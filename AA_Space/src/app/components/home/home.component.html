@@ -1,0 +1,31 @@
+<div class="home-container">
+  <div class="welcome-banner">
+    <h1>Bem-vindo ao AA Space</h1>
+    <p>Um espaço seguro para compartilhar sua jornada e encontrar apoio</p>
+    <a routerLink="/create" class="share-button">Compartilhar Sua História</a>
+  </div>
+
+  <div class="posts-container">
+    <div *ngFor="let post of posts" class="post-card">
+      <div class="post-votes">
+        <button class="vote-button">▲</button>
+        <span>{{ post.likes }}</span>
+        <button class="vote-button">▼</button>
+      </div>
+      <div class="post-content">
+        <h2 class="post-title">
+          <a [routerLink]="['/post', post.id]">{{ post.title }}</a>
+        </h2>
+        <p class="post-info">
+          Compartilhado por {{ post.author }} • {{ post.createdAt | date:'dd/MM/yyyy HH:mm' }}
+        </p>
+        <p class="post-preview">{{ post.content }}</p>
+        <div class="post-footer">
+          <a [routerLink]="['/post', post.id]" class="comments-link">
+            {{ post.commentCount }} comentários
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
