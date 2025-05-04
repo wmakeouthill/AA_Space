@@ -1,0 +1,38 @@
+<div class="home-container">
+  <div class="welcome-banner">
+    <h1>Bem-vindo ao AA Space</h1>
+    <p>Um espaço seguro para compartilhar sua jornada e encontrar apoio</p>
+    <a routerLink="/create" class="share-button">Compartilhar Sua História</a>
+  </div>
+
+  <div class="posts-container">
+    <div *ngIf="isLoading" class="loading">
+      Carregando posts...
+    </div>
+
+    <div *ngIf="error" class="error-message">
+      {{ error }}
+    </div>
+
+    <div *ngFor="let post of posts" class="post-card">
+      <div class="post-content">
+        <h2 class="post-title">
+          <a [routerLink]="['/post', post.id]">{{ post.title }}</a>
+        </h2>
+        <p class="post-info">
+          Compartilhado por {{ post.author }} • {{ post.created_at | date:'dd/MM/yyyy HH:mm' }}
+        </p>
+        <p class="post-preview">{{ post.content }}</p>
+        <div class="post-footer">
+          <button class="like-button" (click)="likePost(post.id, $event)" [class.liked]="post.userLiked">
+            <span class="like-icon">♥</span>
+            <span class="like-count">{{ post.likes || 0 }}</span>
+          </button>
+          <a [routerLink]="['/post', post.id]" class="comments-link">
+            {{ post.comment_count || 0 }} comentários
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,59 @@
+<div class="auth-container">
+  <div class="auth-card">
+    <h1>{{ isLogin ? 'Entrar' : 'Criar Conta' }}</h1>
+    <p class="auth-subtitle">{{ isLogin ? 'Bem-vindo de volta!' : 'Junte-se à nossa comunidade' }}</p>
+
+    <div *ngIf="error" class="error-message">
+      {{ error }}
+    </div>
+
+    <form [formGroup]="authForm" (ngSubmit)="onSubmit()" class="auth-form">
+      <div class="form-group">
+        <label for="username">Nome de usuário</label>
+        <input
+          type="text"
+          id="username"
+          formControlName="username"
+          placeholder="Seu nome de usuário"
+          [class.error]="authForm.get('username')?.errors && authForm.get('username')?.touched"
+        >
+        <div class="error-message" *ngIf="authForm.get('username')?.errors?.['required'] && authForm.get('username')?.touched">
+          Nome de usuário é obrigatório
+        </div>
+        <div class="error-message" *ngIf="authForm.get('username')?.errors?.['minlength'] && authForm.get('username')?.touched">
+          Nome de usuário deve ter pelo menos 3 caracteres
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="password">Senha</label>
+        <input
+          type="password"
+          id="password"
+          formControlName="password"
+          placeholder="Sua senha"
+          [class.error]="authForm.get('password')?.errors && authForm.get('password')?.touched"
+        >
+        <div class="error-message" *ngIf="authForm.get('password')?.errors?.['required'] && authForm.get('password')?.touched">
+          Senha é obrigatória
+        </div>
+        <div class="error-message" *ngIf="authForm.get('password')?.errors?.['minlength'] && authForm.get('password')?.touched">
+          Senha deve ter pelo menos 6 caracteres
+        </div>
+      </div>
+
+      <button type="submit" [disabled]="!authForm.valid || isSubmitting" class="submit-button">
+        {{ isSubmitting ? 'Processando...' : (isLogin ? 'Entrar' : 'Criar Conta') }}
+      </button>
+    </form>
+
+    <div class="auth-footer">
+      <p>
+        {{ isLogin ? 'Ainda não tem uma conta?' : 'Já tem uma conta?' }}
+        <button type="button" class="toggle-button" (click)="toggleAuthMode()">
+          {{ isLogin ? 'Criar conta' : 'Entrar' }}
+        </button>
+      </p>
+    </div>
+  </div>
+</div>

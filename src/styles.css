@@ -1,0 +1,47 @@
+/* You can add global styles to this file, and also import other style files */
+
+/* Global Like Button Styles */
+.like-button {
+  background: none;
+  border: 1px solid #ddd;
+  border-radius: 20px;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.2s ease;
+  color: #666;
+}
+
+.like-button:hover {
+  background-color: #f8f9fa;
+}
+
+.like-button.liked {
+  background-color: #fff0f0;
+  border-color: #dc3545;
+  color: #dc3545;
+}
+
+.like-button .like-icon {
+  transition: transform 0.2s ease, color 0.2s ease;
+}
+
+.like-button:hover .like-icon {
+  transform: scale(1.1);
+}
+
+.like-button.liked .like-icon {
+  color: #dc3545;
+  transform: scale(1.1);
+}
+
+.like-button.small {
+  padding: 0.25rem 0.75rem;
+  font-size: 0.9rem;
+}
+
+.like-button.liked:hover {
+  background-color: #ffe0e0;
+}
