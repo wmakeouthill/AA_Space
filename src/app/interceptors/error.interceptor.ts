@@ -2,17 +2,28 @@ import { HttpInterceptorFn, HttpErrorResponse } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { catchError } from 'rxjs/operators';
 import { throwError } from 'rxjs';
-import { AuthService } from '../services/auth.service';
+import { Router } from '@angular/router';
 
 export const errorInterceptor: HttpInterceptorFn = (req, next) => {
-  const authService = inject(AuthService);
+  const router = inject(Router);
+
+  // Lista de rotas públicas que não devem causar logout em caso de erro 401
+  const publicRoutes = [
+    '/api/auth/login',
+    '/api/auth/register',
+    '/api/posts'
+  ];
 
   return next(req).pipe(
     catchError((error: HttpErrorResponse) => {
       if (error.status === 401) {
-        // Desloga o usuário se receber uma resposta 401 Unauthorized
-        console.log('Erro 401 interceptado - fazendo logout');
-        authService.logout();
+        const isPublicRoute = publicRoutes.some(route => req.url.includes(route));
+
+        // Só redireciona para welcome se não for uma rota pública
+        if (!isPublicRoute) {
+          console.log('Erro 401 interceptado - redirecionando para welcome');
+          router.navigate(['/welcome']);
+        }
       }
       return throwError(() => error);
     })

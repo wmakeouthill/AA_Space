@@ -5,10 +5,11 @@
     </div>
     <nav class="nav-links">
       <a routerLink="/" class="nav-link">Início</a>
-      <a routerLink="/create" class="nav-link" *ngIf="isLoggedIn">Compartilhar História</a>
+      <a routerLink="/create" class="nav-link">Compartilhar História</a>
     </nav>
     <div class="auth-buttons">
       <ng-container *ngIf="!isLoggedIn">
+        <span class="guest-info" *ngIf="guestNickname">{{ guestNickname }}</span>
         <button (click)="login()" class="auth-button">Entrar</button>
       </ng-container>
       <ng-container *ngIf="isLoggedIn">

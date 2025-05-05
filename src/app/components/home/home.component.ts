@@ -1,7 +1,9 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
+import { RouterModule, Router } from '@angular/router';
 import { ApiService } from '../../services/api.service';
+import { AuthService } from '../../services/auth.service';
+import { GuestService } from '../../services/guest.service';
 import { Post } from '../../models/post.interface';
 
 @Component({
@@ -16,9 +18,23 @@ export class HomeComponent implements OnInit {
   isLoading = true;
   error: string | null = null;
 
-  constructor(private apiService: ApiService) {}
+  constructor(
+    private apiService: ApiService,
+    private authService: AuthService,
+    private guestService: GuestService,
+    private router: Router
+  ) {}
 
   ngOnInit() {
+    // Verifica se o usuário está autenticado ou tem um apelido
+    const isAuthenticated = this.authService.getToken() !== null;
+    const hasGuestNickname = this.guestService.hasGuestNickname();
+
+    if (!isAuthenticated && !hasGuestNickname) {
+      this.router.navigate(['/welcome']);
+      return;
+    }
+
     this.loadPosts();
   }
 
@@ -46,6 +62,11 @@ export class HomeComponent implements OnInit {
   likePost(postId: number, event: Event) {
     event.preventDefault();
     event.stopPropagation();
+
+    if (!this.authService.getToken()) {
+      this.error = 'Você precisa estar logado para curtir uma postagem';
+      return;
+    }
 
     const post = this.posts.find(p => p.id === postId);
     if (!post) return;
@@ -81,7 +102,7 @@ export class HomeComponent implements OnInit {
       },
       error: (error) => {
         console.error('Erro ao curtir post:', error);
-        this.error = 'Não foi possível curtir o post. Por favor, tente novamente mais tarde.';
+        this.error = 'Você precisa estar logado para curtir uma postagem';
 
         // Reverte a mudança em caso de erro
         const newPosts = [...this.posts];

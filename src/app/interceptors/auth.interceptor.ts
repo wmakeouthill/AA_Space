@@ -10,12 +10,27 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const publicRoutes = [
     '/api/auth/login',
     '/api/auth/register',
+    '/api/posts',  // GET posts é público
+  ];
+
+  // Lista de rotas que aceitam tanto autenticado quanto anônimo
+  const mixedRoutes = [
+    '/api/posts'  // POST para criar posts
   ];
 
   // Se for uma rota pública, não adiciona o token
-  const isPublicRoute = publicRoutes.some(route => req.url.endsWith(route));
-  if (isPublicRoute) {
-    console.log('Rota pública, não requer token:', req.url);
+  const isPublicRoute = publicRoutes.some(route => req.url.endsWith(route) && req.method === 'GET');
+  const isMixedRoute = mixedRoutes.some(route => req.url.endsWith(route) && req.method === 'POST');
+
+  if (isPublicRoute || isMixedRoute) {
+    console.log('Rota pública ou mista:', req.url);
+    if (token) {
+      // Se tiver token, adiciona mesmo em rotas públicas/mistas
+      const authReq = req.clone({
+        headers: req.headers.set('Authorization', `Bearer ${token}`)
+      });
+      return next(authReq);
+    }
     return next(req);
   }
 

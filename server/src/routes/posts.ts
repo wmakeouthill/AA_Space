@@ -4,14 +4,14 @@ import { authMiddleware } from '../middleware/auth.middleware';
 
 const router = Router();
 
-// Rotas autenticadas para garantir persistência do like por usuário
-router.get('/', authMiddleware, getPosts);
-router.get('/:id', authMiddleware, getPost);
-router.get('/:postId/comments', authMiddleware, getComments);
+// Rotas públicas (sem autenticação)
+router.get('/', getPosts);
+router.get('/:id', getPost);
+router.get('/:postId/comments', getComments);
+router.post('/', createPost);  // Permitir criação de posts anônimos
+router.post('/:postId/comments', createComment);  // Permitir comentários anônimos
 
 // Rotas autenticadas
-router.post('/', authMiddleware, createPost);
-router.post('/:postId/comments', authMiddleware, createComment);
 router.post('/:postId/like', authMiddleware, likePost);
 router.post('/:postId/comments/:commentId/like', authMiddleware, likeComment);
 

@@ -4,6 +4,7 @@ import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { Router } from '@angular/router';
 import { ApiService } from '../../services/api.service';
 import { AuthService } from '../../services/auth.service';
+import { GuestService } from '../../services/guest.service';
 import { catchError, switchMap, tap } from 'rxjs/operators';
 import { of } from 'rxjs';
 
@@ -18,32 +19,49 @@ export class CreatePostComponent implements OnInit {
   postForm: FormGroup;
   isSubmitting = false;
   error: string | null = null;
+  isLoggedIn = false;
+  guestNicknameForm: FormGroup;
+  showGuestNicknameForm = false;
 
   constructor(
     private fb: FormBuilder,
     private router: Router,
     private apiService: ApiService,
-    private authService: AuthService
+    private authService: AuthService,
+    private guestService: GuestService
   ) {
     this.postForm = this.fb.group({
       title: ['', [Validators.required, Validators.minLength(5)]],
       content: ['', [Validators.required, Validators.minLength(20)]],
       isAnonymous: [true]
     });
+
+    this.guestNicknameForm = this.fb.group({
+      nickname: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(20)]]
+    });
   }
 
   ngOnInit() {
-    // Verificar autenticação e token
-    this.authService.isAuthenticated().pipe(
-      tap(isAuthenticated => {
-        if (!isAuthenticated) {
-          console.log('Usuário não autenticado, redirecionando para login');
-          this.router.navigate(['/auth']);
-        } else {
-          console.log('Usuário autenticado:', this.authService.getUsername());
-        }
-      })
-    ).subscribe();
+    this.authService.isAuthenticated().subscribe(isAuthenticated => {
+      this.isLoggedIn = isAuthenticated;
+
+      // Se não estiver logado e não tiver apelido, mostra o formulário de apelido
+      if (!isAuthenticated && !this.guestService.hasGuestNickname()) {
+        this.showGuestNicknameForm = true;
+      }
+    });
+  }
+
+  get guestNickname(): string | null {
+    return this.guestService.getGuestNickname();
+  }
+
+  onSubmitNickname() {
+    if (this.guestNicknameForm.valid) {
+      const nickname = this.guestNicknameForm.value.nickname;
+      this.guestService.setGuestNickname(nickname);
+      this.showGuestNicknameForm = false;
+    }
   }
 
   onSubmit() {
@@ -51,24 +69,28 @@ export class CreatePostComponent implements OnInit {
       this.isSubmitting = true;
       this.error = null;
 
-      // Primeiro verificar se ainda estamos autenticados
-      this.authService.isAuthenticated().pipe(
-        switchMap(isAuthenticated => {
-          if (!isAuthenticated) {
-            console.log('Token expirado ou removido, redirecionando para login');
-            this.router.navigate(['/auth']);
-            return of(null);
-          }
+      // Se não estiver logado e não tiver apelido, mostra erro
+      if (!this.isLoggedIn && !this.guestService.hasGuestNickname()) {
+        this.error = 'Por favor, defina um apelido antes de postar';
+        this.showGuestNicknameForm = true;
+        this.isSubmitting = false;
+        return;
+      }
 
-          const postData = {
-            title: this.postForm.value.title,
-            content: this.postForm.value.content,
-            anonymous: this.postForm.value.isAnonymous
-          };
+      const guestNick = !this.isLoggedIn ? this.guestService.getGuestNickname() : undefined;
+      const postData = {
+        title: this.postForm.value.title,
+        content: this.postForm.value.content,
+        anonymous: this.postForm.value.isAnonymous,
+        guestNickname: guestNick || undefined
+      };
 
-          return this.apiService.createPost(postData);
-        }),
-        catchError(err => {
+      this.apiService.createPost(postData).subscribe({
+        next: (response) => {
+          console.log('Post criado com sucesso:', response);
+          this.router.navigate(['/']);
+        },
+        error: (err) => {
           console.error('Erro ao criar post:', err);
           if (err.status === 401) {
             this.error = 'Sua sessão expirou. Por favor, faça login novamente.';
@@ -77,12 +99,6 @@ export class CreatePostComponent implements OnInit {
             this.error = err.error?.message || 'Ocorreu um erro ao criar o post. Por favor, tente novamente.';
           }
           this.isSubmitting = false;
-          return of(null);
-        })
-      ).subscribe(response => {
-        if (response) {
-          console.log('Post criado com sucesso:', response);
-          this.router.navigate(['/']);
         }
       });
     }

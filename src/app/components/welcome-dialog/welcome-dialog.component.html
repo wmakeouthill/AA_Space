@@ -1,0 +1,61 @@
+<div class="welcome-overlay">
+  <div class="welcome-dialog">
+    <h1>Bem-vindo ao AA Space</h1>
+    <p class="subtitle">Como você gostaria de continuar?</p>
+
+    <div *ngIf="!showNicknameForm" class="options-container">
+      <button (click)="onLogin()" class="option-button login">
+        <span class="icon">👤</span>
+        <div class="option-content">
+          <h3>Entrar</h3>
+          <p>Faça login para interagir com a comunidade</p>
+        </div>
+      </button>
+
+      <button (click)="onGuestWithNickname()" class="option-button guest">
+        <span class="icon">✏️</span>
+        <div class="option-content">
+          <h3>Continuar com Apelido</h3>
+          <p>Escolha um apelido para participar</p>
+        </div>
+      </button>
+
+      <button (click)="onGuestAnonymous()" class="option-button anonymous">
+        <span class="icon">👻</span>
+        <div class="option-content">
+          <h3>Continuar Anônimo</h3>
+          <p>Visualizar conteúdo sem identificação</p>
+        </div>
+      </button>
+    </div>
+
+    <form *ngIf="showNicknameForm" [formGroup]="nicknameForm" (ngSubmit)="onSubmitNickname()" class="nickname-form">
+      <h2>Escolha seu Apelido</h2>
+
+      <div class="form-group">
+        <input
+          type="text"
+          formControlName="nickname"
+          placeholder="Seu apelido"
+          class="nickname-input"
+        >
+        <div class="error-message" *ngIf="nicknameForm.get('nickname')?.errors?.['required'] && nicknameForm.get('nickname')?.touched">
+          O apelido é obrigatório
+        </div>
+        <div class="error-message" *ngIf="nicknameForm.get('nickname')?.errors?.['minlength'] && nicknameForm.get('nickname')?.touched">
+          O apelido deve ter pelo menos 3 caracteres
+        </div>
+        <div class="error-message" *ngIf="nicknameForm.get('nickname')?.errors?.['maxlength'] && nicknameForm.get('nickname')?.touched">
+          O apelido deve ter no máximo 20 caracteres
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button type="button" (click)="showNicknameForm = false" class="back-button">Voltar</button>
+        <button type="submit" [disabled]="!nicknameForm.valid || isSubmitting" class="submit-button">
+          {{ isSubmitting ? 'Confirmando...' : 'Confirmar' }}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

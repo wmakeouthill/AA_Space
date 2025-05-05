@@ -9,16 +9,38 @@ h1 {
   margin-bottom: 0.5rem;
 }
 
+h2 {
+  color: #1a5f7a;
+  margin-bottom: 1rem;
+}
+
 .subtitle {
   color: #666;
   margin-bottom: 2rem;
 }
 
-.post-form {
+.post-form, .guest-nickname-section {
   background-color: white;
   padding: 2rem;
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.guest-nickname-section {
+  margin-bottom: 2rem;
+}
+
+.nickname-form {
+  margin-top: 1.5rem;
+}
+
+.nickname-input {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 1rem;
+  margin-bottom: 1rem;
 }
 
 .form-group {
@@ -50,7 +72,8 @@ textarea:focus {
 
 .checkbox-group {
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  gap: 0.5rem;
 }
 
 .checkbox-label {
@@ -67,12 +90,9 @@ input[type="checkbox"] {
 }
 
 .error-message {
-  background-color: #fee;
-  color: #c00;
-  padding: 1rem;
-  border-radius: 8px;
-  margin-bottom: 1rem;
-  text-align: center;
+  color: #dc3545;
+  font-size: 0.875rem;
+  margin-top: 0.5rem;
 }
 
 .form-actions {
@@ -98,4 +118,10 @@ input[type="checkbox"] {
 .submit-button:disabled {
   background-color: #ccc;
   cursor: not-allowed;
+}
+
+.post-info {
+  color: #666;
+  font-style: italic;
+  margin-top: 0.5rem;
 }

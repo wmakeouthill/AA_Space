@@ -4,6 +4,8 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Post, Comment } from '../../models/post.interface';
 import { ApiService } from '../../services/api.service';
+import { AuthService } from '../../services/auth.service';
+import { GuestService } from '../../services/guest.service';
 
 @Component({
   selector: 'app-post',
@@ -18,12 +20,15 @@ export class PostComponent implements OnInit {
   commentForm: FormGroup;
   isSubmitting = false;
   error: string | null = null;
+  isLoggedIn = false;
 
   constructor(
     private route: ActivatedRoute,
     private router: Router,
     private fb: FormBuilder,
-    private apiService: ApiService
+    private apiService: ApiService,
+    private authService: AuthService,
+    private guestService: GuestService
   ) {
     this.commentForm = this.fb.group({
       content: ['', [Validators.required, Validators.minLength(3)]],
@@ -32,6 +37,7 @@ export class PostComponent implements OnInit {
   }
 
   ngOnInit() {
+    this.isLoggedIn = this.authService.getToken() !== null;
     this.route.params.subscribe(params => {
       const id = params['id'];
       if (!id) {
@@ -86,14 +92,21 @@ export class PostComponent implements OnInit {
   onSubmitComment() {
     if (this.commentForm.valid && this.post) {
       this.isSubmitting = true;
+
+      // Verifica se o usuário está logado ou tem um apelido
+      if (!this.isLoggedIn && !this.guestService.hasGuestNickname()) {
+        this.router.navigate(['/welcome']);
+        return;
+      }
+
       const comment = {
         content: this.commentForm.value.content,
-        anonymous: this.commentForm.value.isAnonymous
+        anonymous: this.commentForm.value.isAnonymous,
+        guestNickname: !this.isLoggedIn ? this.guestService.getGuestNickname() : undefined
       };
 
       this.apiService.createComment(this.post.id, comment).subscribe({
         next: (newComment) => {
-          // Inicializa o novo comentário com os valores corretos
           const formattedComment = {
             ...newComment,
             likes: 0,
@@ -102,10 +115,11 @@ export class PostComponent implements OnInit {
           this.comments.unshift(formattedComment);
           this.commentForm.reset({ isAnonymous: true });
           this.isSubmitting = false;
+          this.error = null;
         },
         error: (error) => {
           console.error('Erro ao enviar comentário:', error);
-          this.error = 'Não foi possível enviar o comentário. Por favor, tente novamente mais tarde.';
+          this.error = error.error?.message || 'Não foi possível enviar o comentário. Por favor, tente novamente mais tarde.';
           this.isSubmitting = false;
         }
       });
@@ -114,6 +128,11 @@ export class PostComponent implements OnInit {
 
   likePost() {
     if (!this.post) return;
+
+    if (!this.authService.getToken()) {
+      this.error = 'Você precisa estar logado para curtir uma postagem';
+      return;
+    }
 
     const previousState = {
       likes: this.post.likes,
@@ -138,14 +157,14 @@ export class PostComponent implements OnInit {
           this.post = {
             ...this.post,
             likes: response.likes,
-            userLiked: response.userLiked // Use the server's userLiked value
+            userLiked: response.userLiked
           };
           console.log('[LIKE POST] Estado final após resposta:', this.post);
         }
       },
       error: (error) => {
         console.error('[LIKE POST] Erro ao curtir post:', error);
-        this.error = 'Não foi possível curtir o post. Por favor, tente novamente mais tarde.';
+        this.error = 'Você precisa estar logado para curtir uma postagem';
         if (this.post) {
           this.post = {
             ...this.post,
@@ -160,6 +179,11 @@ export class PostComponent implements OnInit {
 
   likeComment(comment: Comment) {
     if (!this.post) return;
+
+    if (!this.authService.getToken()) {
+      this.error = 'Você precisa estar logado para curtir um comentário';
+      return;
+    }
 
     const commentIndex = this.comments.findIndex(c => c.id === comment.id);
     if (commentIndex === -1) return;
@@ -189,14 +213,14 @@ export class PostComponent implements OnInit {
         newComments[commentIndex] = {
           ...newComments[commentIndex],
           likes: response.likes,
-          userLiked: response.userLiked // Use the server's userLiked value
+          userLiked: response.userLiked
         };
         this.comments = newComments;
         console.log('[LIKE COMMENT] Estado final após resposta:', this.comments[commentIndex]);
       },
       error: (error) => {
         console.error('[LIKE COMMENT] Erro ao curtir comentário:', error, 'CommentID:', comment.id);
-        this.error = 'Não foi possível curtir o comentário. Por favor, tente novamente mais tarde.';
+        this.error = 'Você precisa estar logado para curtir um comentário';
 
         // Reverte a mudança em caso de erro
         const newComments = [...this.comments];

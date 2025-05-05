@@ -44,6 +44,9 @@ export class Post {
     @Column({ default: false })
     anonymous: boolean;
 
+    @Column({ nullable: true })
+    author: string;
+
     @Column({ default: 0 })
     likes: number;
 
@@ -73,6 +76,9 @@ export class Comment {
 
     @Column({ default: false })
     anonymous: boolean;
+
+    @Column({ nullable: true })
+    author: string;
 
     @Column({ default: 0 })
     likes: number;

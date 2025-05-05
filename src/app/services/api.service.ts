@@ -7,7 +7,8 @@ import { Post, Comment, LikeResponse } from '../models/post.interface';
 interface CreatePostDto {
   title: string;
   content: string;
-  isAnonymous: boolean;
+  anonymous: boolean;
+  guestNickname?: string;
 }
 
 interface CreateCommentDto {
@@ -107,7 +108,7 @@ export class ApiService {
       );
   }
 
-  createPost(post: { title: string; content: string; anonymous: boolean }): Observable<Post> {
+  createPost(post: CreatePostDto): Observable<Post> {
     return this.http.post<Post>(`${this.apiUrl}/posts`, post, this.httpOptions)
       .pipe(
         catchError(this.handleError)

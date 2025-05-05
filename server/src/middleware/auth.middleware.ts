@@ -9,6 +9,29 @@ export const authMiddleware = (req: AuthRequest, res: Response, next: NextFuncti
   try {
     const authHeader = req.headers.authorization;
 
+    // Lista de rotas que permitem acesso sem autenticação
+    const publicPatterns = [
+      { path: '/api/auth/login', method: 'POST' },
+      { path: '/api/auth/register', method: 'POST' },
+      { path: '/api/posts', method: 'GET' },
+      { path: '/api/posts', method: 'POST' }
+    ];
+
+    // Verifica se a URL corresponde a rotas dinâmicas públicas
+    const isDynamicPublicRoute = (
+      (req.method === 'GET' && req.path.match(/^\/api\/posts\/\d+$/)) || // GET individual post
+      (req.method === 'GET' && req.path.match(/^\/api\/posts\/\d+\/comments$/)) // GET post comments
+    );
+
+    // Verifica se é uma rota pública estática
+    const isStaticPublicRoute = publicPatterns.some(pattern =>
+      req.path === pattern.path && req.method === pattern.method
+    );
+
+    if (isStaticPublicRoute || isDynamicPublicRoute) {
+      return next();
+    }
+
     if (!authHeader) {
       return res.status(401).json({
         message: 'Token não fornecido',

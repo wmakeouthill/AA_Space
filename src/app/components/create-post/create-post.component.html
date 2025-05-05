@@ -2,11 +2,40 @@
   <h1>Compartilhe Sua História</h1>
   <p class="subtitle">Este é um espaço seguro para compartilhar sua jornada</p>
 
+  <div *ngIf="showGuestNicknameForm" class="guest-nickname-section">
+    <h2>Escolha seu Apelido</h2>
+    <p>Para compartilhar uma história como convidado, escolha um apelido:</p>
+
+    <form [formGroup]="guestNicknameForm" (ngSubmit)="onSubmitNickname()" class="nickname-form">
+      <div class="form-group">
+        <input
+          type="text"
+          formControlName="nickname"
+          placeholder="Seu apelido"
+          class="nickname-input"
+        >
+        <div class="error-message" *ngIf="guestNicknameForm.get('nickname')?.errors?.['required'] && guestNicknameForm.get('nickname')?.touched">
+          O apelido é obrigatório
+        </div>
+        <div class="error-message" *ngIf="guestNicknameForm.get('nickname')?.errors?.['minlength'] && guestNicknameForm.get('nickname')?.touched">
+          O apelido deve ter pelo menos 3 caracteres
+        </div>
+        <div class="error-message" *ngIf="guestNicknameForm.get('nickname')?.errors?.['maxlength'] && guestNicknameForm.get('nickname')?.touched">
+          O apelido deve ter no máximo 20 caracteres
+        </div>
+      </div>
+      
+      <button type="submit" [disabled]="!guestNicknameForm.valid" class="submit-button">
+        Confirmar Apelido
+      </button>
+    </form>
+  </div>
+
   <div *ngIf="error" class="error-message">
     {{ error }}
   </div>
 
-  <form [formGroup]="postForm" (ngSubmit)="onSubmit()" class="post-form">
+  <form [formGroup]="postForm" (ngSubmit)="onSubmit()" class="post-form" *ngIf="!showGuestNicknameForm">
     <div class="form-group">
       <label for="title">Título</label>
       <input
@@ -44,6 +73,9 @@
         <input type="checkbox" formControlName="isAnonymous">
         Postar anonimamente
       </label>
+      <small class="post-info" *ngIf="!isLoggedIn">
+        Você está postando como convidado com o apelido: {{ guestNickname }}
+      </small>
     </div>
 
     <div class="form-actions">

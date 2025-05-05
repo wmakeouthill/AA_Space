@@ -104,18 +104,25 @@ export const getPost = async (req: Request, res: Response) => {
 
 export const createPost = async (req: AuthRequest, res: Response) => {
     try {
-        const { title, content, anonymous = false } = req.body;
+        const { title, content, anonymous = false, guestNickname } = req.body;
         const userId = req.user?.id;
 
         const postRepository = AppDataSource.getRepository(Post);
         const userRepository = AppDataSource.getRepository(User);
 
         let userData: DeepPartial<User> | undefined = undefined;
+        let author = 'Anônimo';
+
         if (userId) {
+            // Usuário autenticado
             const user = await userRepository.findOne({ where: { id: userId } });
             if (user) {
                 userData = { id: user.id } as DeepPartial<User>;
+                author = anonymous ? 'Anônimo' : user.username;
             }
+        } else if (guestNickname) {
+            // Usuário convidado com apelido
+            author = `Convidado: ${guestNickname}`;
         }
 
         const postData: DeepPartial<Post> = {
@@ -123,12 +130,19 @@ export const createPost = async (req: AuthRequest, res: Response) => {
             content,
             anonymous,
             user: userData,
+            author,
             likes: 0
         };
 
         const newPost = postRepository.create(postData);
         await postRepository.save(newPost);
-        res.status(201).json(newPost);
+
+        const responsePost = {
+            ...newPost,
+            author // Inclui o autor formatado na resposta
+        };
+
+        res.status(201).json(responsePost);
     } catch (error) {
         console.error('Erro ao criar post:', error);
         res.status(500).json({ message: 'Erro interno do servidor' });
@@ -137,7 +151,7 @@ export const createPost = async (req: AuthRequest, res: Response) => {
 
 export const createComment = async (req: AuthRequest, res: Response) => {
     try {
-        const { content, anonymous = false } = req.body;
+        const { content, anonymous = false, guestNickname } = req.body;
         const { postId } = req.params;
         const userId = req.user?.id;
 
@@ -151,40 +165,38 @@ export const createComment = async (req: AuthRequest, res: Response) => {
         }
 
         let userData: DeepPartial<User> | undefined = undefined;
+        let author = 'Anônimo';
+
         if (userId) {
             const user = await userRepository.findOne({ where: { id: userId } });
             if (user) {
                 userData = { id: user.id } as DeepPartial<User>;
+                author = anonymous ? 'Anônimo' : user.username;
             }
+        } else if (guestNickname) {
+            author = `Convidado: ${guestNickname}`;
         }
 
         const commentData: DeepPartial<Comment> = {
             content,
             anonymous,
             user: userData,
+            author,
             post: { id: post.id } as DeepPartial<Post>
         };
 
         const newComment = commentRepository.create(commentData);
         await commentRepository.save(newComment);
 
-        // Carregar o comentário com as relações e formatar a resposta
-        const savedComment = await commentRepository.findOne({
-            where: { id: newComment.id },
-            relations: ['user', 'post']
-        });
-
-        if (!savedComment) {
-            throw new Error('Erro ao carregar o comentário salvo');
-        }
-
         const formattedComment = {
-            id: savedComment.id,
-            content: savedComment.content,
-            author: savedComment.anonymous ? 'Anônimo' : savedComment.user?.username ?? 'Usuário Desconhecido',
-            created_at: savedComment.created_at,
-            post_id: savedComment.post.id,
-            anonymous: savedComment.anonymous
+            id: newComment.id,
+            content: newComment.content,
+            author,
+            created_at: newComment.created_at,
+            post_id: post.id,
+            anonymous: newComment.anonymous,
+            likes: 0,
+            userLiked: false
         };
 
         res.status(201).json(formattedComment);

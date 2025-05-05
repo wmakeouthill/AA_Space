@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { RouterLink, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { AuthService } from '../../services/auth.service';
+import { GuestService } from '../../services/guest.service';
 
 @Component({
   selector: 'app-header',
@@ -13,9 +14,11 @@ import { AuthService } from '../../services/auth.service';
 export class HeaderComponent implements OnInit {
   isLoggedIn = false;
   username: string | null = null;
+  guestNickname: string | null = null;
 
   constructor(
     private authService: AuthService,
+    private guestService: GuestService,
     private router: Router
   ) {}
 
@@ -24,6 +27,11 @@ export class HeaderComponent implements OnInit {
       isAuthenticated => {
         this.isLoggedIn = isAuthenticated;
         this.username = this.authService.getUsername();
+
+        // Se não estiver autenticado, verifica se tem um apelido de convidado
+        if (!isAuthenticated) {
+          this.guestNickname = this.guestService.getGuestNickname();
+        }
       }
     );
   }
@@ -34,6 +42,7 @@ export class HeaderComponent implements OnInit {
 
   logout() {
     this.authService.logout();
+    this.guestService.clearGuestNickname(); // Limpa o apelido ao fazer logout
     this.router.navigate(['/']);
   }
 }
