@@ -9,7 +9,7 @@ interface AuthRequest extends Request {
 
 export const getPosts = async (req: Request, res: Response) => {
     try {
-        const userId = (req as any).user?.id;
+        const userId = (req as AuthRequest).user?.id;
         const postRepository = AppDataSource.getRepository(Post);
         const postLikeRepository = AppDataSource.getRepository(PostLike);
 
@@ -22,28 +22,35 @@ export const getPosts = async (req: Request, res: Response) => {
             .getMany();
 
         const formattedPosts = await Promise.all(posts.map(async post => {
-            // Verifica se o usuário atual deu like
-            const userLike = userId ? await postLikeRepository.findOne({
-                where: {
-                    post: { id: post.id },
-                    user: { id: userId }
-                }
-            }) : null;
+            let userLiked = false;
+            let totalLikes = 0;
 
-            // Conta o total de likes ativos
-            const totalLikes = await postLikeRepository.count({
+            if (userId) {
+                const userLike = await postLikeRepository.findOne({
+                    where: {
+                        post: { id: post.id },
+                        user: { id: userId }
+                    }
+                });
+                userLiked = userLike?.userLiked ?? false;
+            }
+
+            totalLikes = await postLikeRepository.count({
                 where: {
                     post: { id: post.id },
                     userLiked: true
                 }
             });
 
+            // Se o post é anônimo, retorna 'Anônimo', caso contrário usa o autor original
+            const author = post.anonymous ? 'Anônimo' : (post.originalAuthor || post.author);
+
             return {
                 ...post,
-                author: post.anonymous ? 'Anônimo' : post.user?.username,
+                author,
                 comment_count: post.comments?.length || 0,
                 likes: totalLikes,
-                userLiked: userLike?.userLiked ?? false
+                userLiked
             };
         }));
 
@@ -57,7 +64,7 @@ export const getPosts = async (req: Request, res: Response) => {
 export const getPost = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
-        const userId = (req as any).user?.id;
+        const userId = (req as AuthRequest).user?.id;
         const postRepository = AppDataSource.getRepository(Post);
         const postLikeRepository = AppDataSource.getRepository(PostLike);
 
@@ -88,9 +95,12 @@ export const getPost = async (req: Request, res: Response) => {
             }
         });
 
+        // Se o post é anônimo, retorna 'Anônimo', caso contrário usa o autor original
+        const author = post.anonymous ? 'Anônimo' : (post.originalAuthor || post.author);
+
         const formattedPost = {
             ...post,
-            author: post.anonymous ? 'Anônimo' : post.user?.username,
+            author,
             likes: totalLikes,
             userLiked: userLike?.userLiked ?? false
         };
@@ -111,18 +121,21 @@ export const createPost = async (req: AuthRequest, res: Response) => {
         const userRepository = AppDataSource.getRepository(User);
 
         let userData: DeepPartial<User> | undefined = undefined;
-        let author = 'Anônimo';
+        let author: string;
 
+        // Determina o autor real
         if (userId) {
-            // Usuário autenticado
             const user = await userRepository.findOne({ where: { id: userId } });
             if (user) {
                 userData = { id: user.id } as DeepPartial<User>;
-                author = anonymous ? 'Anônimo' : user.username;
+                author = user.username;
+            } else {
+                author = 'Anônimo';
             }
         } else if (guestNickname) {
-            // Usuário convidado com apelido
             author = `Convidado: ${guestNickname}`;
+        } else {
+            author = 'Anônimo';
         }
 
         const postData: DeepPartial<Post> = {
@@ -130,16 +143,18 @@ export const createPost = async (req: AuthRequest, res: Response) => {
             content,
             anonymous,
             user: userData,
-            author,
+            author, // Salvamos o autor real
+            originalAuthor: author, // Salvamos uma cópia do autor original
             likes: 0
         };
 
         const newPost = postRepository.create(postData);
         await postRepository.save(newPost);
 
+        // Para a resposta, se for anônimo, retornamos 'Anônimo'
         const responsePost = {
             ...newPost,
-            author // Inclui o autor formatado na resposta
+            author: anonymous ? 'Anônimo' : author
         };
 
         res.status(201).json(responsePost);
@@ -165,33 +180,40 @@ export const createComment = async (req: AuthRequest, res: Response) => {
         }
 
         let userData: DeepPartial<User> | undefined = undefined;
-        let author = 'Anônimo';
+        let author: string;
 
         if (userId) {
             const user = await userRepository.findOne({ where: { id: userId } });
             if (user) {
                 userData = { id: user.id } as DeepPartial<User>;
-                author = anonymous ? 'Anônimo' : user.username;
+                author = user.username;
+            } else {
+                author = 'Anônimo';
             }
         } else if (guestNickname) {
             author = `Convidado: ${guestNickname}`;
+        } else {
+            author = 'Anônimo';
         }
 
+        // Criamos o commentData com o author original, mesmo que seja anônimo
         const commentData: DeepPartial<Comment> = {
             content,
-            anonymous,
+            anonymous: anonymous,
             user: userData,
-            author,
+            author, // Salvamos o autor real
+            originalAuthor: author, // Salvamos uma cópia do autor original
             post: { id: post.id } as DeepPartial<Post>
         };
 
         const newComment = commentRepository.create(commentData);
         await commentRepository.save(newComment);
 
+        // Para a resposta, se for anônimo, retornamos 'Anônimo'
         const formattedComment = {
             id: newComment.id,
             content: newComment.content,
-            author,
+            author: anonymous ? 'Anônimo' : author,
             created_at: newComment.created_at,
             post_id: post.id,
             anonymous: newComment.anonymous,
@@ -368,15 +390,19 @@ export const getComments = async (req: Request, res: Response) => {
                 }
             });
 
+            // Se o comentário é anônimo, retorna 'Anônimo', 
+            // caso contrário usa o autor original se disponível, ou faz o fallback para o autor normal
+            const author = comment.anonymous ? 'Anônimo' : (comment.originalAuthor || comment.author);
+
             return {
                 id: comment.id,
                 content: comment.content,
-                author: comment.anonymous ? 'Anônimo' : comment.user?.username,
+                author,
                 created_at: comment.created_at,
                 post_id: parseInt(postId),
                 anonymous: comment.anonymous,
                 likes: totalLikes,
-                userLiked: userLike?.userLiked ?? false // Use o estado atual do like
+                userLiked: userLike?.userLiked ?? false
             };
         }));
 

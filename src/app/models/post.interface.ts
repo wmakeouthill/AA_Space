@@ -17,6 +17,7 @@ export interface Comment {
     created_at: Date;
     post_id: number;
     anonymous: boolean;
+    guestNickname?: string;
     likes: number;
     userLiked: boolean;
 }

@@ -8,6 +8,42 @@ const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const authMiddleware = (req, res, next) => {
     try {
         const authHeader = req.headers.authorization;
+        // Lista de rotas que permitem acesso sem autenticação
+        const publicPatterns = [
+            { path: '/api/auth/login', method: 'POST' },
+            { path: '/api/auth/register', method: 'POST' },
+            { path: '/api/posts', method: 'GET' },
+            { path: '/api/posts', method: 'POST' }
+        ];
+        // Verifica se a URL corresponde a rotas dinâmicas públicas
+        const isDynamicPublicRoute = ((req.method === 'GET' && req.path.match(/^\/api\/posts\/\d+$/)) || // GET individual post
+            (req.method === 'GET' && req.path.match(/^\/api\/posts\/\d+\/comments$/)) || // GET post comments
+            (req.method === 'POST' && req.path.match(/^\/api\/posts\/\d+\/comments$/)) // POST comments
+        );
+        // Verifica se é uma rota pública estática
+        const isStaticPublicRoute = publicPatterns.some(pattern => {
+            const pathMatches = pattern.path === req.path || (pattern.path === '/api/posts' && req.path.startsWith('/api/posts'));
+            return pathMatches && pattern.method === req.method;
+        });
+        // Se for rota pública, permite o acesso mesmo sem token
+        if (isStaticPublicRoute || isDynamicPublicRoute) {
+            // Se tiver token, tenta decodificar para ter acesso ao usuário
+            if (authHeader) {
+                const token = authHeader.split(' ')[1];
+                if (token) {
+                    try {
+                        const decoded = jsonwebtoken_1.default.verify(token, process.env.JWT_SECRET || 'seu_segredo_jwt_super_secreto');
+                        req.user = decoded;
+                    }
+                    catch (error) {
+                        // Para rotas públicas, se o token for inválido, continua sem autenticação
+                        console.log('Token inválido em rota pública, continuando sem autenticação');
+                    }
+                }
+            }
+            return next();
+        }
+        // Para rotas protegidas, exige token válido
         if (!authHeader) {
             return res.status(401).json({
                 message: 'Token não fornecido',

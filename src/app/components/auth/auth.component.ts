@@ -13,7 +13,7 @@ import { tap } from 'rxjs/operators';
   styleUrl: './auth.component.css'
 })
 export class AuthComponent {
-  isLogin = false; // Começamos com o registro
+  isLogin = true; // Alterado para começar com o login
   authForm: FormGroup;
   isSubmitting = false;
   error: string | null = null;

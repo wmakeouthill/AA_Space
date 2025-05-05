@@ -47,6 +47,9 @@ export class Post {
     @Column({ nullable: true })
     author: string;
 
+    @Column({ nullable: true })
+    originalAuthor: string;
+
     @Column({ default: 0 })
     likes: number;
 
@@ -79,6 +82,9 @@ export class Comment {
 
     @Column({ nullable: true })
     author: string;
+
+    @Column({ nullable: true })
+    originalAuthor: string;
 
     @Column({ default: 0 })
     likes: number;

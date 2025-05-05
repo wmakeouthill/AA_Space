@@ -32,7 +32,7 @@ export class PostComponent implements OnInit {
   ) {
     this.commentForm = this.fb.group({
       content: ['', [Validators.required, Validators.minLength(3)]],
-      isAnonymous: [true]
+      anonymous: [false]
     });
   }
 
@@ -73,10 +73,10 @@ export class PostComponent implements OnInit {
         this.comments = comments.map(comment => ({
           ...comment,
           likes: comment.likes ?? 0,
-          userLiked: comment.userLiked ?? false, // Use the server's userLiked value
+          userLiked: comment.userLiked ?? false,
           id: comment.id,
           content: comment.content,
-          author: comment.author,
+          author: comment.anonymous ? 'Anônimo' : comment.author,
           created_at: comment.created_at,
           post_id: postId,
           anonymous: comment.anonymous
@@ -99,10 +99,11 @@ export class PostComponent implements OnInit {
         return;
       }
 
+      const guestNick = !this.isLoggedIn ? this.guestService.getGuestNickname() : undefined;
       const comment = {
         content: this.commentForm.value.content,
-        anonymous: this.commentForm.value.isAnonymous,
-        guestNickname: !this.isLoggedIn ? this.guestService.getGuestNickname() : undefined
+        anonymous: this.commentForm.value.anonymous,
+        guestNickname: guestNick || undefined
       };
 
       this.apiService.createComment(this.post.id, comment).subscribe({
@@ -113,7 +114,10 @@ export class PostComponent implements OnInit {
             userLiked: false
           };
           this.comments.unshift(formattedComment);
-          this.commentForm.reset({ isAnonymous: true });
+          this.commentForm.reset({
+            content: '',
+            anonymous: false
+          });
           this.isSubmitting = false;
           this.error = null;
         },

@@ -29,7 +29,7 @@ export class WelcomeDialogComponent {
   }
 
   onLogin() {
-    this.router.navigate(['/auth']);
+    this.router.navigate(['/auth'], { state: { mode: 'login' } });
   }
 
   onGuestWithNickname() {

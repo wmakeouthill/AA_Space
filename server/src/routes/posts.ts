@@ -11,7 +11,7 @@ router.get('/:postId/comments', getComments);
 router.post('/', createPost);  // Permitir criação de posts anônimos
 router.post('/:postId/comments', createComment);  // Permitir comentários anônimos
 
-// Rotas autenticadas
+// Rotas que requerem autenticação
 router.post('/:postId/like', authMiddleware, likePost);
 router.post('/:postId/comments/:commentId/like', authMiddleware, likeComment);
 

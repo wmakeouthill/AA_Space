@@ -33,7 +33,7 @@ export class CreatePostComponent implements OnInit {
     this.postForm = this.fb.group({
       title: ['', [Validators.required, Validators.minLength(5)]],
       content: ['', [Validators.required, Validators.minLength(20)]],
-      isAnonymous: [true]
+      anonymous: [false]
     });
 
     this.guestNicknameForm = this.fb.group({
@@ -81,7 +81,7 @@ export class CreatePostComponent implements OnInit {
       const postData = {
         title: this.postForm.value.title,
         content: this.postForm.value.content,
-        anonymous: this.postForm.value.isAnonymous,
+        anonymous: this.postForm.value.anonymous,
         guestNickname: guestNick || undefined
       };
 

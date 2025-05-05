@@ -21,14 +21,6 @@ const posts_1 = __importDefault(require("./routes/posts"));
 dotenv_1.default.config();
 const app = (0, express_1.default)();
 const port = Number(process.env.PORT || 3001);
-// Debug middleware para logar todas as requisições e headers
-app.use((req, res, next) => {
-    const timestamp = new Date().toISOString();
-    console.log(`[${timestamp}] ${req.method} ${req.url}`);
-    console.log('Headers:', req.headers);
-    console.log('Origin:', req.get('origin'));
-    next();
-});
 // Lista de origens permitidas
 const allowedOrigins = [
     'http://localhost:4200',
@@ -38,11 +30,9 @@ const allowedOrigins = [
 // Configuração CORS detalhada
 const corsOptions = {
     origin: function (origin, callback) {
-        // Permite requests sem origin (como mobile apps ou REST tools)
         if (!origin) {
             return callback(null, true);
         }
-        // Verifica se a origem está na lista de permitidos
         const isAllowed = allowedOrigins.some(allowedOrigin => {
             if (allowedOrigin instanceof RegExp) {
                 return allowedOrigin.test(origin);
@@ -69,7 +59,17 @@ const corsOptions = {
     optionsSuccessStatus: 200,
     maxAge: 3600
 };
+// Debug middleware para logar todas as requisições e headers
+app.use((req, res, next) => {
+    const timestamp = new Date().toISOString();
+    console.log(`[${timestamp}] ${req.method} ${req.url}`);
+    console.log('Headers:', req.headers);
+    console.log('Origin:', req.get('origin'));
+    next();
+});
+// Aplica CORS
 app.use((0, cors_1.default)(corsOptions));
+// Parse JSON bodies
 app.use(express_1.default.json());
 // Headers adicionais para CORS
 app.use((req, res, next) => {
@@ -85,7 +85,7 @@ app.use((req, res, next) => {
     }
     next();
 });
-// Rota de teste para verificar se o servidor está respondendo
+// Rota de health check
 app.get('/api/health', (req, res) => {
     res.json({
         status: 'OK',
@@ -95,9 +95,9 @@ app.get('/api/health', (req, res) => {
         origin: req.headers.origin
     });
 });
-// Rotas da API
+// Configuração das rotas
 app.use('/api/auth', auth_1.default);
-app.use('/api/posts', posts_1.default);
+app.use('/api/posts', posts_1.default); // As rotas do posts já têm seu próprio middleware de autenticação
 // Tratamento de erros global
 app.use((err, req, res, next) => {
     console.error('Error:', err);
@@ -117,13 +117,19 @@ const startServer = () => __awaiter(void 0, void 0, void 0, function* () {
             console.log('CORS enabled for:', allowedOrigins);
             console.log('Available routes:');
             console.log('- GET /api/health');
+            console.log('- POST /api/auth/login');
+            console.log('- POST /api/auth/register');
             console.log('- GET /api/posts');
-            console.log('- POST /api/posts');
             console.log('- GET /api/posts/:id');
+            console.log('- POST /api/posts');
+            console.log('- GET /api/posts/:postId/comments');
+            console.log('- POST /api/posts/:postId/comments');
+            console.log('- POST /api/posts/:postId/like [auth required]');
+            console.log('- POST /api/posts/:postId/comments/:commentId/like [auth required]');
         });
     }
     catch (error) {
-        console.error('Error starting server:', error);
+        console.error('Error during initialization:', error);
         process.exit(1);
     }
 });

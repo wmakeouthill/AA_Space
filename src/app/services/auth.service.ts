@@ -11,24 +11,28 @@ export class AuthService {
   private isAuthenticatedSubject = new BehaviorSubject<boolean>(false);
 
   constructor(private apiService: ApiService) {
-    // Verifica token ao inicializar
-    if (this.hasToken()) {
-      this.validateToken();
+    // Inicializa o estado de autenticação baseado na presença do token
+    const hasToken = this.hasToken();
+    this.isAuthenticatedSubject.next(hasToken);
+
+    // Se houver token, valida ele em background
+    if (hasToken) {
+      this.validateToken().subscribe({
+        error: () => {
+          console.log('Token inválido ou expirado');
+          this.logout();
+        }
+      });
     }
   }
 
-  private validateToken() {
-    // Faz uma requisição para validar o token
-    this.apiService.validateToken().pipe(
-      catchError((error) => {
-        console.log('Token inválido ou expirado');
-        this.logout();
-        throw error;
+  private validateToken(): Observable<any> {
+    return this.apiService.validateToken().pipe(
+      tap(() => {
+        console.log('Token válido');
+        this.isAuthenticatedSubject.next(true);
       })
-    ).subscribe(() => {
-      console.log('Token válido');
-      this.isAuthenticatedSubject.next(true);
-    });
+    );
   }
 
   login(username: string, password: string): Observable<any> {
