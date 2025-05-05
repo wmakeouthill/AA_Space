@@ -17,18 +17,32 @@ const getPosts = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id;
         const postRepository = database_1.AppDataSource.getRepository(entities_1.Post);
+        const postLikeRepository = database_1.AppDataSource.getRepository(entities_1.PostLike);
         const posts = yield postRepository
             .createQueryBuilder('post')
             .leftJoinAndSelect('post.user', 'user')
             .leftJoinAndSelect('post.comments', 'comments')
             .leftJoinAndSelect('post.postLikes', 'postLikes')
-            .leftJoinAndSelect('postLikes.user', 'likeUser')
             .orderBy('post.created_at', 'DESC')
             .getMany();
-        const formattedPosts = posts.map(post => {
-            var _a, _b, _c, _d;
-            return (Object.assign(Object.assign({}, post), { author: post.anonymous ? 'Anônimo' : (_a = post.user) === null || _a === void 0 ? void 0 : _a.username, comment_count: ((_b = post.comments) === null || _b === void 0 ? void 0 : _b.length) || 0, likes: ((_c = post.postLikes) === null || _c === void 0 ? void 0 : _c.length) || 0, userLiked: userId ? (_d = post.postLikes) === null || _d === void 0 ? void 0 : _d.some(like => like.user.id === userId) : false }));
-        });
+        const formattedPosts = yield Promise.all(posts.map((post) => __awaiter(void 0, void 0, void 0, function* () {
+            var _a, _b, _c;
+            // Verifica se o usuário atual deu like
+            const userLike = userId ? yield postLikeRepository.findOne({
+                where: {
+                    post: { id: post.id },
+                    user: { id: userId }
+                }
+            }) : null;
+            // Conta o total de likes ativos
+            const totalLikes = yield postLikeRepository.count({
+                where: {
+                    post: { id: post.id },
+                    userLiked: true
+                }
+            });
+            return Object.assign(Object.assign({}, post), { author: post.anonymous ? 'Anônimo' : (_a = post.user) === null || _a === void 0 ? void 0 : _a.username, comment_count: ((_b = post.comments) === null || _b === void 0 ? void 0 : _b.length) || 0, likes: totalLikes, userLiked: (_c = userLike === null || userLike === void 0 ? void 0 : userLike.userLiked) !== null && _c !== void 0 ? _c : false });
+        })));
         res.json(formattedPosts);
     }
     catch (error) {
@@ -38,22 +52,36 @@ const getPosts = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
 });
 exports.getPosts = getPosts;
 const getPost = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a, _b, _c, _d;
+    var _a, _b, _c;
     try {
         const { id } = req.params;
         const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id;
         const postRepository = database_1.AppDataSource.getRepository(entities_1.Post);
+        const postLikeRepository = database_1.AppDataSource.getRepository(entities_1.PostLike);
         const post = yield postRepository
             .createQueryBuilder('post')
             .leftJoinAndSelect('post.user', 'user')
             .leftJoinAndSelect('post.postLikes', 'postLikes')
-            .leftJoinAndSelect('postLikes.user', 'likeUser')
             .where('post.id = :id', { id: parseInt(id) })
             .getOne();
         if (!post) {
             return res.status(404).json({ message: 'Post não encontrado' });
         }
-        const formattedPost = Object.assign(Object.assign({}, post), { author: post.anonymous ? 'Anônimo' : (_b = post.user) === null || _b === void 0 ? void 0 : _b.username, likes: ((_c = post.postLikes) === null || _c === void 0 ? void 0 : _c.length) || 0, userLiked: userId ? (_d = post.postLikes) === null || _d === void 0 ? void 0 : _d.some(like => like.user.id === userId) : false });
+        // Verifica se o usuário atual deu like
+        const userLike = userId ? yield postLikeRepository.findOne({
+            where: {
+                post: { id: post.id },
+                user: { id: userId }
+            }
+        }) : null;
+        // Conta o total de likes ativos
+        const totalLikes = yield postLikeRepository.count({
+            where: {
+                post: { id: post.id },
+                userLiked: true
+            }
+        });
+        const formattedPost = Object.assign(Object.assign({}, post), { author: post.anonymous ? 'Anônimo' : (_b = post.user) === null || _b === void 0 ? void 0 : _b.username, likes: totalLikes, userLiked: (_c = userLike === null || userLike === void 0 ? void 0 : userLike.userLiked) !== null && _c !== void 0 ? _c : false });
         res.json(formattedPost);
     }
     catch (error) {
@@ -153,55 +181,60 @@ const likePost = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         if (!userId) {
             return res.status(401).json({ message: 'Usuário não autenticado' });
         }
+        console.log(`[LIKE POST] Iniciando processamento para postId=${postId}, userId=${userId}`);
         const postRepository = database_1.AppDataSource.getRepository(entities_1.Post);
-        const likeRepository = database_1.AppDataSource.getRepository(entities_1.PostLike);
-        const post = yield postRepository.findOne({
-            where: { id: parseInt(postId) }
-        });
-        if (!post) {
-            return res.status(404).json({ message: 'Post não encontrado' });
-        }
-        const existingLike = yield likeRepository.findOne({
+        const postLikeRepository = database_1.AppDataSource.getRepository(entities_1.PostLike);
+        // Verifica se já existe um like deste usuário
+        let existingLike = yield postLikeRepository.findOne({
             where: {
                 post: { id: parseInt(postId) },
                 user: { id: userId }
             }
         });
+        console.log(`[LIKE POST] Like existente encontrado:`, existingLike);
+        let userLiked = false;
         if (existingLike) {
-            // Se o like já existe, remove o like
-            yield likeRepository.remove(existingLike);
-            post.likes = Math.max(0, post.likes - 1);
-            yield postRepository.save(post);
-            return res.json({
-                message: 'Like removido',
-                likes: post.likes,
-                userLiked: false
-            });
+            // Se existe, alterna o estado do like
+            existingLike.userLiked = !existingLike.userLiked;
+            yield postLikeRepository.save(existingLike);
+            userLiked = existingLike.userLiked;
+            console.log(`[LIKE POST] Estado do like alternado para: userLiked=${userLiked}`);
         }
         else {
-            // Se o like não existe, cria um novo
-            const newLike = likeRepository.create({
+            // Se não existe, cria um novo like
+            const newLike = postLikeRepository.create({
                 post: { id: parseInt(postId) },
-                user: { id: userId }
-            });
-            yield likeRepository.save(newLike);
-            post.likes++;
-            yield postRepository.save(post);
-            return res.json({
-                message: 'Post curtido',
-                likes: post.likes,
+                user: { id: userId },
                 userLiked: true
             });
+            yield postLikeRepository.save(newLike);
+            userLiked = true;
+            console.log(`[LIKE POST] Novo like criado com userLiked=true`);
         }
+        // Conta APENAS os likes ativos (userLiked = true)
+        const totalLikes = yield postLikeRepository
+            .count({
+            where: {
+                post: { id: parseInt(postId) },
+                userLiked: true
+            }
+        });
+        console.log(`[LIKE POST] Total de likes ativos para post ${postId}: ${totalLikes}`);
+        console.log(`[LIKE POST] Estado final:`, { postId, userId, userLiked, totalLikes });
+        return res.json({
+            message: userLiked ? 'Post curtido' : 'Like removido',
+            likes: totalLikes,
+            userLiked: userLiked
+        });
     }
     catch (error) {
-        console.error('Erro ao processar like:', error);
+        console.error('[LIKE POST] Erro:', error);
         res.status(500).json({ message: 'Erro interno do servidor' });
     }
 });
 exports.likePost = likePost;
 const likeComment = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
+    var _a, _b;
     try {
         const { commentId } = req.params;
         const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id;
@@ -209,43 +242,54 @@ const likeComment = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
             return res.status(401).json({ message: 'Usuário não autenticado' });
         }
         const commentRepository = database_1.AppDataSource.getRepository(entities_1.Comment);
-        const likeRepository = database_1.AppDataSource.getRepository(entities_1.CommentLike);
+        const commentLikeRepository = database_1.AppDataSource.getRepository(entities_1.CommentLike);
         const comment = yield commentRepository
             .createQueryBuilder('comment')
             .leftJoinAndSelect('comment.commentLikes', 'commentLikes')
-            .leftJoinAndSelect('commentLikes.user', 'user')
             .where('comment.id = :id', { id: parseInt(commentId) })
             .getOne();
         if (!comment) {
             return res.status(404).json({ message: 'Comentário não encontrado' });
         }
-        const existingLike = yield likeRepository.findOne({
+        // Verifica se já existe um like deste usuário
+        let existingLike = yield commentLikeRepository.findOne({
             where: {
                 comment: { id: parseInt(commentId) },
                 user: { id: userId }
             }
         });
         if (existingLike) {
-            yield likeRepository.remove(existingLike);
-            comment.likes = Math.max(0, (comment.likes || 0) - 1);
-            yield commentRepository.save(comment);
-            return res.json({
-                message: 'Like removido',
-                likes: comment.commentLikes.length - 1,
-                userLiked: false
-            });
+            // Se existe, alterna o estado do like
+            existingLike.userLiked = !existingLike.userLiked;
+            yield commentLikeRepository.save(existingLike);
         }
-        const newLike = likeRepository.create({
-            comment: { id: parseInt(commentId) },
-            user: { id: userId }
+        else {
+            // Se não existe, cria um novo like
+            const newLike = commentLikeRepository.create({
+                comment: { id: parseInt(commentId) },
+                user: { id: userId },
+                userLiked: true
+            });
+            yield commentLikeRepository.save(newLike);
+        }
+        // Conta o total de likes ativos (onde userLiked = true)
+        const totalLikes = yield commentLikeRepository.count({
+            where: {
+                comment: { id: parseInt(commentId) },
+                userLiked: true
+            }
         });
-        yield likeRepository.save(newLike);
-        comment.likes = (comment.likes || 0) + 1;
-        yield commentRepository.save(comment);
+        // Verifica o estado atual do like do usuário
+        const currentUserLike = yield commentLikeRepository.findOne({
+            where: {
+                comment: { id: parseInt(commentId) },
+                user: { id: userId }
+            }
+        });
         return res.json({
-            message: 'Comentário curtido',
-            likes: comment.commentLikes.length + 1,
-            userLiked: true
+            message: (currentUserLike === null || currentUserLike === void 0 ? void 0 : currentUserLike.userLiked) ? 'Comentário curtido' : 'Like removido',
+            likes: totalLikes,
+            userLiked: (_b = currentUserLike === null || currentUserLike === void 0 ? void 0 : currentUserLike.userLiked) !== null && _b !== void 0 ? _b : false
         });
     }
     catch (error) {
@@ -260,28 +304,42 @@ const getComments = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
         const { postId } = req.params;
         const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id;
         const commentRepository = database_1.AppDataSource.getRepository(entities_1.Comment);
+        const commentLikeRepository = database_1.AppDataSource.getRepository(entities_1.CommentLike);
         const comments = yield commentRepository
             .createQueryBuilder('comment')
             .leftJoinAndSelect('comment.user', 'user')
             .leftJoinAndSelect('comment.post', 'post')
             .leftJoinAndSelect('comment.commentLikes', 'commentLikes')
-            .leftJoinAndSelect('commentLikes.user', 'likeUser')
             .where('comment.post.id = :postId', { postId: parseInt(postId) })
             .orderBy('comment.created_at', 'DESC')
             .getMany();
-        const formattedComments = comments.map(comment => {
-            var _a, _b, _c;
-            return ({
+        const formattedComments = yield Promise.all(comments.map((comment) => __awaiter(void 0, void 0, void 0, function* () {
+            var _a, _b;
+            // Verifica se o usuário atual deu like
+            const userLike = userId ? yield commentLikeRepository.findOne({
+                where: {
+                    comment: { id: comment.id },
+                    user: { id: userId }
+                }
+            }) : null;
+            // Conta o total de likes ativos
+            const totalLikes = yield commentLikeRepository.count({
+                where: {
+                    comment: { id: comment.id },
+                    userLiked: true
+                }
+            });
+            return {
                 id: comment.id,
                 content: comment.content,
                 author: comment.anonymous ? 'Anônimo' : (_a = comment.user) === null || _a === void 0 ? void 0 : _a.username,
                 created_at: comment.created_at,
                 post_id: parseInt(postId),
                 anonymous: comment.anonymous,
-                likes: ((_b = comment.commentLikes) === null || _b === void 0 ? void 0 : _b.length) || 0,
-                userLiked: userId ? (_c = comment.commentLikes) === null || _c === void 0 ? void 0 : _c.some(like => like.user.id === userId) : false
-            });
-        });
+                likes: totalLikes,
+                userLiked: (_b = userLike === null || userLike === void 0 ? void 0 : userLike.userLiked) !== null && _b !== void 0 ? _b : false // Use o estado atual do like
+            };
+        })));
         res.json(formattedComments);
     }
     catch (error) {

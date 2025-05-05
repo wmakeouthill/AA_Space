@@ -30,7 +30,7 @@ export class HomeComponent implements OnInit {
         this.posts = posts.map(post => ({
           ...post,
           likes: post.likes ?? 0,
-          userLiked: (post.likes ?? 0) > 0, // Define userLiked baseado no número de likes
+          userLiked: post.userLiked ?? false, // Use the server's userLiked value
           comment_count: post.comment_count ?? 0
         }));
         this.isLoading = false;
@@ -53,21 +53,19 @@ export class HomeComponent implements OnInit {
     const postIndex = this.posts.findIndex(p => p.id === postId);
     if (postIndex === -1) return;
 
-    // Cria uma nova referência do array para forçar a detecção de mudanças
+    // Mantém o estado anterior para caso de erro
+    const previousState = {
+      likes: post.likes,
+      userLiked: post.userLiked
+    };
+
+    // Atualiza o estado otimisticamente
     const updatedPosts = [...this.posts];
-    const updatedPost = { ...post };
-
-    // Atualiza o estado do like usando a lógica de 0/1
-    if (updatedPost.likes === 0) {
-      updatedPost.likes = 1;
-      updatedPost.userLiked = true;
-    } else {
-      updatedPost.likes = 0;
-      updatedPost.userLiked = false;
-    }
-
-    // Atualiza o array com o novo post
-    updatedPosts[postIndex] = updatedPost;
+    updatedPosts[postIndex] = {
+      ...post,
+      userLiked: !post.userLiked,
+      likes: post.userLiked ? Math.max(0, post.likes - 1) : post.likes + 1
+    };
     this.posts = updatedPosts;
 
     this.apiService.likePost(postId).subscribe({
@@ -77,7 +75,7 @@ export class HomeComponent implements OnInit {
         newPosts[postIndex] = {
           ...newPosts[postIndex],
           likes: response.likes,
-          userLiked: response.likes > 0 // Define userLiked baseado no número de likes
+          userLiked: response.userLiked
         };
         this.posts = newPosts;
       },
@@ -87,7 +85,11 @@ export class HomeComponent implements OnInit {
 
         // Reverte a mudança em caso de erro
         const newPosts = [...this.posts];
-        newPosts[postIndex] = { ...post };
+        newPosts[postIndex] = {
+          ...post,
+          likes: previousState.likes,
+          userLiked: previousState.userLiked
+        };
         this.posts = newPosts;
       }
     });

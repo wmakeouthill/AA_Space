@@ -38,6 +38,14 @@ __decorate([
     (0, typeorm_1.OneToMany)(() => Comment, comment => comment.user),
     __metadata("design:type", Array)
 ], User.prototype, "comments", void 0);
+__decorate([
+    (0, typeorm_1.OneToMany)(() => PostLike, postLike => postLike.user),
+    __metadata("design:type", Array)
+], User.prototype, "postLikes", void 0);
+__decorate([
+    (0, typeorm_1.OneToMany)(() => CommentLike, commentLike => commentLike.user),
+    __metadata("design:type", Array)
+], User.prototype, "commentLikes", void 0);
 exports.User = User = __decorate([
     (0, typeorm_1.Entity)()
 ], User);
@@ -141,11 +149,15 @@ __decorate([
     __metadata("design:type", Date)
 ], PostLike.prototype, "created_at", void 0);
 __decorate([
-    (0, typeorm_1.ManyToOne)(() => Post, post => post.postLikes, { nullable: false }),
+    (0, typeorm_1.Column)({ default: false }),
+    __metadata("design:type", Boolean)
+], PostLike.prototype, "userLiked", void 0);
+__decorate([
+    (0, typeorm_1.ManyToOne)(() => Post, post => post.postLikes),
     __metadata("design:type", Post)
 ], PostLike.prototype, "post", void 0);
 __decorate([
-    (0, typeorm_1.ManyToOne)(() => User, { nullable: false }),
+    (0, typeorm_1.ManyToOne)(() => User, user => user.postLikes),
     __metadata("design:type", User)
 ], PostLike.prototype, "user", void 0);
 exports.PostLike = PostLike = __decorate([
@@ -163,11 +175,15 @@ __decorate([
     __metadata("design:type", Date)
 ], CommentLike.prototype, "created_at", void 0);
 __decorate([
-    (0, typeorm_1.ManyToOne)(() => Comment, comment => comment.commentLikes, { nullable: false }),
+    (0, typeorm_1.Column)({ default: false }),
+    __metadata("design:type", Boolean)
+], CommentLike.prototype, "userLiked", void 0);
+__decorate([
+    (0, typeorm_1.ManyToOne)(() => Comment, comment => comment.commentLikes),
     __metadata("design:type", Comment)
 ], CommentLike.prototype, "comment", void 0);
 __decorate([
-    (0, typeorm_1.ManyToOne)(() => User, { nullable: false }),
+    (0, typeorm_1.ManyToOne)(() => User, user => user.commentLikes),
     __metadata("design:type", User)
 ], CommentLike.prototype, "user", void 0);
 exports.CommentLike = CommentLike = __decorate([

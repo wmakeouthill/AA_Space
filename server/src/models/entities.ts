@@ -19,6 +19,12 @@ export class User {
 
     @OneToMany(() => Comment, comment => comment.user)
     comments: Comment[];
+
+    @OneToMany(() => PostLike, postLike => postLike.user)
+    postLikes: PostLike[];
+
+    @OneToMany(() => CommentLike, commentLike => commentLike.user)
+    commentLikes: CommentLike[];
 }
 
 @Entity()
@@ -93,12 +99,12 @@ export class PostLike {
     created_at: Date;
 
     @Column({ default: false })
-    userLiked: boolean;  // Indica se o usuário específico deu like
+    userLiked: boolean;
 
-    @ManyToOne(() => Post, post => post.postLikes, { nullable: false })
+    @ManyToOne(() => Post, post => post.postLikes)
     post: Post;
 
-    @ManyToOne(() => User, { nullable: false })
+    @ManyToOne(() => User, user => user.postLikes)
     user: User;
 }
 
@@ -111,11 +117,11 @@ export class CommentLike {
     created_at: Date;
 
     @Column({ default: false })
-    userLiked: boolean;  // Indica se o usuário específico deu like
+    userLiked: boolean;
 
-    @ManyToOne(() => Comment, comment => comment.commentLikes, { nullable: false })
+    @ManyToOne(() => Comment, comment => comment.commentLikes)
     comment: Comment;
 
-    @ManyToOne(() => User, { nullable: false })
+    @ManyToOne(() => User, user => user.commentLikes)
     user: User;
 }

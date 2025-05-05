@@ -50,7 +50,7 @@ export class PostComponent implements OnInit {
         this.post = {
           ...post,
           likes: post.likes ?? 0,
-          userLiked: (post.likes ?? 0) > 0, // Define userLiked baseado no número de likes
+          userLiked: post.userLiked ?? false, // Use the server's userLiked value
           comment_count: post.comment_count ?? 0
         };
       },
@@ -64,11 +64,10 @@ export class PostComponent implements OnInit {
   private loadComments(postId: number) {
     this.apiService.getComments(postId).subscribe({
       next: (comments) => {
-        // Garante que os valores estejam definidos corretamente ao carregar os comentários
         this.comments = comments.map(comment => ({
           ...comment,
           likes: comment.likes ?? 0,
-          userLiked: comment.likes > 0, // Define userLiked baseado no número de likes
+          userLiked: comment.userLiked ?? false, // Use the server's userLiked value
           id: comment.id,
           content: comment.content,
           author: comment.author,
@@ -76,13 +75,6 @@ export class PostComponent implements OnInit {
           post_id: postId,
           anonymous: comment.anonymous
         }));
-
-        // Log para debug dos likes
-        console.log('Comentários carregados:', this.comments.map(c => ({
-          id: c.id,
-          userLiked: c.userLiked,
-          likes: c.likes
-        })));
       },
       error: (error) => {
         console.error('Erro ao carregar comentários:', error);
@@ -128,27 +120,31 @@ export class PostComponent implements OnInit {
       userLiked: this.post.userLiked
     };
 
-    // Atualiza o estado usando a lógica de 0/1
-    if (this.post.likes === 0) {
-      this.post.likes = 1;
-      this.post.userLiked = true;
-    } else {
-      this.post.likes = 0;
-      this.post.userLiked = false;
-    }
+    console.log('[LIKE POST] Antes do clique:', previousState);
+
+    // Optimistic update
+    this.post = {
+      ...this.post,
+      userLiked: !this.post.userLiked,
+      likes: this.post.userLiked ? Math.max(0, this.post.likes - 1) : this.post.likes + 1
+    };
+
+    console.log('[LIKE POST] Após clique (optimistic):', this.post);
 
     this.apiService.likePost(this.post.id).subscribe({
       next: (response) => {
+        console.log('[LIKE POST] Resposta do backend:', response);
         if (this.post) {
           this.post = {
             ...this.post,
             likes: response.likes,
-            userLiked: response.likes > 0 // Define userLiked baseado no número de likes
+            userLiked: response.userLiked // Use the server's userLiked value
           };
+          console.log('[LIKE POST] Estado final após resposta:', this.post);
         }
       },
       error: (error) => {
-        console.error('Erro ao curtir post:', error);
+        console.error('[LIKE POST] Erro ao curtir post:', error);
         this.error = 'Não foi possível curtir o post. Por favor, tente novamente mais tarde.';
         if (this.post) {
           this.post = {
@@ -156,6 +152,7 @@ export class PostComponent implements OnInit {
             likes: previousState.likes,
             userLiked: previousState.userLiked
           };
+          console.log('[LIKE POST] Estado revertido após erro:', this.post);
         }
       }
     });
@@ -167,42 +164,49 @@ export class PostComponent implements OnInit {
     const commentIndex = this.comments.findIndex(c => c.id === comment.id);
     if (commentIndex === -1) return;
 
-    // Cria uma cópia do array de comentários para forçar a detecção de mudanças
+    const previousState = {
+      likes: comment.likes,
+      userLiked: comment.userLiked
+    };
+
+    console.log('[LIKE COMMENT] Antes do clique:', previousState, 'CommentID:', comment.id);
+
+    // Optimistic update
     const updatedComments = [...this.comments];
-    const updatedComment = { ...comment };
-
-    // Atualiza o estado do like usando a lógica de 0/1
-    if (updatedComment.likes === 0) {
-      updatedComment.likes = 1;
-      updatedComment.userLiked = true;
-    } else {
-      updatedComment.likes = 0;
-      updatedComment.userLiked = false;
-    }
-
-    // Atualiza o array com o novo comentário
-    updatedComments[commentIndex] = updatedComment;
+    updatedComments[commentIndex] = {
+      ...comment,
+      userLiked: !comment.userLiked,
+      likes: comment.userLiked ? Math.max(0, comment.likes - 1) : comment.likes + 1
+    };
     this.comments = updatedComments;
+
+    console.log('[LIKE COMMENT] Após clique (optimistic):', this.comments[commentIndex]);
 
     this.apiService.likeComment(this.post.id, comment.id).subscribe({
       next: (response) => {
-        // Atualiza com a resposta do servidor
+        console.log('[LIKE COMMENT] Resposta do backend:', response, 'CommentID:', comment.id);
         const newComments = [...this.comments];
         newComments[commentIndex] = {
           ...newComments[commentIndex],
           likes: response.likes,
-          userLiked: response.likes > 0 // Define userLiked baseado no número de likes
+          userLiked: response.userLiked // Use the server's userLiked value
         };
         this.comments = newComments;
+        console.log('[LIKE COMMENT] Estado final após resposta:', this.comments[commentIndex]);
       },
       error: (error) => {
-        console.error('Erro ao curtir comentário:', error);
+        console.error('[LIKE COMMENT] Erro ao curtir comentário:', error, 'CommentID:', comment.id);
         this.error = 'Não foi possível curtir o comentário. Por favor, tente novamente mais tarde.';
 
         // Reverte a mudança em caso de erro
         const newComments = [...this.comments];
-        newComments[commentIndex] = { ...comment };
+        newComments[commentIndex] = {
+          ...comment,
+          likes: previousState.likes,
+          userLiked: previousState.userLiked
+        };
         this.comments = newComments;
+        console.log('[LIKE COMMENT] Estado revertido após erro:', this.comments[commentIndex]);
       }
     });
   }

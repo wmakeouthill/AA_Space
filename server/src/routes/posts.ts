@@ -4,10 +4,10 @@ import { authMiddleware } from '../middleware/auth.middleware';
 
 const router = Router();
 
-// Rotas públicas
-router.get('/', getPosts);
-router.get('/:id', getPost);
-router.get('/:postId/comments', getComments);
+// Rotas autenticadas para garantir persistência do like por usuário
+router.get('/', authMiddleware, getPosts);
+router.get('/:id', authMiddleware, getPost);
+router.get('/:postId/comments', authMiddleware, getComments);
 
 // Rotas autenticadas
 router.post('/', authMiddleware, createPost);
