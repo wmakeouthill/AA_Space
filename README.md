@@ -1,59 +1,140 @@
-# AaSpace
+# AA Space
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 19.2.10.
+Um fórum seguro e acolhedor para compartilhar experiências e encontrar apoio. Este projeto foi desenvolvido usando Angular 19 para o frontend e Node.js com Express para o backend.
 
-## Development server
+## Requisitos do Sistema
 
-To start a local development server, run:
+- Node.js (v18 ou superior)
+- npm (v9 ou superior)
+- Angular CLI (v19.2.10)
+- SQLite3
 
+## Estrutura do Projeto
+
+O projeto está dividido em duas partes principais:
+
+- `/src` - Frontend Angular
+- `/server` - Backend Node.js/Express
+
+## Instalação
+
+1. Clone o repositório:
+```bash
+git clone [url-do-repositorio]
+```
+
+2. Instale as dependências do frontend:
+```bash
+npm install
+```
+
+3. Instale as dependências do backend:
+```bash
+cd server
+npm install
+```
+
+### Dependências Principais
+
+#### Frontend (Angular):
+- @angular/common: ^19.2.0
+- @angular/compiler: ^19.2.0
+- @angular/core: ^19.2.0
+- @angular/forms: ^19.2.0
+- @angular/platform-browser: ^19.2.0
+- @angular/platform-browser-dynamic: ^19.2.0
+- @angular/router: ^19.2.0
+- rxjs: ~7.8.0
+- zone.js: ~0.15.0
+
+#### Backend (Node.js):
+- express: ^5.1.0
+- typeorm: ^0.3.22
+- sqlite3: ^5.1.7
+- bcrypt: ^5.1.1
+- jsonwebtoken: ^9.0.0
+- cors: ^2.8.5
+- dotenv: ^16.5.0
+
+## Configuração
+
+1. Configure as variáveis de ambiente do backend:
+   Crie um arquivo `.env` na pasta `/server` com as seguintes variáveis:
+```
+DB_HOST=localhost
+DB_USER=root
+DB_PASSWORD=root
+DB_NAME=aa_space
+JWT_SECRET=seu_segredo_jwt_super_secreto
+PORT=3001
+```
+
+## Executando o Projeto
+
+1. Inicie o servidor backend:
+```bash
+cd server
+npm run dev
+```
+
+2. Em outro terminal, inicie o frontend:
 ```bash
 ng serve
 ```
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+O frontend estará disponível em `http://localhost:4200` e o backend em `http://localhost:3001`.
 
-## Code scaffolding
+## Funcionalidades
 
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
+- Sistema de autenticação com JWT
+- Criação de posts anônimos ou identificados
+- Sistema de comentários
+- Sistema de curtidas em posts e comentários
+- Modo convidado com nickname
+- Interface responsiva e amigável
 
-```bash
-ng generate component component-name
-```
+## Estrutura do Banco de Dados
 
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+O projeto utiliza SQLite3 com TypeORM e possui as seguintes entidades:
 
-```bash
-ng generate --help
-```
+- User (Usuários)
+- Post (Postagens)
+- Comment (Comentários)
+- PostLike (Curtidas em posts)
+- CommentLike (Curtidas em comentários)
 
-## Building
+## Desenvolvimento
 
-To build the project run:
-
-```bash
-ng build
-```
-
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
-
-## Running unit tests
-
-To execute unit tests with the [Karma](https://karma-runner.github.io) test runner, use the following command:
-
+- Para executar os testes:
 ```bash
 ng test
 ```
 
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
-
+- Para criar uma build de produção:
 ```bash
-ng e2e
+ng build --prod
 ```
 
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
+## Endpoints da API
 
-## Additional Resources
+### Autenticação
+- POST /api/auth/register - Registro de usuário
+- POST /api/auth/login - Login
+- GET /api/auth/validate - Validação de token
 
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+### Posts
+- GET /api/posts - Lista todos os posts
+- GET /api/posts/:id - Obtém um post específico
+- POST /api/posts - Cria um novo post
+- GET /api/posts/:postId/comments - Lista comentários de um post
+- POST /api/posts/:postId/comments - Adiciona um comentário
+- POST /api/posts/:postId/like - Curtir/descurtir um post
+- POST /api/posts/:postId/comments/:commentId/like - Curtir/descurtir um comentário
+
+## Contribuição
+
+1. Faça o fork do projeto
+2. Crie uma branch para sua feature (`git checkout -b feature/AmazingFeature`)
+3. Faça commit das suas mudanças (`git commit -m 'Add some AmazingFeature'`)
+4. Faça push para a branch (`git push origin feature/AmazingFeature`)
+5. Abra um Pull Request
