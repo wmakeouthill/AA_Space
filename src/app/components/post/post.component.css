@@ -42,6 +42,9 @@
   color: #666;
   font-size: 0.9rem;
   margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .post-body {
@@ -54,6 +57,9 @@
   padding: 1rem 0;
   border-top: 1px solid #eee;
   border-bottom: 1px solid #eee;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
 }
 
 .like-button {
@@ -98,6 +104,54 @@
 .like-button.small {
   padding: 0.25rem 0.7rem;
   font-size: 0.9em;
+}
+
+.delete-button {
+  background: none;
+  border: 1px solid #dc3545;
+  border-radius: 20px;
+  padding: 0.4rem 0.9rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.2s ease;
+  color: #dc3545;
+}
+
+.delete-button:hover {
+  background-color: #dc3545;
+  color: white;
+}
+
+.delete-button .delete-icon {
+  transition: transform 0.2s ease;
+}
+
+.delete-button:hover .delete-icon {
+  transform: scale(1.1);
+}
+
+.delete-button-small {
+  background: none;
+  border: none;
+  padding: 0;
+  margin-left: 0.5rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: #dc3545;
+  opacity: 0.6;
+  transition: opacity 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+}
+
+.delete-button-small:hover {
+  opacity: 1;
+}
+
+.delete-icon-small {
+  font-size: 0.9rem;
 }
 
 .comments-section {

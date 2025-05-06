@@ -37,6 +37,14 @@ export class ApiService {
     return this.http.get<Post>(`${this.API_URL}/posts/${id}`);
   }
 
+  deletePost(id: number): Observable<any> {
+    // Usando a rota POST alternativa para exclusão
+    return this.http.post<any>(`${this.API_URL}/posts/${id}/delete`, {});
+    
+    // Método DELETE original (comentado para usar o POST)
+    // return this.http.delete<any>(`${this.API_URL}/posts/${id}`);
+  }
+
   getComments(postId: number): Observable<Comment[]> {
     return this.http.get<Comment[]>(`${this.API_URL}/posts/${postId}/comments`);
   }

@@ -115,7 +115,8 @@ export const validateToken = async (req: Request, res: Response) => {
 
         res.json({
             valid: true,
-            username: user.username
+            username: user.username,
+            userId: user.id // Adiciona o ID do usuário na resposta
         });
     } catch (error) {
         console.error('Erro ao validar token:', error);

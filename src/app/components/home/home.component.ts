@@ -6,6 +6,11 @@ import { AuthService } from '../../services/auth.service';
 import { GuestService } from '../../services/guest.service';
 import { Post } from '../../models/post.interface';
 
+interface UserInfo {
+  id: number;
+  username: string;
+}
+
 @Component({
   selector: 'app-home',
   standalone: true,
@@ -17,6 +22,7 @@ export class HomeComponent implements OnInit {
   posts: Post[] = [];
   isLoading = true;
   error: string | null = null;
+  userId: number | null = null;
 
   constructor(
     private apiService: ApiService,
@@ -33,6 +39,18 @@ export class HomeComponent implements OnInit {
     if (!isAuthenticated && !hasGuestNickname) {
       this.router.navigate(['/welcome']);
       return;
+    }
+
+    // Obtém o ID do usuário atual se estiver autenticado
+    if (isAuthenticated) {
+      this.authService.getUserInfo().subscribe({
+        next: (user: UserInfo) => {
+          this.userId = user.id;
+        },
+        error: () => {
+          this.userId = null;
+        }
+      });
     }
 
     this.loadPosts();
@@ -114,5 +132,32 @@ export class HomeComponent implements OnInit {
 
   reloadPosts() {
     this.loadPosts();
+  }
+
+  // Verifica se o usuário atual é o autor do post
+  isPostAuthor(post: Post): boolean {
+    if (!this.userId || !post.user) return false;
+    return post.user.id === this.userId;
+  }
+
+  deletePost(postId: number, event: Event) {
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (!confirm('Tem certeza que deseja excluir esta postagem? Esta ação não pode ser desfeita.')) {
+      return;
+    }
+
+    this.apiService.deletePost(postId).subscribe({
+      next: () => {
+        // Remove o post da lista após exclusão bem-sucedida
+        this.posts = this.posts.filter(p => p.id !== postId);
+        this.error = null;
+      },
+      error: (error) => {
+        console.error('Erro ao excluir postagem:', error);
+        this.error = error.error?.message || 'Não foi possível excluir a postagem. Por favor, tente novamente mais tarde.';
+      }
+    });
   }
 }

@@ -129,6 +129,8 @@ const startServer = async () => {
             console.log('- POST /api/posts/:postId/comments');
             console.log('- POST /api/posts/:postId/like [auth required]');
             console.log('- POST /api/posts/:postId/comments/:commentId/like [auth required]');
+            console.log('- DELETE /api/posts/:id [auth required]');
+            console.log('- POST /api/posts/:id/delete [auth required]');
         });
     } catch (error) {
         console.error('Error during initialization:', error);

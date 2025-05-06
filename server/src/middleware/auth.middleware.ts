@@ -6,12 +6,19 @@ interface AuthRequest extends Request {
 }
 
 export const authMiddleware = (req: Request, res: Response, next: NextFunction) => {
+    // Adiciona logs para diagnóstico
+    console.log(`[AUTH MIDDLEWARE] Método: ${req.method}, URL: ${req.url}`);
+    console.log(`[AUTH MIDDLEWARE] Headers Authorization:`, req.headers.authorization);
+    
     const token = req.headers.authorization?.split(' ')[1];
+    console.log(`[AUTH MIDDLEWARE] Token presente: ${!!token}`);
 
     if (token) {
         try {
-            const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key') as { id: number; username: string };
+            const JWT_SECRET = process.env.JWT_SECRET || 'seu_segredo_jwt_super_secreto';
+            const decoded = jwt.verify(token, JWT_SECRET) as { id: number; username: string };
             (req as AuthRequest).user = decoded;
+            console.log(`[AUTH MIDDLEWARE] Token válido, usuário: ${decoded.id} (${decoded.username})`);
         } catch (error) {
             console.error('Erro ao verificar token:', error);
         }

@@ -8,6 +8,11 @@ export interface Post {
     comment_count: number;
     anonymous: boolean;
     userLiked: boolean;
+    user?: {
+        id: number;
+        username?: string;
+    };
+    user_id?: number; // Adicionando propriedade opcional user_id
 }
 
 export interface Comment {

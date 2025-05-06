@@ -7,6 +7,11 @@ import { ApiService } from '../../services/api.service';
 import { AuthService } from '../../services/auth.service';
 import { GuestService } from '../../services/guest.service';
 
+interface UserInfo {
+  id: number;
+  username: string;
+}
+
 @Component({
   selector: 'app-post',
   standalone: true,
@@ -21,6 +26,8 @@ export class PostComponent implements OnInit {
   isSubmitting = false;
   error: string | null = null;
   isLoggedIn = false;
+  isCurrentUserAuthor = false;
+  userId: number | null = null;
 
   constructor(
     private route: ActivatedRoute,
@@ -38,6 +45,20 @@ export class PostComponent implements OnInit {
 
   ngOnInit() {
     this.isLoggedIn = this.authService.getToken() !== null;
+    
+    // Obter ID do usuário atual, se estiver logado
+    if (this.isLoggedIn) {
+      this.authService.getUserInfo().subscribe({
+        next: (user: UserInfo) => {
+          this.userId = user.id;
+          this.checkAuthorPermissions();
+        },
+        error: () => {
+          this.userId = null;
+        }
+      });
+    }
+    
     this.route.params.subscribe(params => {
       const id = params['id'];
       if (!id) {
@@ -58,6 +79,7 @@ export class PostComponent implements OnInit {
           likes: post.likes ?? 0,
           userLiked: !!post.userLiked // Força a conversão para booleano
         };
+        this.checkAuthorPermissions();
       },
       error: (error) => {
         console.error('Erro ao carregar post:', error);
@@ -214,6 +236,83 @@ export class PostComponent implements OnInit {
           userLiked: previousState.userLiked
         };
         this.comments = newComments;
+      }
+    });
+  }
+
+  // Verifica se o usuário atual é o autor do post
+  private checkAuthorPermissions() {
+    console.log("Verificando permissões de autor:");
+    console.log("Post:", this.post);
+    console.log("UserId:", this.userId);
+    
+    // Se não há post ou usuário logado, não é o autor
+    if (!this.post || !this.userId) {
+      console.log("Sem post ou usuário logado");
+      this.isCurrentUserAuthor = false;
+      return;
+    }
+
+    // Obter o token atual e tentar extrair o id do usuário caso ainda não tenhamos
+    if (!this.userId) {
+      const token = this.authService.getToken();
+      if (token) {
+        try {
+          const tokenParts = token.split('.');
+          if (tokenParts.length === 3) {
+            const tokenPayload = JSON.parse(atob(tokenParts[1]));
+            console.log('Token payload:', tokenPayload);
+            if (tokenPayload.id) {
+              this.userId = tokenPayload.id;
+              console.log('ID do usuário extraído do token:', this.userId);
+            }
+          }
+        } catch (e) {
+          console.error('Erro ao decodificar token:', e);
+        }
+      }
+    }
+
+    // Verificação principal: checamos se o post.user existe e tem o mesmo id que o usuário logado
+    if (this.post.user && this.userId) {
+      console.log(`Comparando IDs do objeto user: post.user.id (${this.post.user.id}) === userId (${this.userId})`);
+      this.isCurrentUserAuthor = this.post.user.id === this.userId;
+    } 
+    // Verificação alternativa: se o post tem um user_id, verificamos diretamente com ele
+    else if (this.post.user_id !== undefined && this.post.user_id !== null && this.userId) {
+      console.log(`Comparando com user_id: post.user_id (${this.post.user_id}) === userId (${this.userId})`);
+      this.isCurrentUserAuthor = this.post.user_id === this.userId;
+    }
+    // Última tentativa: comparar o post.author com o nome de usuário atual
+    else {
+      const username = this.authService.getUsername();
+      if (username && this.post.author) {
+        // Removemos o prefixo "Convidado:" se existir, para comparação mais precisa
+        const authorName = this.post.author.replace('Convidado: ', '');
+        console.log(`Comparando por nome de usuário: "${authorName}" === "${username}"`);
+        this.isCurrentUserAuthor = authorName === username;
+      } else {
+        this.isCurrentUserAuthor = false;
+      }
+    }
+    
+    console.log("Resultado da verificação de autor:", this.isCurrentUserAuthor);
+  }
+
+  deletePost() {
+    if (!this.post) return;
+
+    if (!confirm('Tem certeza que deseja excluir esta postagem? Esta ação não pode ser desfeita.')) {
+      return;
+    }
+
+    this.apiService.deletePost(this.post.id).subscribe({
+      next: () => {
+        this.router.navigate(['/']);
+      },
+      error: (error) => {
+        console.error('Erro ao excluir postagem:', error);
+        this.error = error.error?.message || 'Não foi possível excluir a postagem. Por favor, tente novamente mais tarde.';
       }
     });
   }

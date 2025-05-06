@@ -105,13 +105,24 @@ export const getPost = async (req: Request, res: Response) => {
 
         const author = post.anonymous ? 'Anônimo' : (post.originalAuthor || post.author);
 
+        // Preserva explicitamente a informação do usuário autor
         const formattedPost = {
             ...post,
             author,
             likes: totalLikes,
-            userLiked: !!userLike
+            userLiked: !!userLike,
+            // Garantir que a informação do usuário seja preservada
+            user: post.user ? {
+                id: post.user.id,
+                username: post.user.username
+            } : null,
+            // Adicionar user_id explicitamente para facilitar a verificação de autoria
+            user_id: post.user ? post.user.id : null
         };
 
+        // Para debug
+        console.log(`[GET POST] Resposta final - post.user: ${post.user ? JSON.stringify(post.user) : 'null'}`);
+        console.log(`[GET POST] Resposta final - formattedPost.user_id: ${formattedPost.user_id}`);
         console.log(`[GET POST] Resposta final - userLiked: ${!!userLike}, totalLikes: ${totalLikes}`);
 
         res.json(formattedPost);
@@ -418,6 +429,77 @@ export const getComments = async (req: Request, res: Response) => {
         res.json(formattedComments);
     } catch (error) {
         console.error('Erro ao buscar comentários:', error);
+        res.status(500).json({ message: 'Erro interno do servidor' });
+    }
+};
+
+export const deletePost = async (req: AuthRequest, res: Response) => {
+    try {
+        const { id } = req.params;
+        const userId = req.user?.id;
+        const postId = parseInt(id);
+
+        console.log(`[DELETE POST] Tentativa de excluir post ${id} pelo usuário ${userId}`);
+
+        if (!userId) {
+            return res.status(401).json({ message: 'Usuário não autenticado' });
+        }
+
+        const postRepository = AppDataSource.getRepository(Post);
+        const commentRepository = AppDataSource.getRepository(Comment);
+        const postLikeRepository = AppDataSource.getRepository(PostLike);
+        const commentLikeRepository = AppDataSource.getRepository(CommentLike);
+        
+        // Busca o post para verificar se o usuário atual é o autor
+        const post = await postRepository.findOne({
+            where: { id: postId },
+            relations: ['user', 'comments', 'postLikes']
+        });
+
+        if (!post) {
+            return res.status(404).json({ message: 'Post não encontrado' });
+        }
+
+        // Verifica se o usuário é o autor do post
+        if (post.user && post.user.id !== userId) {
+            return res.status(403).json({ message: 'Você não tem permissão para excluir este post' });
+        }
+
+        console.log(`[DELETE POST] Iniciando exclusão do post ${id} e seus relacionamentos`);
+
+        // Passo 1: Encontrar todos os comentários relacionados ao post
+        const comments = await commentRepository.find({
+            where: { post: { id: postId } },
+            relations: ['commentLikes']
+        });
+
+        // Passo 2: Para cada comentário, remover curtidas do comentário
+        for (const comment of comments) {
+            console.log(`[DELETE POST] Removendo curtidas do comentário ${comment.id}`);
+            if (comment.commentLikes && comment.commentLikes.length > 0) {
+                await commentLikeRepository.remove(comment.commentLikes);
+            }
+        }
+
+        // Passo 3: Remover todos os comentários do post
+        if (comments.length > 0) {
+            console.log(`[DELETE POST] Removendo ${comments.length} comentários do post ${id}`);
+            await commentRepository.remove(comments);
+        }
+
+        // Passo 4: Remover todas as curtidas do post
+        if (post.postLikes && post.postLikes.length > 0) {
+            console.log(`[DELETE POST] Removendo ${post.postLikes.length} curtidas do post ${id}`);
+            await postLikeRepository.remove(post.postLikes);
+        }
+
+        // Passo 5: Finalmente remover o post
+        console.log(`[DELETE POST] Finalizando exclusão do post ${id}`);
+        await postRepository.remove(post);
+
+        return res.status(200).json({ message: 'Post excluído com sucesso' });
+    } catch (error) {
+        console.error('Erro ao excluir post:', error);
         res.status(500).json({ message: 'Erro interno do servidor' });
     }
 };
