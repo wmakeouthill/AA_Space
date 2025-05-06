@@ -83,4 +83,19 @@ export class ApiService {
         })
       );
   }
+
+  // Método para remover privilégios de administrador de um usuário
+  removeAdmin(username: string): Observable<any> {
+    return this.http.post<any>(`${this.API_URL}/auth/remove-admin`, { username });
+  }
+  
+  // Método para transferir o título de administrador principal para outro usuário
+  transferMainAdmin(username: string): Observable<any> {
+    return this.http.post<any>(`${this.API_URL}/auth/transfer-admin`, { username });
+  }
+  
+  // Método para listar todos os administradores
+  listAdmins(): Observable<any> {
+    return this.http.get<any>(`${this.API_URL}/auth/admins`);
+  }
 }

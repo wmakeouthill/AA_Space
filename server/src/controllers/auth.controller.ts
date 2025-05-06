@@ -191,3 +191,188 @@ export const promoteToAdmin = async (req: AuthRequest, res: Response) => {
         res.status(500).json({ message: 'Erro interno do servidor' });
     }
 };
+
+export const removeAdmin = async (req: AuthRequest, res: Response) => {
+    try {
+        // Verificar se o usuário que faz a solicitação é um administrador
+        const requestingUserId = req.user?.id;
+        const isRequestingUserAdmin = req.user?.isAdmin;
+
+        if (!requestingUserId) {
+            return res.status(401).json({ message: 'Usuário não autenticado' });
+        }
+
+        if (!isRequestingUserAdmin) {
+            return res.status(403).json({ message: 'Apenas administradores podem remover privilégios de administrador' });
+        }
+
+        // Obter o nome de usuário a ser rebaixado
+        const { username } = req.body;
+
+        if (!username) {
+            return res.status(400).json({ message: 'É necessário fornecer um nome de usuário' });
+        }
+
+        const userRepository = AppDataSource.getRepository(User);
+        let userToRemove;
+
+        // Encontrar o usuário pelo nome de usuário
+        userToRemove = await userRepository.findOne({
+            where: { username }
+        });
+
+        if (!userToRemove) {
+            return res.status(404).json({ message: 'Usuário não encontrado' });
+        }
+
+        // Verificar se o usuário já não é administrador
+        if (!userToRemove.isAdmin) {
+            return res.status(400).json({ message: 'Usuário não é administrador' });
+        }
+
+        // Verificar se o usuário está tentando remover seus próprios privilégios
+        if (userToRemove.id === requestingUserId) {
+            return res.status(400).json({ message: 'Você não pode remover seus próprios privilégios de administrador' });
+        }
+
+        // Verificar se é o usuário 'admin' original (proteção)
+        if (userToRemove.username === 'admin') {
+            return res.status(400).json({ message: 'Não é possível remover os privilégios do administrador principal' });
+        }
+
+        // Remover privilégios de administrador
+        userToRemove.isAdmin = false;
+        await userRepository.save(userToRemove);
+
+        return res.status(200).json({
+            message: `Privilégios de administrador removidos de ${userToRemove.username} com sucesso`,
+            user: {
+                id: userToRemove.id,
+                username: userToRemove.username,
+                isAdmin: userToRemove.isAdmin
+            }
+        });
+    } catch (error) {
+        console.error('Erro ao remover privilégios de administrador:', error);
+        res.status(500).json({ message: 'Erro interno do servidor' });
+    }
+};
+
+export const transferMainAdmin = async (req: AuthRequest, res: Response) => {
+    try {
+        // Verificar se o usuário que faz a solicitação é um administrador
+        const requestingUserId = req.user?.id;
+        const isRequestingUserAdmin = req.user?.isAdmin;
+
+        if (!requestingUserId) {
+            return res.status(401).json({ message: 'Usuário não autenticado' });
+        }
+
+        if (!isRequestingUserAdmin) {
+            return res.status(403).json({ message: 'Apenas administradores podem transferir privilégios' });
+        }
+
+        const userRepository = AppDataSource.getRepository(User);
+        
+        // Verificar se o usuário atual é o administrador principal
+        const currentUser = await userRepository.findOne({
+            where: { id: requestingUserId }
+        });
+        
+        if (!currentUser || !currentUser.isMainAdmin) {
+            return res.status(403).json({ message: 'Apenas o administrador principal pode transferir o título' });
+        }
+
+        // Obter o nome de usuário para transferir o título de administrador principal
+        const { username } = req.body;
+
+        if (!username) {
+            return res.status(400).json({ message: 'É necessário fornecer um nome de usuário' });
+        }
+
+        // Verificar se está tentando transferir para si mesmo
+        if (username === currentUser.username) {
+            return res.status(400).json({ message: 'Você já é o administrador principal' });
+        }
+
+        // Encontrar o usuário pelo nome de usuário
+        const userToPromote = await userRepository.findOne({
+            where: { username }
+        });
+
+        if (!userToPromote) {
+            return res.status(404).json({ message: 'Usuário não encontrado' });
+        }
+
+        // Verificar se o usuário já é administrador
+        if (!userToPromote.isAdmin) {
+            return res.status(400).json({ message: 'O usuário precisa ser um administrador primeiro' });
+        }
+
+        // Realizar a transferência em uma transação
+        const queryRunner = AppDataSource.createQueryRunner();
+        await queryRunner.connect();
+        await queryRunner.startTransaction();
+
+        try {
+            // Remover status de administrador principal do atual
+            currentUser.isMainAdmin = false;
+            await queryRunner.manager.save(currentUser);
+            
+            // Definir o novo administrador principal
+            userToPromote.isMainAdmin = true;
+            await queryRunner.manager.save(userToPromote);
+            
+            await queryRunner.commitTransaction();
+            
+            return res.status(200).json({
+                message: `Título de administrador principal transferido com sucesso de '${currentUser.username}' para '${userToPromote.username}'.`,
+                oldMainAdmin: currentUser.username,
+                newMainAdmin: userToPromote.username
+            });
+        } catch (error) {
+            await queryRunner.rollbackTransaction();
+            throw error;
+        } finally {
+            await queryRunner.release();
+        }
+    } catch (error) {
+        console.error('Erro ao transferir título de administrador principal:', error);
+        res.status(500).json({ message: 'Erro interno do servidor' });
+    }
+};
+
+export const listAdmins = async (req: AuthRequest, res: Response) => {
+    try {
+        // Verificar se o usuário que faz a solicitação é um administrador
+        const requestingUserId = req.user?.id;
+        const isRequestingUserAdmin = req.user?.isAdmin;
+
+        if (!requestingUserId) {
+            return res.status(401).json({ message: 'Usuário não autenticado' });
+        }
+
+        if (!isRequestingUserAdmin) {
+            return res.status(403).json({ message: 'Apenas administradores podem listar administradores' });
+        }
+
+        const userRepository = AppDataSource.getRepository(User);
+        
+        // Buscar todos os usuários que são administradores
+        const admins = await userRepository.find({
+            where: { isAdmin: true },
+            select: ['id', 'username', 'isMainAdmin']
+        });
+
+        return res.status(200).json({
+            admins: admins.map(admin => ({
+                id: admin.id,
+                username: admin.username,
+                isMainAdmin: admin.isMainAdmin
+            }))
+        });
+    } catch (error) {
+        console.error('Erro ao listar administradores:', error);
+        res.status(500).json({ message: 'Erro interno do servidor' });
+    }
+};

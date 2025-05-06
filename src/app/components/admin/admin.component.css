@@ -18,6 +18,12 @@ h2 {
   margin-bottom: 1rem;
 }
 
+h3 {
+  color: #2c3e50;
+  margin-top: 1.5rem;
+  margin-bottom: 0.8rem;
+}
+
 .admin-section {
   margin-bottom: 2rem;
   padding: 1.5rem;
@@ -86,4 +92,61 @@ input:focus {
   background-color: #dff0d8;
   border-radius: 4px;
   margin-bottom: 1.5rem;
+}
+
+/* Novos estilos para a lista de administradores */
+.admin-list-section {
+  margin: 1rem 0 2rem 0;
+}
+
+.admin-list {
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  background-color: white;
+  overflow: hidden;
+}
+
+.admin-item {
+  padding: 0.8rem 1rem;
+  border-bottom: 1px solid #e0e0e0;
+  display: flex;
+  align-items: center;
+}
+
+.admin-item:last-child {
+  border-bottom: none;
+}
+
+.admin-username {
+  font-weight: 500;
+  flex-grow: 1;
+}
+
+.admin-badge {
+  background-color: #f39c12;
+  color: white;
+  font-size: 0.7rem;
+  padding: 2px 6px;
+  border-radius: 3px;
+  margin-left: 8px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+/* Estilo para o botão de remover privilégios */
+.remove-button {
+  background-color: #e74c3c;
+}
+
+.remove-button:hover {
+  background-color: #c0392b;
+}
+
+/* Estilo para o botão de transferência */
+.transfer-button {
+  background-color: #f39c12;
+}
+
+.transfer-button:hover {
+  background-color: #e67e22;
 }

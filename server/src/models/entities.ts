@@ -14,6 +14,9 @@ export class User {
     @Column({ default: false })
     isAdmin: boolean;
 
+    @Column({ default: false })
+    isMainAdmin: boolean;
+
     @CreateDateColumn()
     created_at: Date;
 

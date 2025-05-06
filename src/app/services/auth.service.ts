@@ -37,19 +37,19 @@ export class AuthService {
       this.isAuthenticatedSubject.next(false);
       return of(null);
     }
-    
+
     console.log('Iniciando validação de token');
     this.tokenValidationInProgress = true;
-    
+
     return this.apiService.validateToken().pipe(
       tap(response => {
         this.tokenValidationInProgress = false;
         console.log('Resposta da validação de token:', response);
-        
+
         if (response && response.valid) {
           console.log('Token validado com sucesso');
           this.isAuthenticatedSubject.next(true);
-          
+
           // Atualiza o nome de usuário caso tenha mudado
           if (response.username) {
             console.log('Atualizando nome de usuário:', response.username);
@@ -75,7 +75,7 @@ export class AuthService {
       catchError(error => {
         this.tokenValidationInProgress = false;
         console.error('Erro ao validar token:', error);
-        
+
         // Verifica se o erro é de autenticação (401)
         if (error.status === 401) {
           console.log('Token inválido ou expirado, fazendo logout');
@@ -85,7 +85,7 @@ export class AuthService {
           // para evitar logout desnecessário durante problemas de conectividade temporários
           console.log('Erro de serviço, mantendo estado de autenticação atual');
         }
-        
+
         return of(null);
       })
     );
@@ -99,13 +99,13 @@ export class AuthService {
           // Salva os dados no localStorage para persistir entre recargas
           localStorage.setItem(this.TOKEN_KEY, response.token);
           localStorage.setItem(this.USERNAME_KEY, response.username);
-          
+
           // Salvar a flag isAdmin
           if (response.isAdmin !== undefined) {
             localStorage.setItem(this.IS_ADMIN_KEY, response.isAdmin ? 'true' : 'false');
           }
-          
-          // Extrair o ID do token JWT 
+
+          // Extrair o ID do token JWT
           try {
             const tokenParts = response.token.split('.');
             if (tokenParts.length === 3) {
@@ -115,7 +115,7 @@ export class AuthService {
                 console.log('Salvando ID do usuário do token:', tokenPayload.id);
                 localStorage.setItem(this.USER_ID_KEY, String(tokenPayload.id));
               }
-              
+
               // Também extrair isAdmin do payload se existir
               if (tokenPayload.isAdmin !== undefined) {
                 localStorage.setItem(this.IS_ADMIN_KEY, tokenPayload.isAdmin ? 'true' : 'false');
@@ -124,7 +124,7 @@ export class AuthService {
           } catch (e) {
             console.error('Erro ao decodificar token:', e);
           }
-          
+
           this.isAuthenticatedSubject.next(true);
         }
       })
@@ -166,6 +166,10 @@ export class AuthService {
     return localStorage.getItem(this.USERNAME_KEY);
   }
 
+  getUserId(): string | null {
+    return localStorage.getItem(this.USER_ID_KEY);
+  }
+
   isAuthenticated(): Observable<boolean> {
     return this.isAuthenticatedSubject.asObservable();
   }
@@ -183,7 +187,7 @@ export class AuthService {
     const userId = localStorage.getItem(this.USER_ID_KEY);
     const username = this.getUsername();
     const isAdmin = this.isAdmin();
-    
+
     if (userId && username) {
       // Retorna as informações armazenadas localmente
       return of({ id: parseInt(userId), username, isAdmin });
@@ -199,12 +203,12 @@ export class AuthService {
               // Tenta usar response.id como alternativa
               localStorage.setItem(this.USER_ID_KEY, String(response.id));
             }
-            
+
             // Atualiza também o nome de usuário se estiver presente
             if (response.username) {
               localStorage.setItem(this.USERNAME_KEY, response.username);
             }
-            
+
             // Atualiza a flag de administrador se estiver presente
             if (response.isAdmin !== undefined) {
               localStorage.setItem(this.IS_ADMIN_KEY, response.isAdmin ? 'true' : 'false');
@@ -220,13 +224,13 @@ export class AuthService {
           if (response && response.valid) {
             // Verificar diferentes possibilidades para o ID do usuário
             let id: number | undefined;
-            
+
             if (response.userId !== undefined && response.userId !== null) {
               id = typeof response.userId === 'string' ? parseInt(response.userId) : response.userId;
             } else if (response.id !== undefined && response.id !== null) {
               id = typeof response.id === 'string' ? parseInt(response.id) : response.id;
             }
-            
+
             if (id !== undefined) {
               return {
                 id,
@@ -234,7 +238,7 @@ export class AuthService {
                 isAdmin: response.isAdmin
               };
             }
-            
+
             // Se não encontrar ID válido, lança erro
             throw new Error('ID do usuário não encontrado na resposta');
           } else {
@@ -251,7 +255,7 @@ export class AuthService {
     if (username === 'admin') {
       console.log('Forçando status de administrador para usuário admin');
       localStorage.setItem(this.IS_ADMIN_KEY, 'true');
-      
+
       // Tentar atualizar o token também
       const token = this.getToken();
       if (token) {
@@ -260,18 +264,18 @@ export class AuthService {
           if (tokenParts.length === 3) {
             // Decodificar o payload atual
             const payload = JSON.parse(atob(tokenParts[1]));
-            
+
             // Adicionar ou atualizar a propriedade isAdmin
             payload.isAdmin = true;
-            
+
             // Criar um novo token com o payload modificado
             const updatedPayload = btoa(JSON.stringify(payload)).replace(/=/g, '')
                                    .replace(/\+/g, '-')
                                    .replace(/\//g, '_');
-            
+
             // Criar token atualizado (apenas para uso local, não é uma assinatura válida)
             const updatedToken = `${tokenParts[0]}.${updatedPayload}.${tokenParts[2]}`;
-            
+
             // Armazenar o token atualizado
             localStorage.setItem(this.TOKEN_KEY, updatedToken);
             console.log('Token atualizado com informação de admin');
