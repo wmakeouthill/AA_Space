@@ -1,31 +1,34 @@
 .home-container {
-  max-width: 100%;
-  width: 100%;
-  min-width: 700px;
-  margin: 80px auto 0;
-  padding: 2%;
+  max-width: 1000px;
+  margin: 40px auto 0; /* Reduzido de 65px para 45px para diminuir o espaço entre header e banner */
+  padding: 1.3rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  box-sizing: border-box;
 }
 
 .welcome-banner {
   background-color: #1a5f7a;
   color: white;
-  padding: 2%;
-  border-radius: 8px;
-  margin-bottom: 2rem;
+  padding: 1.3rem; /* Reduzido o padding */
+  border-radius: 6px; /* Ajustado o border-radius */
+  margin-bottom: 0.1rem; /* Reduzido o espaçamento inferior */
   text-align: center;
   width: 100%;
+  box-sizing: border-box;
 }
 
 .welcome-banner h1 {
   margin: 0;
-  font-size: 2.2rem;
-  margin-bottom: 1rem;
+  font-size: 2rem; /* Reduzido o tamanho da fonte */
+  margin-bottom: 0.5rem; /* Ajustado o espaçamento inferior */
 }
 
 .welcome-banner p {
   margin: 0;
-  margin-bottom: 1.5rem;
-  font-size: 1.1rem;
+  margin-bottom: 1rem; /* Reduzido o espaçamento inferior */
+  font-size: 1rem; /* Reduzido o tamanho da fonte */
 }
 
 .share-button {
@@ -48,17 +51,20 @@
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
-  margin-top: 2rem;
+  gap: 1rem; /* Reduzido de 1.5rem para 1rem para diminuir o espaçamento entre os cards */
+  margin-top: 1rem; /* Reduzido de 2rem para 1rem para manter proporcional ao margin-bottom do banner */
+  box-sizing: border-box; /* Garantindo que o padding não afete a largura total */
+  align-items: stretch;
 }
 
 .post-card {
   display: flex;
   background-color: white;
-  border-radius: 8px;
-  padding: 2%;
+  border-radius: 6px; /* Ajustado o border-radius */
+  padding: 1rem; /* Reduzido o padding */
   width: 100%;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); /* Reduzido o shadow */
+  box-sizing: border-box; /* Garantindo que o padding não afete a largura total */
 }
 
 .post-votes {
@@ -84,7 +90,8 @@
 
 .post-content {
   flex: 1;
-  padding: 1%;
+  font-size: 0.9rem; /* Ajustado o tamanho da fonte */
+  line-height: 1.5; /* Melhorado o espaçamento entre linhas */
 }
 
 .post-title {
@@ -95,7 +102,7 @@
 .post-title a {
   color: #1a5f7a;
   text-decoration: none;
-  font-size: 1.4rem;
+  font-size: 1.2rem; /* Reduzido o tamanho da fonte */
 }
 
 .post-title a:hover {

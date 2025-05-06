@@ -1,29 +1,42 @@
 .create-post-container {
-  max-width: 95%;
-  margin: 80px auto 0;
-  padding: 2%;
+  max-width: 1000px;
+  width: 100%;
+  margin: auto;
+  margin-top: 15px;
+  padding: 1.3rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  box-sizing: border-box;
 }
 
 h1 {
   color: #1a5f7a;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.2rem;
+  white-space: nowrap;
+  font-size: 2rem;
+  text-align: center;
+  width: 100%;
 }
 
 h2 {
   color: #1a5f7a;
-  margin-bottom: 1rem;
+  margin-bottom: 0.4rem;
 }
 
 .subtitle {
   color: #666;
-  margin-bottom: 2rem;
+  margin-bottom: 1.3rem;
 }
 
 .post-form, .guest-nickname-section {
   background-color: white;
-  padding: 4%;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  padding: 2rem;
+  border-radius: 6px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  box-sizing: border-box;
+  max-width: 800px;
 }
 
 .guest-nickname-section {
@@ -57,11 +70,13 @@ label {
 input[type="text"],
 textarea {
   width: 100%;
-  padding: 2%;
+  padding: 0.75rem 1rem;
+  margin: 0 auto;
   border: 1px solid #ddd;
   border-radius: 4px;
   font-size: 1rem;
   transition: border-color 0.2s;
+  box-sizing: border-box;
 }
 
 input[type="text"]:focus,

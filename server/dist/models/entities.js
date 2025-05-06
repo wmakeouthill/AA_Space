@@ -77,9 +77,9 @@ __decorate([
     __metadata("design:type", String)
 ], Post.prototype, "author", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ default: 0 }),
-    __metadata("design:type", Number)
-], Post.prototype, "likes", void 0);
+    (0, typeorm_1.Column)({ nullable: true }),
+    __metadata("design:type", String)
+], Post.prototype, "originalAuthor", void 0);
 __decorate([
     (0, typeorm_1.CreateDateColumn)(),
     __metadata("design:type", Date)
@@ -123,9 +123,9 @@ __decorate([
     __metadata("design:type", String)
 ], Comment.prototype, "author", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ default: 0 }),
-    __metadata("design:type", Number)
-], Comment.prototype, "likes", void 0);
+    (0, typeorm_1.Column)({ nullable: true }),
+    __metadata("design:type", String)
+], Comment.prototype, "originalAuthor", void 0);
 __decorate([
     (0, typeorm_1.CreateDateColumn)(),
     __metadata("design:type", Date)
@@ -157,10 +157,6 @@ __decorate([
     __metadata("design:type", Date)
 ], PostLike.prototype, "created_at", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ default: false }),
-    __metadata("design:type", Boolean)
-], PostLike.prototype, "userLiked", void 0);
-__decorate([
     (0, typeorm_1.ManyToOne)(() => Post, post => post.postLikes),
     __metadata("design:type", Post)
 ], PostLike.prototype, "post", void 0);
@@ -182,10 +178,6 @@ __decorate([
     (0, typeorm_1.CreateDateColumn)(),
     __metadata("design:type", Date)
 ], CommentLike.prototype, "created_at", void 0);
-__decorate([
-    (0, typeorm_1.Column)({ default: false }),
-    __metadata("design:type", Boolean)
-], CommentLike.prototype, "userLiked", void 0);
 __decorate([
     (0, typeorm_1.ManyToOne)(() => Comment, comment => comment.commentLikes),
     __metadata("design:type", Comment)

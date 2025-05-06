@@ -11,8 +11,7 @@ async function testDatabaseConnection() {
         const testPost = postRepository.create({
             title: "Test Post",
             content: "This is a test post to verify database connection",
-            anonymous: true,
-            likes: 0
+            anonymous: true
         });
 
         await postRepository.save(testPost);

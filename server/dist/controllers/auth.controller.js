@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.login = exports.register = void 0;
+exports.validateToken = exports.login = exports.register = void 0;
 const bcrypt_1 = __importDefault(require("bcrypt"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const database_1 = require("../config/database");
@@ -86,3 +86,30 @@ const login = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     }
 });
 exports.login = login;
+const validateToken = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const authHeader = req.headers.authorization;
+        if (!authHeader) {
+            return res.status(401).json({ message: 'Token não fornecido' });
+        }
+        const token = authHeader.split(' ')[1];
+        if (!token) {
+            return res.status(401).json({ message: 'Token não fornecido' });
+        }
+        const decoded = jsonwebtoken_1.default.verify(token, JWT_SECRET);
+        const userRepository = database_1.AppDataSource.getRepository(entities_1.User);
+        const user = yield userRepository.findOne({ where: { id: decoded.id } });
+        if (!user) {
+            return res.status(401).json({ message: 'Usuário não encontrado' });
+        }
+        res.json({
+            valid: true,
+            username: user.username
+        });
+    }
+    catch (error) {
+        console.error('Erro ao validar token:', error);
+        res.status(401).json({ message: 'Token inválido' });
+    }
+});
+exports.validateToken = validateToken;

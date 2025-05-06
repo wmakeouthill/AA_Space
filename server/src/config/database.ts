@@ -9,7 +9,7 @@ console.log('Database path:', dbPath);
 export const AppDataSource = new DataSource({
     type: "sqlite",
     database: dbPath,
-    synchronize: true,
+    synchronize: false, // Alterado de true para false para evitar conflitos com migrações
     logging: true,
     entities: [User, Post, Comment, PostLike, CommentLike],
     migrations: [join(__dirname, "../migrations/*.ts")]

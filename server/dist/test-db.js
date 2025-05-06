@@ -21,8 +21,7 @@ function testDatabaseConnection() {
             const testPost = postRepository.create({
                 title: "Test Post",
                 content: "This is a test post to verify database connection",
-                anonymous: true,
-                likes: 0
+                anonymous: true
             });
             yield postRepository.save(testPost);
             console.log("Test post created successfully:", testPost);

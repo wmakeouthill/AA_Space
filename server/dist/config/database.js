@@ -10,7 +10,7 @@ console.log('Database path:', dbPath);
 exports.AppDataSource = new typeorm_1.DataSource({
     type: "sqlite",
     database: dbPath,
-    synchronize: true,
+    synchronize: false, // Alterado de true para false para evitar conflitos com migrações
     logging: true,
     entities: [entities_1.User, entities_1.Post, entities_1.Comment, entities_1.PostLike, entities_1.CommentLike],
     migrations: [(0, path_1.join)(__dirname, "../migrations/*.ts")]
