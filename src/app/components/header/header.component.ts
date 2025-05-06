@@ -1,8 +1,9 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { RouterLink, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { AuthService } from '../../services/auth.service';
 import { GuestService } from '../../services/guest.service';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-header',
@@ -11,10 +12,12 @@ import { GuestService } from '../../services/guest.service';
   templateUrl: './header.component.html',
   styleUrl: './header.component.css'
 })
-export class HeaderComponent implements OnInit {
+export class HeaderComponent implements OnInit, OnDestroy {
   isLoggedIn = false;
   username: string | null = null;
   guestNickname: string | null = null;
+  private authSubscription: Subscription | null = null;
+  private guestNicknameSubscription: Subscription | null = null;
 
   constructor(
     private authService: AuthService,
@@ -23,17 +26,38 @@ export class HeaderComponent implements OnInit {
   ) {}
 
   ngOnInit() {
-    this.authService.isAuthenticated().subscribe(
+    // Inscreve-se para mudanças no estado de autenticação
+    this.authSubscription = this.authService.isAuthenticated().subscribe(
       isAuthenticated => {
         this.isLoggedIn = isAuthenticated;
         this.username = this.authService.getUsername();
-
-        // Se não estiver autenticado, verifica se tem um apelido de convidado
-        if (!isAuthenticated) {
-          this.guestNickname = this.guestService.getGuestNickname();
+        
+        // Se estiver autenticado, o nickname de convidado não deve ser exibido
+        if (isAuthenticated) {
+          this.guestNickname = null;
         }
       }
     );
+
+    // Inscreve-se para mudanças no nickname do convidado
+    this.guestNicknameSubscription = this.guestService.guestNickname$().subscribe(
+      nickname => {
+        // Só atualiza o nickname se não estiver autenticado
+        if (!this.isLoggedIn) {
+          this.guestNickname = nickname;
+        }
+      }
+    );
+  }
+
+  ngOnDestroy() {
+    // Cancela inscrições para evitar memory leaks
+    if (this.authSubscription) {
+      this.authSubscription.unsubscribe();
+    }
+    if (this.guestNicknameSubscription) {
+      this.guestNicknameSubscription.unsubscribe();
+    }
   }
 
   login() {
