@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.validateToken = exports.login = exports.register = void 0;
+exports.promoteToAdmin = exports.validateToken = exports.login = exports.register = void 0;
 const bcrypt_1 = __importDefault(require("bcrypt"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const database_1 = require("../config/database");
@@ -71,12 +71,13 @@ const login = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         if (!validPassword) {
             return res.status(401).json({ message: 'Senha inválida' });
         }
-        // Gera o token JWT
-        const token = jsonwebtoken_1.default.sign({ id: user.id, username: user.username }, JWT_SECRET, { expiresIn: TOKEN_EXPIRATION });
-        console.log('Login bem-sucedido:', { id: user.id, username: user.username });
+        // Gera o token JWT incluindo a informação de admin
+        const token = jsonwebtoken_1.default.sign({ id: user.id, username: user.username, isAdmin: user.isAdmin }, JWT_SECRET, { expiresIn: TOKEN_EXPIRATION });
+        console.log('Login bem-sucedido:', { id: user.id, username: user.username, isAdmin: user.isAdmin });
         res.json({
             token,
             username: user.username,
+            isAdmin: user.isAdmin,
             message: 'Login realizado com sucesso'
         });
     }
@@ -104,7 +105,9 @@ const validateToken = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         }
         res.json({
             valid: true,
-            username: user.username
+            username: user.username,
+            userId: user.id,
+            isAdmin: user.isAdmin
         });
     }
     catch (error) {
@@ -113,3 +116,58 @@ const validateToken = (req, res) => __awaiter(void 0, void 0, void 0, function* 
     }
 });
 exports.validateToken = validateToken;
+const promoteToAdmin = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a, _b;
+    try {
+        // Verificar se o usuário que faz a solicitação é um administrador
+        const requestingUserId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id;
+        const isRequestingUserAdmin = (_b = req.user) === null || _b === void 0 ? void 0 : _b.isAdmin;
+        if (!requestingUserId) {
+            return res.status(401).json({ message: 'Usuário não autenticado' });
+        }
+        if (!isRequestingUserAdmin) {
+            return res.status(403).json({ message: 'Apenas administradores podem promover usuários' });
+        }
+        // Obter o ID ou nome de usuário a ser promovido
+        const { userId, username } = req.body;
+        if (!userId && !username) {
+            return res.status(400).json({ message: 'É necessário fornecer um ID de usuário ou nome de usuário' });
+        }
+        const userRepository = database_1.AppDataSource.getRepository(entities_1.User);
+        let userToPromote;
+        // Encontrar o usuário pelo ID ou nome de usuário
+        if (userId) {
+            userToPromote = yield userRepository.findOne({
+                where: { id: userId }
+            });
+        }
+        else {
+            userToPromote = yield userRepository.findOne({
+                where: { username }
+            });
+        }
+        if (!userToPromote) {
+            return res.status(404).json({ message: 'Usuário não encontrado' });
+        }
+        // Verificar se o usuário já é administrador
+        if (userToPromote.isAdmin) {
+            return res.status(400).json({ message: 'Usuário já é administrador' });
+        }
+        // Promover o usuário a administrador
+        userToPromote.isAdmin = true;
+        yield userRepository.save(userToPromote);
+        return res.status(200).json({
+            message: `Usuário ${userToPromote.username} promovido a administrador com sucesso`,
+            user: {
+                id: userToPromote.id,
+                username: userToPromote.username,
+                isAdmin: userToPromote.isAdmin
+            }
+        });
+    }
+    catch (error) {
+        console.error('Erro ao promover usuário a administrador:', error);
+        res.status(500).json({ message: 'Erro interno do servidor' });
+    }
+});
+exports.promoteToAdmin = promoteToAdmin;

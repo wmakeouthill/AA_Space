@@ -1,6 +1,7 @@
 import { Injectable, Inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 import { Post, Comment, LikeResponse } from '../models/post.interface';
 
 @Injectable({
@@ -72,6 +73,14 @@ export class ApiService {
 
   // Método para promover um usuário a administrador
   promoteToAdmin(userIdOrUsername: { userId?: number; username?: string }): Observable<any> {
-    return this.http.post<any>(`${this.API_URL}/auth/promote`, userIdOrUsername);
+    // Tentamos primeiro a nova rota alternativa
+    return this.http.post<any>(`${this.API_URL}/auth/make-admin`, userIdOrUsername)
+      .pipe(
+        catchError(error => {
+          // Se a nova rota falhar, tentamos a rota original
+          console.log('Tentativa com rota alternativa falhou, tentando rota original...');
+          return this.http.post<any>(`${this.API_URL}/auth/promote`, userIdOrUsername);
+        })
+      );
   }
 }

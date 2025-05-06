@@ -58,8 +58,14 @@ export class AdminComponent implements OnInit {
 
       const username = this.promoteForm.value.username;
       
-      this.apiService.promoteToAdmin({ username }).subscribe({
-        next: (response) => {
+      // Usando diretamente o HttpClient para garantir o uso da rota correta
+      this.apiService['http'].post('http://localhost:3001/api/auth/make-admin', { username }, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${this.authService.getToken()}`
+        }
+      }).subscribe({
+        next: (response: any) => {
           console.log('Usuário promovido com sucesso:', response);
           this.successMessage = response.message || 'Usuário promovido a administrador com sucesso.';
           this.promoteForm.reset();

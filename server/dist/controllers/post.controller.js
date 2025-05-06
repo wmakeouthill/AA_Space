@@ -9,7 +9,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getComments = exports.likeComment = exports.likePost = exports.createComment = exports.createPost = exports.getPost = exports.getPosts = void 0;
+exports.deleteComment = exports.deletePost = exports.getComments = exports.likeComment = exports.likePost = exports.createComment = exports.createPost = exports.getPost = exports.getPosts = void 0;
 const database_1 = require("../config/database");
 const entities_1 = require("../models/entities");
 const getPosts = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
@@ -89,7 +89,18 @@ const getPost = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         });
         console.log(`[GET POST] Total de likes: ${totalLikes}`);
         const author = post.anonymous ? 'Anônimo' : (post.originalAuthor || post.author);
-        const formattedPost = Object.assign(Object.assign({}, post), { author, likes: totalLikes, userLiked: !!userLike });
+        // Preserva explicitamente a informação do usuário autor
+        const formattedPost = Object.assign(Object.assign({}, post), { author, likes: totalLikes, userLiked: !!userLike, 
+            // Garantir que a informação do usuário seja preservada
+            user: post.user ? {
+                id: post.user.id,
+                username: post.user.username
+            } : null, 
+            // Adicionar user_id explicitamente para facilitar a verificação de autoria
+            user_id: post.user ? post.user.id : null });
+        // Para debug
+        console.log(`[GET POST] Resposta final - post.user: ${post.user ? JSON.stringify(post.user) : 'null'}`);
+        console.log(`[GET POST] Resposta final - formattedPost.user_id: ${formattedPost.user_id}`);
         console.log(`[GET POST] Resposta final - userLiked: ${!!userLike}, totalLikes: ${totalLikes}`);
         res.json(formattedPost);
     }
@@ -362,7 +373,13 @@ const getComments = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
                 post_id: parseInt(postId),
                 anonymous: comment.anonymous,
                 likes: totalLikes,
-                userLiked: !!hasLike
+                userLiked: !!hasLike,
+                // Adicionar informações do usuário para verificação de autoria
+                user: comment.user ? {
+                    id: comment.user.id,
+                    username: comment.user.username
+                } : null,
+                user_id: comment.user ? comment.user.id : null
             };
         })));
         res.json(formattedComments);
@@ -373,3 +390,106 @@ const getComments = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
     }
 });
 exports.getComments = getComments;
+const deletePost = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a, _b;
+    try {
+        const { id } = req.params;
+        const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id;
+        const isAdmin = (_b = req.user) === null || _b === void 0 ? void 0 : _b.isAdmin;
+        const postId = parseInt(id);
+        console.log(`[DELETE POST] Tentativa de excluir post ${id} pelo usuário ${userId}`);
+        if (!userId) {
+            return res.status(401).json({ message: 'Usuário não autenticado' });
+        }
+        const postRepository = database_1.AppDataSource.getRepository(entities_1.Post);
+        const commentRepository = database_1.AppDataSource.getRepository(entities_1.Comment);
+        const postLikeRepository = database_1.AppDataSource.getRepository(entities_1.PostLike);
+        const commentLikeRepository = database_1.AppDataSource.getRepository(entities_1.CommentLike);
+        // Busca o post para verificar se o usuário atual é o autor
+        const post = yield postRepository.findOne({
+            where: { id: postId },
+            relations: ['user', 'comments', 'postLikes']
+        });
+        if (!post) {
+            return res.status(404).json({ message: 'Post não encontrado' });
+        }
+        // Verifica se o usuário é o autor do post ou administrador
+        if (!isAdmin && post.user && post.user.id !== userId) {
+            return res.status(403).json({ message: 'Você não tem permissão para excluir este post' });
+        }
+        console.log(`[DELETE POST] Iniciando exclusão do post ${id} e seus relacionamentos`);
+        // Passo 1: Encontrar todos os comentários relacionados ao post
+        const comments = yield commentRepository.find({
+            where: { post: { id: postId } },
+            relations: ['commentLikes']
+        });
+        // Passo 2: Para cada comentário, remover curtidas do comentário
+        for (const comment of comments) {
+            console.log(`[DELETE POST] Removendo curtidas do comentário ${comment.id}`);
+            if (comment.commentLikes && comment.commentLikes.length > 0) {
+                yield commentLikeRepository.remove(comment.commentLikes);
+            }
+        }
+        // Passo 3: Remover todos os comentários do post
+        if (comments.length > 0) {
+            console.log(`[DELETE POST] Removendo ${comments.length} comentários do post ${id}`);
+            yield commentRepository.remove(comments);
+        }
+        // Passo 4: Remover todas as curtidas do post
+        if (post.postLikes && post.postLikes.length > 0) {
+            console.log(`[DELETE POST] Removendo ${post.postLikes.length} curtidas do post ${id}`);
+            yield postLikeRepository.remove(post.postLikes);
+        }
+        // Passo 5: Finalmente remover o post
+        console.log(`[DELETE POST] Finalizando exclusão do post ${id}`);
+        yield postRepository.remove(post);
+        return res.status(200).json({ message: 'Post excluído com sucesso' });
+    }
+    catch (error) {
+        console.error('Erro ao excluir post:', error);
+        res.status(500).json({ message: 'Erro interno do servidor' });
+    }
+});
+exports.deletePost = deletePost;
+const deleteComment = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a, _b;
+    try {
+        const { commentId } = req.params;
+        const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id;
+        const isAdmin = (_b = req.user) === null || _b === void 0 ? void 0 : _b.isAdmin;
+        const commentIdInt = parseInt(commentId);
+        console.log(`[DELETE COMMENT] Tentativa de excluir comentário ${commentId} pelo usuário ${userId}`);
+        if (!userId) {
+            return res.status(401).json({ message: 'Usuário não autenticado' });
+        }
+        const commentRepository = database_1.AppDataSource.getRepository(entities_1.Comment);
+        const commentLikeRepository = database_1.AppDataSource.getRepository(entities_1.CommentLike);
+        // Busca o comentário para verificar se o usuário atual é o autor
+        const comment = yield commentRepository.findOne({
+            where: { id: commentIdInt },
+            relations: ['user', 'commentLikes']
+        });
+        if (!comment) {
+            return res.status(404).json({ message: 'Comentário não encontrado' });
+        }
+        // Verifica se o usuário é o autor do comentário ou administrador
+        if (!isAdmin && comment.user && comment.user.id !== userId) {
+            return res.status(403).json({ message: 'Você não tem permissão para excluir este comentário' });
+        }
+        console.log(`[DELETE COMMENT] Iniciando exclusão do comentário ${commentId}`);
+        // Passo 1: Remover as curtidas do comentário
+        if (comment.commentLikes && comment.commentLikes.length > 0) {
+            console.log(`[DELETE COMMENT] Removendo ${comment.commentLikes.length} curtidas do comentário ${commentId}`);
+            yield commentLikeRepository.remove(comment.commentLikes);
+        }
+        // Passo 2: Finalmente remover o comentário
+        console.log(`[DELETE COMMENT] Finalizando exclusão do comentário ${commentId}`);
+        yield commentRepository.remove(comment);
+        return res.status(200).json({ message: 'Comentário excluído com sucesso' });
+    }
+    catch (error) {
+        console.error('Erro ao excluir comentário:', error);
+        res.status(500).json({ message: 'Erro interno do servidor' });
+    }
+});
+exports.deleteComment = deleteComment;

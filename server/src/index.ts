@@ -122,6 +122,8 @@ const startServer = async () => {
             console.log('- GET /api/health');
             console.log('- POST /api/auth/login');
             console.log('- POST /api/auth/register');
+            console.log('- GET /api/auth/validate');
+            console.log('- POST /api/auth/promote [auth required, admin only]');
             console.log('- GET /api/posts');
             console.log('- GET /api/posts/:id');
             console.log('- POST /api/posts');

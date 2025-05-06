@@ -13,4 +13,10 @@ router.post('/', post_controller_1.createPost);
 router.post('/:postId/comments', post_controller_1.createComment);
 router.post('/:postId/like', post_controller_1.likePost);
 router.post('/:postId/comments/:commentId/like', post_controller_1.likeComment);
+router.delete('/:id', post_controller_1.deletePost);
+router.delete('/:postId/comments/:commentId', post_controller_1.deleteComment);
+// Adicionando uma rota POST alternativa para exclusão de posts
+router.post('/:id/delete', post_controller_1.deletePost);
+// Adicionando uma rota POST alternativa para exclusão de comentários (para navegadores que não suportam DELETE)
+router.post('/:postId/comments/:commentId/delete', post_controller_1.deleteComment);
 exports.default = router;
