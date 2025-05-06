@@ -7,7 +7,7 @@ import { Router } from '@angular/router';
 export const errorInterceptor: HttpInterceptorFn = (req, next) => {
   const router = inject(Router);
 
-  // Lista de rotas públicas que não devem causar logout em caso de erro 401
+  // Lista de rotas públicas que não devem causar logout em caso de erro 401 - uhul
   const publicRoutes = [
     { path: '/api/auth/login', method: 'POST' },
     { path: '/api/auth/register', method: 'POST' }
