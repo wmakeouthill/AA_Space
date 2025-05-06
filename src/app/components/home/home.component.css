@@ -1,5 +1,6 @@
 .home-container {
   max-width: 1000px;
+  min-width: 650px;
   margin: 40px auto 0; /* Reduzido de 65px para 45px para diminuir o espaço entre header e banner */
   padding: 1.3rem;
   display: flex;
@@ -133,7 +134,7 @@
   background: none;
   border: 1px solid #ddd;
   border-radius: 20px;
-  padding: 0.2rem 0.5rem;
+  padding: 0.3rem 0.78rem;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
