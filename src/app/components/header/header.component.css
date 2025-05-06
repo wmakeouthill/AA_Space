@@ -86,3 +86,23 @@
   text-overflow: ellipsis;
   border: 1px solid #e0e0e0;
 }
+
+.admin-link {
+  color: #f39c12;
+  font-weight: 600;
+}
+
+.admin-link:hover {
+  color: #e67e22;
+}
+
+.admin-badge {
+  background-color: #f39c12;
+  color: white;
+  font-size: 0.7rem;
+  padding: 2px 6px;
+  border-radius: 3px;
+  margin-left: 8px;
+  font-weight: 600;
+  text-transform: uppercase;
+}

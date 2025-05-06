@@ -240,11 +240,76 @@ export class PostComponent implements OnInit {
     });
   }
 
+  // Verifica se o usuário atual é o autor do comentário
+  isCommentAuthor(comment: Comment): boolean {
+    // Se for administrador, pode excluir qualquer comentário
+    const isUserAdmin = this.authService.isAdmin();
+    console.log('Verificando permissões para comentário - isAdmin:', isUserAdmin);
+    
+    if (isUserAdmin) {
+      console.log('Usuário é administrador, permissão concedida para comentário');
+      return true;
+    }
+    
+    // Se não há usuário logado, não é o autor
+    if (!this.userId) {
+      return false;
+    }
+
+    // Verificação principal: checamos se o comment.user existe e tem o mesmo id que o usuário logado
+    if (comment.user && this.userId) {
+      return comment.user.id === this.userId;
+    } 
+    // Verificação alternativa: se o comment tem um user_id, verificamos diretamente com ele
+    else if (comment.user_id !== undefined && comment.user_id !== null && this.userId) {
+      return comment.user_id === this.userId;
+    }
+    // Última tentativa: comparar o comment.author com o nome de usuário atual
+    else {
+      const username = this.authService.getUsername();
+      if (username && comment.author) {
+        // Removemos o prefixo "Convidado:" se existir, para comparação mais precisa
+        const authorName = comment.author.replace('Convidado: ', '');
+        return authorName === username;
+      } else {
+        return false;
+      }
+    }
+  }
+
+  // Função para excluir um comentário
+  deleteComment(comment: Comment) {
+    if (!this.post) return;
+
+    if (!confirm('Tem certeza que deseja excluir este comentário? Esta ação não pode ser desfeita.')) {
+      return;
+    }
+
+    this.apiService.deleteComment(this.post.id, comment.id).subscribe({
+      next: () => {
+        // Remove o comentário da lista após exclusão bem-sucedida
+        this.comments = this.comments.filter(c => c.id !== comment.id);
+        this.error = null;
+      },
+      error: (error) => {
+        console.error('Erro ao excluir comentário:', error);
+        this.error = error.error?.message || 'Não foi possível excluir o comentário. Por favor, tente novamente mais tarde.';
+      }
+    });
+  }
+
   // Verifica se o usuário atual é o autor do post
   private checkAuthorPermissions() {
     console.log("Verificando permissões de autor:");
     console.log("Post:", this.post);
     console.log("UserId:", this.userId);
+    
+    // Se for administrador, pode excluir qualquer post
+    if (this.authService.isAdmin()) {
+      console.log("Usuário é administrador, permissão concedida.");
+      this.isCurrentUserAuthor = true;
+      return;
+    }
     
     // Se não há post ou usuário logado, não é o autor
     if (!this.post || !this.userId) {

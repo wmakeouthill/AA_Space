@@ -5,6 +5,7 @@ import { ApiService } from './api.service';
 interface UserInfo {
   id: number;
   username: string;
+  isAdmin?: boolean;
 }
 
 @Injectable({
@@ -14,6 +15,7 @@ export class AuthService {
   private readonly TOKEN_KEY = 'auth_token';
   private readonly USERNAME_KEY = 'username';
   private readonly USER_ID_KEY = 'user_id';
+  private readonly IS_ADMIN_KEY = 'is_admin';
   private isAuthenticatedSubject = new BehaviorSubject<boolean>(false);
   private tokenValidationInProgress = false;
 
@@ -59,6 +61,12 @@ export class AuthService {
             console.log('Atualizando ID do usuário:', response.userId);
             localStorage.setItem(this.USER_ID_KEY, response.userId.toString());
           }
+
+          // Salva a flag isAdmin no localStorage
+          if (response.isAdmin !== undefined) {
+            console.log('Atualizando status de admin:', response.isAdmin);
+            localStorage.setItem(this.IS_ADMIN_KEY, response.isAdmin ? 'true' : 'false');
+          }
         } else {
           console.log('Resposta de validação inválida');
           this.logout();
@@ -92,6 +100,11 @@ export class AuthService {
           localStorage.setItem(this.TOKEN_KEY, response.token);
           localStorage.setItem(this.USERNAME_KEY, response.username);
           
+          // Salvar a flag isAdmin
+          if (response.isAdmin !== undefined) {
+            localStorage.setItem(this.IS_ADMIN_KEY, response.isAdmin ? 'true' : 'false');
+          }
+          
           // Extrair o ID do token JWT 
           try {
             const tokenParts = response.token.split('.');
@@ -101,6 +114,11 @@ export class AuthService {
               if (tokenPayload.id) {
                 console.log('Salvando ID do usuário do token:', tokenPayload.id);
                 localStorage.setItem(this.USER_ID_KEY, String(tokenPayload.id));
+              }
+              
+              // Também extrair isAdmin do payload se existir
+              if (tokenPayload.isAdmin !== undefined) {
+                localStorage.setItem(this.IS_ADMIN_KEY, tokenPayload.isAdmin ? 'true' : 'false');
               }
             }
           } catch (e) {
@@ -130,6 +148,7 @@ export class AuthService {
     localStorage.removeItem(this.TOKEN_KEY);
     localStorage.removeItem(this.USERNAME_KEY);
     localStorage.removeItem(this.USER_ID_KEY);
+    localStorage.removeItem(this.IS_ADMIN_KEY);
     this.isAuthenticatedSubject.next(false);
   }
 
@@ -151,6 +170,10 @@ export class AuthService {
     return this.isAuthenticatedSubject.asObservable();
   }
 
+  isAdmin(): boolean {
+    return localStorage.getItem(this.IS_ADMIN_KEY) === 'true';
+  }
+
   private hasToken(): boolean {
     return !!this.getToken();
   }
@@ -159,10 +182,11 @@ export class AuthService {
     // Se tivermos uma validação de token prévia que retornou o ID do usuário
     const userId = localStorage.getItem(this.USER_ID_KEY);
     const username = this.getUsername();
+    const isAdmin = this.isAdmin();
     
     if (userId && username) {
       // Retorna as informações armazenadas localmente
-      return of({ id: parseInt(userId), username });
+      return of({ id: parseInt(userId), username, isAdmin });
     } else {
       // Se não tivermos o ID do usuário ainda, realizamos uma nova validação
       return this.apiService.validateToken().pipe(
@@ -179,6 +203,11 @@ export class AuthService {
             // Atualiza também o nome de usuário se estiver presente
             if (response.username) {
               localStorage.setItem(this.USERNAME_KEY, response.username);
+            }
+            
+            // Atualiza a flag de administrador se estiver presente
+            if (response.isAdmin !== undefined) {
+              localStorage.setItem(this.IS_ADMIN_KEY, response.isAdmin ? 'true' : 'false');
             }
           }
         }),
@@ -201,7 +230,8 @@ export class AuthService {
             if (id !== undefined) {
               return {
                 id,
-                username: response.username || 'Usuário'
+                username: response.username || 'Usuário',
+                isAdmin: response.isAdmin
               };
             }
             
@@ -212,6 +242,44 @@ export class AuthService {
           }
         })
       );
+    }
+  }
+
+  // Método para forçar o armazenamento de admin para o usuário 'admin'
+  forceAdminForUserAdmin() {
+    const username = this.getUsername();
+    if (username === 'admin') {
+      console.log('Forçando status de administrador para usuário admin');
+      localStorage.setItem(this.IS_ADMIN_KEY, 'true');
+      
+      // Tentar atualizar o token também
+      const token = this.getToken();
+      if (token) {
+        try {
+          const tokenParts = token.split('.');
+          if (tokenParts.length === 3) {
+            // Decodificar o payload atual
+            const payload = JSON.parse(atob(tokenParts[1]));
+            
+            // Adicionar ou atualizar a propriedade isAdmin
+            payload.isAdmin = true;
+            
+            // Criar um novo token com o payload modificado
+            const updatedPayload = btoa(JSON.stringify(payload)).replace(/=/g, '')
+                                   .replace(/\+/g, '-')
+                                   .replace(/\//g, '_');
+            
+            // Criar token atualizado (apenas para uso local, não é uma assinatura válida)
+            const updatedToken = `${tokenParts[0]}.${updatedPayload}.${tokenParts[2]}`;
+            
+            // Armazenar o token atualizado
+            localStorage.setItem(this.TOKEN_KEY, updatedToken);
+            console.log('Token atualizado com informação de admin');
+          }
+        } catch (e) {
+          console.error('Erro ao processar token:', e);
+        }
+      }
     }
   }
 }

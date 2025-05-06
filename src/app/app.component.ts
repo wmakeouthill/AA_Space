@@ -1,4 +1,5 @@
 import { Component, OnInit } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { RouterOutlet } from '@angular/router';
 import { HeaderComponent } from './components/header/header.component';
 import { AuthService } from './services/auth.service';
@@ -6,7 +7,7 @@ import { AuthService } from './services/auth.service';
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, HeaderComponent],
+  imports: [CommonModule, RouterOutlet, HeaderComponent],
   templateUrl: './app.component.html',
   styleUrl: './app.component.css'
 })
@@ -15,17 +16,11 @@ export class AppComponent implements OnInit {
 
   constructor(private authService: AuthService) {}
 
-  ngOnInit(): void {
-    // Verifica e inicializa a autenticação ao carregar o componente principal
-    const token = this.authService.getToken();
-    if (token) {
-      console.log('AppComponent: Token encontrado, validando na inicialização');
-      this.authService.validateToken().subscribe({
-        next: (result) => console.log('AppComponent: Validação de token concluída'),
-        error: (err) => console.error('AppComponent: Erro na validação de token', err)
-      });
-    } else {
-      console.log('AppComponent: Nenhum token ao inicializar');
-    }
+  ngOnInit() {
+    // Validar o token ao iniciar o app
+    this.authService.validateToken().subscribe(() => {
+      // Força o status de administrador para o usuário 'admin'
+      this.authService.forceAdminForUserAdmin();
+    });
   }
 }

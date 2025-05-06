@@ -1,0 +1,42 @@
+<div class="admin-container">
+  <h1>Painel de Administração</h1>
+
+  <div *ngIf="error" class="error-message">
+    {{ error }}
+  </div>
+
+  <div *ngIf="successMessage" class="success-message">
+    {{ successMessage }}
+  </div>
+
+  <div *ngIf="isAdmin" class="admin-panel">
+    <div class="admin-section">
+      <h2>Gerenciar Administradores</h2>
+      <p>Promova usuários existentes a administradores.</p>
+
+      <form [formGroup]="promoteForm" (ngSubmit)="onPromoteUser()" class="admin-form">
+        <div class="form-group">
+          <label for="username">Nome de Usuário</label>
+          <input
+            type="text"
+            formControlName="username"
+            id="username"
+            placeholder="Digite o nome do usuário a promover"
+            [disabled]="isSubmitting"
+          >
+          <div class="error-message" *ngIf="promoteForm.get('username')?.errors?.['required'] && promoteForm.get('username')?.touched">
+            O nome de usuário é obrigatório
+          </div>
+        </div>
+
+        <button
+          type="submit"
+          [disabled]="!promoteForm.valid || isSubmitting"
+          class="submit-button"
+        >
+          {{ isSubmitting ? 'Promovendo...' : 'Promover a Administrador' }}
+        </button>
+      </form>
+    </div>
+  </div>
+</div>

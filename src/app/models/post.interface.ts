@@ -25,6 +25,11 @@ export interface Comment {
     guestNickname?: string;
     likes: number;
     userLiked: boolean;
+    user?: {
+        id: number;
+        username?: string;
+    };
+    user_id?: number; // Adicionando propriedade opcional user_id para comentários
 }
 
 export interface PostLike {

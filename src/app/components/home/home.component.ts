@@ -136,6 +136,16 @@ export class HomeComponent implements OnInit {
 
   // Verifica se o usuário atual é o autor do post
   isPostAuthor(post: Post): boolean {
+    // Se for administrador, pode excluir qualquer post
+    const isUserAdmin = this.authService.isAdmin();
+    console.log('Verificando permissões para post home - isAdmin:', isUserAdmin);
+    
+    if (isUserAdmin) {
+      console.log('Usuário é administrador, permissão concedida para o post');
+      return true;
+    }
+    
+    // Para usuários não-administradores, verifica autoria normal
     if (!this.userId || !post.user) return false;
     return post.user.id === this.userId;
   }

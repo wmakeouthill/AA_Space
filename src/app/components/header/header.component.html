@@ -6,6 +6,7 @@
     <nav class="nav-links">
       <a routerLink="/" class="nav-link">Início</a>
       <a routerLink="/create" class="nav-link">Compartilhar História</a>
+      <a *ngIf="isAdmin" routerLink="/admin" class="nav-link admin-link">Administração</a>
     </nav>
     <div class="auth-buttons">
       <ng-container *ngIf="!isLoggedIn">
@@ -14,6 +15,7 @@
       </ng-container>
       <ng-container *ngIf="isLoggedIn">
         <span class="username">{{ username }}</span>
+        <span *ngIf="isAdmin" class="admin-badge">Admin</span>
         <button (click)="logout()" class="auth-button">Sair</button>
       </ng-container>
     </div>

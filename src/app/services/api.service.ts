@@ -61,4 +61,17 @@ export class ApiService {
   likeComment(postId: number, commentId: number): Observable<LikeResponse> {
     return this.http.post<LikeResponse>(`${this.API_URL}/posts/${postId}/comments/${commentId}/like`, {});
   }
+
+  deleteComment(postId: number, commentId: number): Observable<any> {
+    // Usando a rota POST alternativa para exclusão de comentários (para compatibilidade com navegadores)
+    return this.http.post<any>(`${this.API_URL}/posts/${postId}/comments/${commentId}/delete`, {});
+    
+    // Método DELETE original (comentado para usar o POST)
+    // return this.http.delete<any>(`${this.API_URL}/posts/${postId}/comments/${commentId}`);
+  }
+
+  // Método para promover um usuário a administrador
+  promoteToAdmin(userIdOrUsername: { userId?: number; username?: string }): Observable<any> {
+    return this.http.post<any>(`${this.API_URL}/auth/promote`, userIdOrUsername);
+  }
 }

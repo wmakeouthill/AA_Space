@@ -14,6 +14,7 @@ import { Subscription } from 'rxjs';
 })
 export class HeaderComponent implements OnInit, OnDestroy {
   isLoggedIn = false;
+  isAdmin = false;
   username: string | null = null;
   guestNickname: string | null = null;
   private authSubscription: Subscription | null = null;
@@ -31,6 +32,15 @@ export class HeaderComponent implements OnInit, OnDestroy {
       isAuthenticated => {
         this.isLoggedIn = isAuthenticated;
         this.username = this.authService.getUsername();
+        
+        // Força a definição manual de admin caso o usuário seja 'admin'
+        if (this.username === 'admin') {
+          localStorage.setItem('is_admin', 'true');
+          console.log('Definindo manualmente o usuário admin como administrador');
+        }
+        
+        this.isAdmin = this.authService.isAdmin();
+        console.log('Status de administrador:', this.isAdmin);
         
         // Se estiver autenticado, o nickname de convidado não deve ser exibido
         if (isAuthenticated) {
