@@ -13,26 +13,37 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   ];
 
   // Verifica se é uma rota pública estática
-  const isStaticPublicRoute = publicRoutes.some(pattern => {
+  const isPublicRoute = publicRoutes.some(pattern => {
     const pathMatches = req.url.endsWith(pattern.path);
     return pathMatches && req.method === pattern.method;
   });
 
+  // Se for rota de validação de token, usa o token atual (se existir)
+  const isValidateTokenRoute = req.url.endsWith('/api/auth/validate');
+
   // Se for rota pública, não precisamos adicionar o token
-  if (isStaticPublicRoute) {
-    console.log('Rota pública:', req.url);
+  if (isPublicRoute) {
+    console.log('AuthInterceptor: Rota pública, sem token:', req.url);
     return next(req);
   }
 
   // Para todas as outras rotas, adiciona o token se existir
   if (token) {
-    console.log('Adicionando token à requisição:', req.url);
+    console.log('AuthInterceptor: Adicionando token à requisição:', req.url);
+    
+    // Clone a requisição e adicione o cabeçalho de autorização
     const authReq = req.clone({
       headers: req.headers.set('Authorization', `Bearer ${token}`)
     });
+    
     return next(authReq);
   }
 
-  console.log('Requisição sem token:', req.url);
+  // Caso especial - requisição para validação de token sem ter um token
+  if (isValidateTokenRoute && !token) {
+    console.log('AuthInterceptor: Tentativa de validar token sem ter um token');
+  }
+
+  console.log('AuthInterceptor: Requisição sem token:', req.url);
   return next(req);
 };
