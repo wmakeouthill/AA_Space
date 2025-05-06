@@ -69,12 +69,33 @@ JWT_SECRET=seu_segredo_jwt_super_secreto
 PORT=3001
 ```
 
+## Configuração do Banco de Dados e Migrações
+
+1. Compile o backend:
+```bash
+cd server
+npm run build
+```
+
+2. Execute as migrações para criar o banco de dados e tabelas:
+```bash
+cd server
+npm run migration:run
+```
+
+Isso criará o arquivo de banco de dados SQLite e aplicará todas as migrações necessárias, incluindo:
+- Criação das tabelas principais (User, Post, Comment, PostLike, CommentLike)
+- Adição de colunas especiais (isAdmin, isMainAdmin)
+- Criação do usuário administrador padrão (usuário: admin, senha: admin123)
+
 ## Executando o Projeto
 
 1. Inicie o servidor backend:
 ```bash
 cd server
-npm run dev
+npm run dev    # Para ambiente de desenvolvimento
+# OU
+npm run start  # Para versão compilada
 ```
 
 2. Em outro terminal, inicie o frontend:
@@ -84,6 +105,31 @@ ng serve
 
 O frontend estará disponível em `http://localhost:4200` e o backend em `http://localhost:3001`.
 
+## Acessando o Sistema
+
+1. **Usuário Administrador Padrão**:
+   - Username: admin
+   - Senha: admin123
+
+2. **Conta de Usuário Normal**:
+   - Registre um novo usuário na página de login/registro
+
+## Administração do Sistema
+
+### Painel de Administração
+O sistema inclui um painel de administração acessível apenas para usuários com privilégios de administrador. Para acessar:
+
+1. Faça login como administrador
+2. Acesse o menu de administração através do cabeçalho
+
+### Gerenciamento de Administradores
+O sistema permite:
+- Adicionar novos administradores
+- Remover privilégios de administração
+- Transferir o título de administrador principal
+
+**IMPORTANTE**: A transferência de administrador principal apenas transfere privilégios especiais de um usuário para outro, mantendo os nomes de usuário e senhas originais. Após a transferência, use as credenciais originais para fazer login.
+
 ## Funcionalidades
 
 - Sistema de autenticação com JWT
@@ -92,12 +138,15 @@ O frontend estará disponível em `http://localhost:4200` e o backend em `http:/
 - Sistema de curtidas em posts e comentários
 - Modo convidado com nickname
 - Interface responsiva e amigável
+- Painel de administração para gerenciar usuários
 
 ## Estrutura do Banco de Dados
 
 O projeto utiliza SQLite3 com TypeORM e possui as seguintes entidades:
 
 - User (Usuários)
+  - Inclui flags `isAdmin` para administradores
+  - Inclui flag `isMainAdmin` para identificar o administrador principal
 - Post (Postagens)
 - Comment (Comentários)
 - PostLike (Curtidas em posts)
@@ -115,12 +164,39 @@ ng test
 ng build --prod
 ```
 
+## Solução de Problemas
+
+### Problemas com Migrações
+Se encontrar erros relacionados a migrações já existentes:
+```bash
+cd server
+npm run migration:show  # Mostra quais migrações estão aplicadas
+```
+
+Para forçar a re-execução de uma migração:
+```bash
+cd server
+npm run migration:revert  # Reverte a última migração
+npm run migration:run     # Executa novamente as migrações
+```
+
+### Problemas de Login ou Acesso
+- Verifique se o banco de dados foi configurado corretamente
+- Certifique-se de que as migrações foram aplicadas
+- Confirme se está usando as credenciais corretas para o administrador
+
 ## Endpoints da API
 
 ### Autenticação
 - POST /api/auth/register - Registro de usuário
 - POST /api/auth/login - Login
 - GET /api/auth/validate - Validação de token
+
+### Administração
+- POST /api/auth/make-admin - Promove um usuário a administrador
+- POST /api/auth/remove-admin - Remove privilégios de administrador
+- POST /api/auth/transfer-admin - Transfere o título de administrador principal
+- GET /api/auth/admins - Lista todos os administradores
 
 ### Posts
 - GET /api/posts - Lista todos os posts
