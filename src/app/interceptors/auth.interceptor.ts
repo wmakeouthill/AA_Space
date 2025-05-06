@@ -9,17 +9,8 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   // Lista de rotas públicas que não precisam de autenticação
   const publicRoutes = [
     { path: '/api/auth/login', method: 'POST' },
-    { path: '/api/auth/register', method: 'POST' },
-    { path: '/api/posts', method: 'GET' },
-    { path: '/api/posts', method: 'POST' }
+    { path: '/api/auth/register', method: 'POST' }
   ];
-
-  // Verifica se a URL corresponde a rotas dinâmicas públicas
-  const isDynamicPublicRoute = (
-    (req.method === 'GET' && req.url.match(/\/api\/posts\/\d+$/)) || // GET individual post
-    (req.method === 'GET' && req.url.match(/\/api\/posts\/\d+\/comments$/)) || // GET post comments
-    (req.method === 'POST' && req.url.match(/\/api\/posts\/\d+\/comments$/)) // POST comments
-  );
 
   // Verifica se é uma rota pública estática
   const isStaticPublicRoute = publicRoutes.some(pattern => {
@@ -28,7 +19,7 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   });
 
   // Se for rota pública, não precisamos adicionar o token
-  if (isStaticPublicRoute || isDynamicPublicRoute) {
+  if (isStaticPublicRoute) {
     console.log('Rota pública:', req.url);
     return next(req);
   }

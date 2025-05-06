@@ -50,9 +50,6 @@ export class Post {
     @Column({ nullable: true })
     originalAuthor: string;
 
-    @Column({ default: 0 })
-    likes: number;
-
     @CreateDateColumn()
     created_at: Date;
 
@@ -86,9 +83,6 @@ export class Comment {
     @Column({ nullable: true })
     originalAuthor: string;
 
-    @Column({ default: 0 })
-    likes: number;
-
     @CreateDateColumn()
     created_at: Date;
 
@@ -110,9 +104,6 @@ export class PostLike {
     @CreateDateColumn()
     created_at: Date;
 
-    @Column({ default: false })
-    userLiked: boolean;
-
     @ManyToOne(() => Post, post => post.postLikes)
     post: Post;
 
@@ -127,9 +118,6 @@ export class CommentLike {
 
     @CreateDateColumn()
     created_at: Date;
-
-    @Column({ default: false })
-    userLiked: boolean;
 
     @ManyToOne(() => Comment, comment => comment.commentLikes)
     comment: Comment;

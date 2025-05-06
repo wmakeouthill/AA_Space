@@ -43,11 +43,10 @@ export class HomeComponent implements OnInit {
     this.error = null;
     this.apiService.getPosts().subscribe({
       next: (posts) => {
+        // Garante que userLiked seja um booleano
         this.posts = posts.map(post => ({
           ...post,
-          likes: post.likes ?? 0,
-          userLiked: post.userLiked ?? false, // Use the server's userLiked value
-          comment_count: post.comment_count ?? 0
+          userLiked: !!post.userLiked // Força a conversão para booleano
         }));
         this.isLoading = false;
       },
@@ -68,13 +67,10 @@ export class HomeComponent implements OnInit {
       return;
     }
 
-    const post = this.posts.find(p => p.id === postId);
-    if (!post) return;
-
     const postIndex = this.posts.findIndex(p => p.id === postId);
     if (postIndex === -1) return;
 
-    // Mantém o estado anterior para caso de erro
+    const post = this.posts[postIndex];
     const previousState = {
       likes: post.likes,
       userLiked: post.userLiked

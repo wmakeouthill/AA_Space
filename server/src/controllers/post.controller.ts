@@ -10,6 +10,8 @@ interface AuthRequest extends Request {
 export const getPosts = async (req: Request, res: Response) => {
     try {
         const userId = (req as AuthRequest).user?.id;
+        console.log(`[GET POSTS] Buscando posts para usuário ${userId}`);
+
         const postRepository = AppDataSource.getRepository(Post);
         const postLikeRepository = AppDataSource.getRepository(PostLike);
 
@@ -18,31 +20,30 @@ export const getPosts = async (req: Request, res: Response) => {
             .leftJoinAndSelect('post.user', 'user')
             .leftJoinAndSelect('post.comments', 'comments')
             .leftJoinAndSelect('post.postLikes', 'postLikes')
+            .leftJoinAndSelect('postLikes.user', 'likeUser')
             .orderBy('post.created_at', 'DESC')
             .getMany();
 
         const formattedPosts = await Promise.all(posts.map(async post => {
-            let userLiked = false;
-            let totalLikes = 0;
-
-            if (userId) {
-                const userLike = await postLikeRepository.findOne({
-                    where: {
-                        post: { id: post.id },
-                        user: { id: userId }
-                    }
-                });
-                userLiked = userLike?.userLiked ?? false;
-            }
-
-            totalLikes = await postLikeRepository.count({
+            // Verifica se existe like do usuário
+            const hasLike = userId ? await postLikeRepository.findOne({
                 where: {
                     post: { id: post.id },
-                    userLiked: true
+                    user: { id: userId }
+                }
+            }) : null;
+
+            console.log(`[GET POSTS] Post ${post.id} - Like do usuário: ${!!hasLike}`);
+
+            // Conta o total de likes
+            const totalLikes = await postLikeRepository.count({
+                where: {
+                    post: { id: post.id }
                 }
             });
 
-            // Se o post é anônimo, retorna 'Anônimo', caso contrário usa o autor original
+            console.log(`[GET POSTS] Post ${post.id} - Total de likes: ${totalLikes}`);
+
             const author = post.anonymous ? 'Anônimo' : (post.originalAuthor || post.author);
 
             return {
@@ -50,7 +51,7 @@ export const getPosts = async (req: Request, res: Response) => {
                 author,
                 comment_count: post.comments?.length || 0,
                 likes: totalLikes,
-                userLiked
+                userLiked: !!hasLike
             };
         }));
 
@@ -65,13 +66,18 @@ export const getPost = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
         const userId = (req as AuthRequest).user?.id;
+
+        console.log(`[GET POST] Buscando post ${id} para usuário ${userId}`);
+
         const postRepository = AppDataSource.getRepository(Post);
         const postLikeRepository = AppDataSource.getRepository(PostLike);
 
+        // Modificado para incluir um join com postLikes e user
         const post = await postRepository
             .createQueryBuilder('post')
             .leftJoinAndSelect('post.user', 'user')
             .leftJoinAndSelect('post.postLikes', 'postLikes')
+            .leftJoinAndSelect('postLikes.user', 'likeUser')
             .where('post.id = :id', { id: parseInt(id) })
             .getOne();
 
@@ -79,7 +85,7 @@ export const getPost = async (req: Request, res: Response) => {
             return res.status(404).json({ message: 'Post não encontrado' });
         }
 
-        // Verifica se o usuário atual deu like
+        // Verifica se o usuário atual tem um like neste post
         const userLike = userId ? await postLikeRepository.findOne({
             where: {
                 post: { id: post.id },
@@ -87,23 +93,26 @@ export const getPost = async (req: Request, res: Response) => {
             }
         }) : null;
 
-        // Conta o total de likes ativos
+        console.log(`[GET POST] Like do usuário encontrado: ${!!userLike}`);
+
         const totalLikes = await postLikeRepository.count({
             where: {
-                post: { id: post.id },
-                userLiked: true
+                post: { id: post.id }
             }
         });
 
-        // Se o post é anônimo, retorna 'Anônimo', caso contrário usa o autor original
+        console.log(`[GET POST] Total de likes: ${totalLikes}`);
+
         const author = post.anonymous ? 'Anônimo' : (post.originalAuthor || post.author);
 
         const formattedPost = {
             ...post,
             author,
             likes: totalLikes,
-            userLiked: userLike?.userLiked ?? false
+            userLiked: !!userLike
         };
+
+        console.log(`[GET POST] Resposta final - userLiked: ${!!userLike}, totalLikes: ${totalLikes}`);
 
         res.json(formattedPost);
     } catch (error) {
@@ -123,7 +132,6 @@ export const createPost = async (req: AuthRequest, res: Response) => {
         let userData: DeepPartial<User> | undefined = undefined;
         let author: string;
 
-        // Determina o autor real
         if (userId) {
             const user = await userRepository.findOne({ where: { id: userId } });
             if (user) {
@@ -143,15 +151,13 @@ export const createPost = async (req: AuthRequest, res: Response) => {
             content,
             anonymous,
             user: userData,
-            author, // Salvamos o autor real
-            originalAuthor: author, // Salvamos uma cópia do autor original
-            likes: 0
+            author,
+            originalAuthor: author
         };
 
         const newPost = postRepository.create(postData);
         await postRepository.save(newPost);
 
-        // Para a resposta, se for anônimo, retornamos 'Anônimo'
         const responsePost = {
             ...newPost,
             author: anonymous ? 'Anônimo' : author
@@ -196,20 +202,18 @@ export const createComment = async (req: AuthRequest, res: Response) => {
             author = 'Anônimo';
         }
 
-        // Criamos o commentData com o author original, mesmo que seja anônimo
         const commentData: DeepPartial<Comment> = {
             content,
             anonymous: anonymous,
             user: userData,
-            author, // Salvamos o autor real
-            originalAuthor: author, // Salvamos uma cópia do autor original
+            author,
+            originalAuthor: author,
             post: { id: post.id } as DeepPartial<Post>
         };
 
         const newComment = commentRepository.create(commentData);
         await commentRepository.save(newComment);
 
-        // Para a resposta, se for anônimo, retornamos 'Anônimo'
         const formattedComment = {
             id: newComment.id,
             content: newComment.content,
@@ -233,11 +237,22 @@ export const likePost = async (req: AuthRequest, res: Response) => {
         const { postId } = req.params;
         const userId = req.user?.id;
 
+        console.log(`[LIKE POST] Recebida requisição de like - postId: ${postId}, userId: ${userId}`);
+
         if (!userId) {
             return res.status(401).json({ message: 'Usuário não autenticado' });
         }
 
+        const postRepository = AppDataSource.getRepository(Post);
         const postLikeRepository = AppDataSource.getRepository(PostLike);
+
+        const post = await postRepository.findOne({
+            where: { id: parseInt(postId) }
+        });
+
+        if (!post) {
+            return res.status(404).json({ message: 'Post não encontrado' });
+        }
 
         // Verifica se já existe um like deste usuário
         let existingLike = await postLikeRepository.findOne({
@@ -247,38 +262,42 @@ export const likePost = async (req: AuthRequest, res: Response) => {
             }
         });
 
-        let userLiked = false;
+        console.log(`[LIKE POST] Like existente: ${!!existingLike}`);
 
+        // Se existe like, remove; se não existe, cria
         if (existingLike) {
-            // Se existe, alterna o estado do like
-            existingLike.userLiked = !existingLike.userLiked;
-            await postLikeRepository.save(existingLike);
-            userLiked = existingLike.userLiked;
+            await postLikeRepository.remove(existingLike);
+            console.log(`[LIKE POST] Like removido para post ${postId}`);
         } else {
-            // Se não existe, cria um novo like
             const newLike = postLikeRepository.create({
                 post: { id: parseInt(postId) },
-                user: { id: userId },
-                userLiked: true
+                user: { id: userId }
             });
             await postLikeRepository.save(newLike);
-            userLiked = true;
+            console.log(`[LIKE POST] Novo like criado para post ${postId}`);
         }
 
-        // Conta APENAS os likes ativos usando uma query SQL direta
-        const result = await postLikeRepository
-            .createQueryBuilder('postLike')
-            .select('COUNT(*)', 'count')
-            .where('postLike.postId = :postId', { postId: parseInt(postId) })
-            .andWhere('postLike.userLiked = :state', { state: true })
-            .getRawOne();
+        // Verifica novamente se existe like para retornar o estado atual
+        const userHasLike = await postLikeRepository.findOne({
+            where: {
+                post: { id: parseInt(postId) },
+                user: { id: userId }
+            }
+        });
 
-        const totalLikes = Number(result?.count) || 0;
+        // Conta o total de likes (de todos os usuários)
+        const totalLikes = await postLikeRepository.count({
+            where: {
+                post: { id: parseInt(postId) }
+            }
+        });
+
+        console.log(`[LIKE POST] Estado final - userHasLike: ${!!userHasLike}, totalLikes: ${totalLikes}`);
 
         return res.json({
-            message: userLiked ? 'Post curtido' : 'Like removido',
+            message: userHasLike ? 'Post curtido' : 'Like removido',
             likes: totalLikes,
-            userLiked: userLiked
+            userLiked: !!userHasLike
         });
     } catch (error) {
         console.error('[LIKE POST] Erro:', error);
@@ -298,11 +317,9 @@ export const likeComment = async (req: AuthRequest, res: Response) => {
         const commentRepository = AppDataSource.getRepository(Comment);
         const commentLikeRepository = AppDataSource.getRepository(CommentLike);
 
-        const comment = await commentRepository
-            .createQueryBuilder('comment')
-            .leftJoinAndSelect('comment.commentLikes', 'commentLikes')
-            .where('comment.id = :id', { id: parseInt(commentId) })
-            .getOne();
+        const comment = await commentRepository.findOne({
+            where: { id: parseInt(commentId) }
+        });
 
         if (!comment) {
             return res.status(404).json({ message: 'Comentário não encontrado' });
@@ -316,40 +333,36 @@ export const likeComment = async (req: AuthRequest, res: Response) => {
             }
         });
 
+        // Se existe like, remove; se não existe, cria
         if (existingLike) {
-            // Se existe, alterna o estado do like
-            existingLike.userLiked = !existingLike.userLiked;
-            await commentLikeRepository.save(existingLike);
+            await commentLikeRepository.remove(existingLike);
         } else {
-            // Se não existe, cria um novo like
             const newLike = commentLikeRepository.create({
                 comment: { id: parseInt(commentId) },
-                user: { id: userId },
-                userLiked: true
+                user: { id: userId }
             });
             await commentLikeRepository.save(newLike);
         }
 
-        // Conta o total de likes ativos (onde userLiked = true)
-        const totalLikes = await commentLikeRepository.count({
-            where: {
-                comment: { id: parseInt(commentId) },
-                userLiked: true
-            }
-        });
-
-        // Verifica o estado atual do like do usuário
-        const currentUserLike = await commentLikeRepository.findOne({
+        // Verifica novamente se existe like para retornar o estado atual
+        const userHasLike = await commentLikeRepository.findOne({
             where: {
                 comment: { id: parseInt(commentId) },
                 user: { id: userId }
             }
         });
 
+        // Conta o total de likes (de todos os usuários)
+        const totalLikes = await commentLikeRepository.count({
+            where: {
+                comment: { id: parseInt(commentId) }
+            }
+        });
+
         return res.json({
-            message: currentUserLike?.userLiked ? 'Comentário curtido' : 'Like removido',
-            likes: totalLikes,
-            userLiked: currentUserLike?.userLiked ?? false
+            message: userHasLike ? 'Comentário curtido' : 'Like removido',
+            likes: totalLikes, // Número total de likes
+            userLiked: !!userHasLike // Boolean indicando se este usuário tem like
         });
     } catch (error) {
         console.error('Erro ao processar like no comentário:', error);
@@ -360,7 +373,7 @@ export const likeComment = async (req: AuthRequest, res: Response) => {
 export const getComments = async (req: Request, res: Response) => {
     try {
         const { postId } = req.params;
-        const userId = (req as any).user?.id;
+        const userId = (req as AuthRequest).user?.id;
         const commentRepository = AppDataSource.getRepository(Comment);
         const commentLikeRepository = AppDataSource.getRepository(CommentLike);
 
@@ -368,30 +381,26 @@ export const getComments = async (req: Request, res: Response) => {
             .createQueryBuilder('comment')
             .leftJoinAndSelect('comment.user', 'user')
             .leftJoinAndSelect('comment.post', 'post')
-            .leftJoinAndSelect('comment.commentLikes', 'commentLikes')
             .where('comment.post.id = :postId', { postId: parseInt(postId) })
             .orderBy('comment.created_at', 'DESC')
             .getMany();
 
         const formattedComments = await Promise.all(comments.map(async comment => {
-            // Verifica se o usuário atual deu like
-            const userLike = userId ? await commentLikeRepository.findOne({
+            // Verifica se existe like do usuário
+            const hasLike = userId ? await commentLikeRepository.findOne({
                 where: {
                     comment: { id: comment.id },
                     user: { id: userId }
                 }
             }) : null;
 
-            // Conta o total de likes ativos
+            // Conta o total de likes
             const totalLikes = await commentLikeRepository.count({
                 where: {
-                    comment: { id: comment.id },
-                    userLiked: true
+                    comment: { id: comment.id }
                 }
             });
 
-            // Se o comentário é anônimo, retorna 'Anônimo', 
-            // caso contrário usa o autor original se disponível, ou faz o fallback para o autor normal
             const author = comment.anonymous ? 'Anônimo' : (comment.originalAuthor || comment.author);
 
             return {
@@ -402,7 +411,7 @@ export const getComments = async (req: Request, res: Response) => {
                 post_id: parseInt(postId),
                 anonymous: comment.anonymous,
                 likes: totalLikes,
-                userLiked: userLike?.userLiked ?? false
+                userLiked: !!hasLike
             };
         }));
 

@@ -56,8 +56,7 @@ export class PostComponent implements OnInit {
         this.post = {
           ...post,
           likes: post.likes ?? 0,
-          userLiked: post.userLiked ?? false, // Use the server's userLiked value
-          comment_count: post.comment_count ?? 0
+          userLiked: !!post.userLiked // Força a conversão para booleano
         };
       },
       error: (error) => {
@@ -73,13 +72,7 @@ export class PostComponent implements OnInit {
         this.comments = comments.map(comment => ({
           ...comment,
           likes: comment.likes ?? 0,
-          userLiked: comment.userLiked ?? false,
-          id: comment.id,
-          content: comment.content,
-          author: comment.anonymous ? 'Anônimo' : comment.author,
-          created_at: comment.created_at,
-          post_id: postId,
-          anonymous: comment.anonymous
+          userLiked: !!comment.userLiked // Força a conversão para booleano
         }));
       },
       error: (error) => {
@@ -143,8 +136,6 @@ export class PostComponent implements OnInit {
       userLiked: this.post.userLiked
     };
 
-    console.log('[LIKE POST] Antes do clique:', previousState);
-
     // Optimistic update
     this.post = {
       ...this.post,
@@ -152,22 +143,18 @@ export class PostComponent implements OnInit {
       likes: this.post.userLiked ? Math.max(0, this.post.likes - 1) : this.post.likes + 1
     };
 
-    console.log('[LIKE POST] Após clique (optimistic):', this.post);
-
     this.apiService.likePost(this.post.id).subscribe({
       next: (response) => {
-        console.log('[LIKE POST] Resposta do backend:', response);
         if (this.post) {
           this.post = {
             ...this.post,
             likes: response.likes,
-            userLiked: response.userLiked
+            userLiked: response.userLiked // Corrigido: Atualizar userLiked com o valor do servidor
           };
-          console.log('[LIKE POST] Estado final após resposta:', this.post);
         }
       },
       error: (error) => {
-        console.error('[LIKE POST] Erro ao curtir post:', error);
+        console.error('Erro ao curtir post:', error);
         this.error = 'Você precisa estar logado para curtir uma postagem';
         if (this.post) {
           this.post = {
@@ -175,7 +162,6 @@ export class PostComponent implements OnInit {
             likes: previousState.likes,
             userLiked: previousState.userLiked
           };
-          console.log('[LIKE POST] Estado revertido após erro:', this.post);
         }
       }
     });
@@ -197,8 +183,6 @@ export class PostComponent implements OnInit {
       userLiked: comment.userLiked
     };
 
-    console.log('[LIKE COMMENT] Antes do clique:', previousState, 'CommentID:', comment.id);
-
     // Optimistic update
     const updatedComments = [...this.comments];
     updatedComments[commentIndex] = {
@@ -208,11 +192,8 @@ export class PostComponent implements OnInit {
     };
     this.comments = updatedComments;
 
-    console.log('[LIKE COMMENT] Após clique (optimistic):', this.comments[commentIndex]);
-
     this.apiService.likeComment(this.post.id, comment.id).subscribe({
       next: (response) => {
-        console.log('[LIKE COMMENT] Resposta do backend:', response, 'CommentID:', comment.id);
         const newComments = [...this.comments];
         newComments[commentIndex] = {
           ...newComments[commentIndex],
@@ -220,10 +201,9 @@ export class PostComponent implements OnInit {
           userLiked: response.userLiked
         };
         this.comments = newComments;
-        console.log('[LIKE COMMENT] Estado final após resposta:', this.comments[commentIndex]);
       },
       error: (error) => {
-        console.error('[LIKE COMMENT] Erro ao curtir comentário:', error, 'CommentID:', comment.id);
+        console.error('Erro ao curtir comentário:', error);
         this.error = 'Você precisa estar logado para curtir um comentário';
 
         // Reverte a mudança em caso de erro
@@ -234,7 +214,6 @@ export class PostComponent implements OnInit {
           userLiked: previousState.userLiked
         };
         this.comments = newComments;
-        console.log('[LIKE COMMENT] Estado revertido após erro:', this.comments[commentIndex]);
       }
     });
   }

@@ -1,7 +1,7 @@
 .create-post-container {
-  max-width: 800px;
+  max-width: 95%;
   margin: 80px auto 0;
-  padding: 2rem;
+  padding: 2%;
 }
 
 h1 {
@@ -21,7 +21,7 @@ h2 {
 
 .post-form, .guest-nickname-section {
   background-color: white;
-  padding: 2rem;
+  padding: 4%;
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
@@ -57,7 +57,7 @@ label {
 input[type="text"],
 textarea {
   width: 100%;
-  padding: 0.75rem;
+  padding: 2%;
   border: 1px solid #ddd;
   border-radius: 4px;
   font-size: 1rem;

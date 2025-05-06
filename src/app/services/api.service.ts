@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, Inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { Post, Comment, LikeResponse } from '../models/post.interface';
@@ -7,10 +7,24 @@ import { Post, Comment, LikeResponse } from '../models/post.interface';
   providedIn: 'root'
 })
 export class ApiService {
-  private readonly API_URL = 'http://localhost:3000/api';
+  private readonly API_URL = 'http://localhost:3001/api';
 
   constructor(private http: HttpClient) {}
+  
+  // Auth endpoints
+  login(credentials: { username: string; password: string }): Observable<any> {
+    return this.http.post(`${this.API_URL}/auth/login`, credentials);
+  }
 
+  register(credentials: { username: string; password: string }): Observable<any> {
+    return this.http.post(`${this.API_URL}/auth/register`, credentials);
+  }
+
+  validateToken(): Observable<any> {
+    return this.http.get(`${this.API_URL}/auth/validate`);
+  }
+
+  // Post endpoints
   createPost(post: { title: string; content: string; anonymous: boolean; guestNickname?: string }): Observable<Post> {
     return this.http.post<Post>(`${this.API_URL}/posts`, post);
   }
