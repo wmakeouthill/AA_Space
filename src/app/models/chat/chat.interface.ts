@@ -13,6 +13,7 @@ export interface ChatParticipant {
     id: number;
     username: string;
     isAdmin?: boolean;
+    profileImage?: string; // URL da imagem de perfil do participante
 }
 
 export interface Message {
@@ -20,6 +21,7 @@ export interface Message {
     content: string;
     senderId: number;
     senderName?: string;
+    senderProfileImage?: string; // URL da imagem de perfil do remetente
     timestamp: Date | string;
     read: boolean;
 }
@@ -43,4 +45,5 @@ export interface User {
     id: number;
     username: string;
     email?: string;
+    profileImage?: string; // URL da imagem de perfil do usuário
 }

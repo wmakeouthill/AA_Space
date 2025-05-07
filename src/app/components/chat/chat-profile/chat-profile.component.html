@@ -1,0 +1,36 @@
+<div class="profile-container">
+  <div class="profile" (click)="toggleProfileOptions()">
+    <div class="profile-image-container">
+      <img [src]="profileImage || defaultImage" alt="Imagem de perfil" class="profile-image" (click)="toggleEnlargedImage($event)">
+      <div class="profile-image-overlay" *ngIf="showProfileOptions">
+        <label for="file-upload" class="upload-label">
+          Alterar
+          <input type="file" id="file-upload" style="display:none" accept="image/*" (change)="onFileSelected($event)">
+        </label>
+        <button class="remove-button" *ngIf="profileImage" (click)="removeProfileImage()">Remover</button>
+        <button class="view-button" *ngIf="profileImage" (click)="toggleEnlargedImage($event)">Ampliar</button>
+      </div>
+    </div>
+    <div class="profile-info">
+      <div class="profile-username">{{ username }}</div>
+      <div class="profile-status">Online</div>
+    </div>
+  </div>
+  
+  <div class="upload-indicator" *ngIf="isUploading">
+    <div class="spinner"></div>
+    <span>Carregando...</span>
+  </div>
+  
+  <div class="error-message" *ngIf="uploadError">
+    {{ uploadError }}
+  </div>
+  
+  <!-- Visualização ampliada da imagem de perfil -->
+  <div class="enlarged-image-overlay" *ngIf="showEnlargedImage" (click)="toggleEnlargedImage($event)">
+    <div class="enlarged-image-container">
+      <img [src]="profileImage || defaultImage" alt="Imagem de perfil" class="enlarged-image">
+      <button class="close-enlarged-button" (click)="toggleEnlargedImage($event)">&times;</button>
+    </div>
+  </div>
+</div>

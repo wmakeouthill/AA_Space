@@ -6,6 +6,7 @@ import { AppDataSource } from './config/database';
 import authRoutes from './routes/auth';
 import postRoutes from './routes/posts';
 import chatRoutes from './routes/chat';
+import profileRoutes from './routes/profile';
 
 dotenv.config();
 
@@ -70,7 +71,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 app.use(cors(corsOptions));
 
 // Parse JSON bodies
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));  // Aumentando o limite para permitir uploads de imagens
 
 // Headers adicionais para CORS
 app.use((req: Request, res: Response, next: NextFunction) => {
@@ -90,6 +91,9 @@ app.use((req: Request, res: Response, next: NextFunction) => {
     next();
 });
 
+// Diretório para servir os arquivos de upload
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+
 // Rota de health check
 app.get('/api/health', (req: Request, res: Response) => {
     res.json({
@@ -106,6 +110,7 @@ app.get('/api/health', (req: Request, res: Response) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/posts', postRoutes);
 app.use('/api/chat', chatRoutes);
+app.use('/api/profile', profileRoutes);
 
 // Em ambiente de produção ou Codespaces, configure para servir arquivos estáticos do Angular
 if (process.env.NODE_ENV === 'production' || isCodespacesEnv) {

@@ -21,6 +21,7 @@ export class ChatConversationComponent implements OnChanges {
   loading = false;
   error: string | null = null;
   sending = false;
+  defaultImage: string = 'assets/images/user.png';
 
   constructor(private chatService: ChatService) {
     this.currentUserId = this.chatService.getCurrentUserId();
@@ -52,6 +53,42 @@ export class ChatConversationComponent implements OnChanges {
     // Encontrar o participante pelo ID
     const participant = this.selectedChat.participants.find(p => p.id === userId);
     return participant?.username || 'Usuário';
+  }
+
+  // Método para obter a imagem de perfil de um usuário pelo ID
+  getProfileImage(userId: number): string {
+    if (!this.selectedChat) return this.defaultImage;
+
+    // Verificar se é um participante do chat
+    const participant = this.selectedChat.participants.find(p => p.id === userId);
+    
+    // Se o participante tiver uma imagem de perfil definida, use-a
+    if (participant?.profileImage) {
+      return participant.profileImage;
+    }
+    
+    // Caso contrário, use a imagem padrão
+    return this.defaultImage;
+  }
+
+  // Método para obter a imagem de perfil do usuário atual
+  getCurrentUserProfileImage(): string {
+    // Primeiro, tenta pegar do localStorage (solução temporária)
+    const savedImage = localStorage.getItem('user_profile_image');
+    if (savedImage) {
+      return savedImage;
+    }
+    
+    // Se não encontrar no localStorage, verifica nos participantes do chat
+    if (this.selectedChat) {
+      const currentUser = this.selectedChat.participants.find(p => p.id === this.currentUserId);
+      if (currentUser?.profileImage) {
+        return currentUser.profileImage;
+      }
+    }
+    
+    // Caso não encontre em nenhum lugar, retorna a imagem padrão
+    return this.defaultImage;
   }
 
   sendMessage(): void {

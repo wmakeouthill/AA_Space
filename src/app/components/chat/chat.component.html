@@ -1,5 +1,6 @@
 <div class="chat-container">
   <div class="chat-sidebar">
+    <app-chat-profile></app-chat-profile>
     <app-chat-new (chatCreated)="onChatCreated($event)"></app-chat-new>
     <app-chat-list (chatSelected)="onChatSelected($event)"></app-chat-list>
   </div>

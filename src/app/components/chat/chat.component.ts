@@ -4,6 +4,7 @@ import { RouterModule } from '@angular/router';
 import { ChatListComponent } from './chat-list/chat-list.component';
 import { ChatConversationComponent } from './chat-conversation/chat-conversation.component';
 import { ChatNewComponent } from './chat-new/chat-new.component';
+import { ChatProfileComponent } from './chat-profile/chat-profile.component';
 import { ChatService } from '../../services/chat.service';
 import { Chat } from '../../models/chat/chat.interface';
 
@@ -17,7 +18,8 @@ import { Chat } from '../../models/chat/chat.interface';
     RouterModule,
     ChatListComponent,
     ChatConversationComponent,
-    ChatNewComponent
+    ChatNewComponent,
+    ChatProfileComponent
   ]
 })
 export class ChatComponent implements OnInit {

@@ -15,12 +15,23 @@
     <div *ngFor="let message of messages"
          class="message"
          [ngClass]="{'message-sent': message.senderId === currentUserId, 'message-received': message.senderId !== currentUserId}">
-      <div class="message-bubble">
-        <div class="message-sender" *ngIf="message.senderId !== currentUserId && selectedChat.isGroup">
-          {{ getUserName(message.senderId) }}
+      
+      <div class="message-avatar" *ngIf="message.senderId !== currentUserId">
+        <img [src]="getProfileImage(message.senderId)" alt="Avatar" class="avatar-image">
+      </div>
+      
+      <div class="message-content-wrapper">
+        <div class="message-bubble">
+          <div class="message-sender" *ngIf="message.senderId !== currentUserId && selectedChat.isGroup">
+            {{ getUserName(message.senderId) }}
+          </div>
+          <div class="message-content">{{ message.content }}</div>
+          <div class="message-time">{{ message.timestamp | date:'shortTime' }}</div>
         </div>
-        <div class="message-content">{{ message.content }}</div>
-        <div class="message-time">{{ message.timestamp | date:'shortTime' }}</div>
+      </div>
+      
+      <div class="message-avatar sender-avatar" *ngIf="message.senderId === currentUserId">
+        <img [src]="getCurrentUserProfileImage()" alt="Seu avatar" class="avatar-image">
       </div>
     </div>
   </div>
