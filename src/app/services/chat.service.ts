@@ -4,19 +4,25 @@ import { catchError, map } from 'rxjs/operators';
 import { HttpClient } from '@angular/common/http';
 import { ApiResponse, Chat, CreateChatRequest, Message, User } from '../models/chat/chat.interface';
 import { AuthService } from './auth.service';
+import { ApiService } from './api.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class ChatService {
-  private apiUrl = `http://localhost:3001/api/chat`;
+  private apiUrl: string;
   private currentUserId: number;
 
   constructor(
     private http: HttpClient,
-    private authService: AuthService
+    private authService: AuthService,
+    private apiService: ApiService
   ) {
     this.currentUserId = parseInt(this.authService.getUserId() || '0');
+    // Obtém a URL base da API do ApiService, mas sem o '/api' no final
+    const baseApiUrl = (this.apiService as any).API_URL.replace('/api', '');
+    this.apiUrl = `${baseApiUrl}/api/chat`;
+    console.log('ChatService usando URL da API:', this.apiUrl);
   }
 
   // Retorna um Observable com a lista de chats

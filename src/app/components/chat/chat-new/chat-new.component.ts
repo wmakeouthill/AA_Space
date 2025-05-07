@@ -24,6 +24,8 @@ export class ChatNewComponent implements OnInit {
 
   // Lista de usuários disponíveis
   users: User[] = [];
+  filteredUsers: User[] = [];
+  searchQuery: string = '';
 
   constructor(private chatService: ChatService) {
     this.currentUserId = this.chatService.getCurrentUserId();
@@ -40,7 +42,9 @@ export class ChatNewComponent implements OnInit {
 
     this.chatService.getAvailableUsers().subscribe({
       next: (users) => {
-        this.users = users;
+        // Ordenar usuários por username em ordem alfabética
+        this.users = users.sort((a, b) => a.username.localeCompare(b.username));
+        this.applyFilter();
         this.loading = false;
       },
       error: (err) => {
@@ -51,6 +55,23 @@ export class ChatNewComponent implements OnInit {
     });
   }
 
+  applyFilter(): void {
+    if (!this.searchQuery.trim()) {
+      this.filteredUsers = [...this.users];
+      return;
+    }
+
+    const query = this.searchQuery.toLowerCase().trim();
+    this.filteredUsers = this.users.filter(user => 
+      user.username.toLowerCase().includes(query) || 
+      (user.email && user.email.toLowerCase().includes(query))
+    );
+  }
+
+  onSearchChange(): void {
+    this.applyFilter();
+  }
+
   openNewChatModal(): void {
     this.showModal = true;
     this.resetForm();
@@ -58,6 +79,9 @@ export class ChatNewComponent implements OnInit {
     // Recarregar a lista de usuários caso tenha erro
     if (this.users.length === 0 || this.error) {
       this.loadAvailableUsers();
+    } else {
+      // Aplicar filtro com base na pesquisa atual
+      this.applyFilter();
     }
   }
 
@@ -70,7 +94,12 @@ export class ChatNewComponent implements OnInit {
     this.isGroup = false;
     this.groupName = '';
     this.selectedUsers = [];
+    this.searchQuery = '';
     this.error = null;
+    // Redefine a lista filtrada para mostrar todos os usuários
+    if (this.users.length > 0) {
+      this.filteredUsers = [...this.users];
+    }
   }
 
   toggleUserSelection(userId: number): void {
@@ -92,6 +121,10 @@ export class ChatNewComponent implements OnInit {
 
   isUserSelected(userId: number): boolean {
     return this.selectedUsers.includes(userId);
+  }
+
+  getUsersSelectedCount(): number {
+    return this.selectedUsers.length;
   }
 
   canCreate(): boolean {

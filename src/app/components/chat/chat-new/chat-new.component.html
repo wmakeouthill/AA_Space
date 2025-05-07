@@ -29,18 +29,50 @@
 
       <div class="form-group">
         <label>{{ isGroup ? 'Adicionar Participantes:' : 'Selecionar Usuário:' }}</label>
+        
+        <!-- Campo de pesquisa -->
+        <div class="search-container">
+          <input
+            type="text"
+            [(ngModel)]="searchQuery"
+            (ngModelChange)="onSearchChange()"
+            placeholder="Pesquisar usuários..."
+            class="search-input">
+          <span *ngIf="getUsersSelectedCount() > 0" class="selected-count">
+            {{ getUsersSelectedCount() }} selecionado{{ getUsersSelectedCount() > 1 ? 's' : '' }}
+          </span>
+        </div>
+        
         <div class="user-list">
+          <div *ngIf="loading" class="loading-indicator">
+            <p>Carregando usuários...</p>
+          </div>
+          
+          <div *ngIf="!loading && filteredUsers.length === 0" class="no-results">
+            <p>Nenhum usuário encontrado</p>
+          </div>
+          
           <div
-            *ngFor="let user of users"
+            *ngFor="let user of filteredUsers"
             class="user-item"
             [class.selected]="isUserSelected(user.id)"
             (click)="toggleUserSelection(user.id)">
             <div class="user-avatar">
               <img [src]="'assets/images/user.png'" alt="Avatar">
             </div>
-            <div class="user-name">{{ user.username }}</div>
+            <div class="user-info">
+              <div class="user-name">{{ user.username }}</div>
+              <div *ngIf="user.email" class="user-email">{{ user.email }}</div>
+            </div>
+            <div *ngIf="isUserSelected(user.id)" class="user-selected-indicator">
+              <span>✓</span>
+            </div>
           </div>
         </div>
+      </div>
+      
+      <div *ngIf="error" class="error-message">
+        {{ error }}
       </div>
     </div>
     <div class="modal-footer">
