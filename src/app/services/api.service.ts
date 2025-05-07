@@ -11,13 +11,13 @@ export class ApiService {
   private readonly API_URL = 'http://localhost:3001/api';
 
   constructor(private http: HttpClient) {}
-  
+
   // Auth endpoints
   login(credentials: { username: string; password: string }): Observable<any> {
     return this.http.post(`${this.API_URL}/auth/login`, credentials);
   }
 
-  register(credentials: { username: string; password: string }): Observable<any> {
+  register(credentials: { username: string; password: string; email?: string; phone?: string }): Observable<any> {
     return this.http.post(`${this.API_URL}/auth/register`, credentials);
   }
 
@@ -41,7 +41,7 @@ export class ApiService {
   deletePost(id: number): Observable<any> {
     // Usando a rota POST alternativa para exclusão
     return this.http.post<any>(`${this.API_URL}/posts/${id}/delete`, {});
-    
+
     // Método DELETE original (comentado para usar o POST)
     // return this.http.delete<any>(`${this.API_URL}/posts/${id}`);
   }
@@ -66,7 +66,7 @@ export class ApiService {
   deleteComment(postId: number, commentId: number): Observable<any> {
     // Usando a rota POST alternativa para exclusão de comentários (para compatibilidade com navegadores)
     return this.http.post<any>(`${this.API_URL}/posts/${postId}/comments/${commentId}/delete`, {});
-    
+
     // Método DELETE original (comentado para usar o POST)
     // return this.http.delete<any>(`${this.API_URL}/posts/${postId}/comments/${commentId}`);
   }
@@ -88,14 +88,19 @@ export class ApiService {
   removeAdmin(username: string): Observable<any> {
     return this.http.post<any>(`${this.API_URL}/auth/remove-admin`, { username });
   }
-  
+
   // Método para transferir o título de administrador principal para outro usuário
   transferMainAdmin(username: string): Observable<any> {
     return this.http.post<any>(`${this.API_URL}/auth/transfer-admin`, { username });
   }
-  
+
   // Método para listar todos os administradores
   listAdmins(): Observable<any> {
     return this.http.get<any>(`${this.API_URL}/auth/admins`);
+  }
+
+  // Método para listar todos os usuários
+  listAllUsers(): Observable<any> {
+    return this.http.get<any>(`${this.API_URL}/auth/users`);
   }
 }

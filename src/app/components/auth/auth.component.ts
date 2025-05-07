@@ -1,6 +1,6 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, FormGroup, ReactiveFormsModule, Validators, FormControl } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 import { tap } from 'rxjs/operators';
@@ -12,8 +12,8 @@ import { tap } from 'rxjs/operators';
   templateUrl: './auth.component.html',
   styleUrl: './auth.component.css'
 })
-export class AuthComponent {
-  isLogin = true; // Alterado para começar com o login
+export class AuthComponent implements OnInit {
+  isLogin = true;
   authForm: FormGroup;
   isSubmitting = false;
   error: string | null = null;
@@ -23,16 +23,44 @@ export class AuthComponent {
     private router: Router,
     private authService: AuthService
   ) {
+    // Inicializa o formulário na construção com todos os campos possíveis
     this.authForm = this.fb.group({
       username: ['', [Validators.required, Validators.minLength(3)]],
-      password: ['', [Validators.required, Validators.minLength(6)]]
+      password: ['', [Validators.required, Validators.minLength(6)]],
+      email: ['', [Validators.email]],
+      phone: ['']
     });
   }
 
+  ngOnInit() {
+    // Atualiza o formulário de acordo com o modo atual
+    this.updateFormControls();
+  }
+
+  updateFormControls() {
+    // Se estiver no modo de login, remove os campos opcionais
+    // Se estiver no modo de registro, mantém os campos opcionais
+    if (this.isLogin) {
+      // Mantém apenas os campos obrigatórios para login
+      this.authForm.get('email')?.disable();
+      this.authForm.get('phone')?.disable();
+    } else {
+      // Habilita todos os campos para registro
+      this.authForm.get('email')?.enable();
+      this.authForm.get('phone')?.enable();
+    }
+  }
+
   toggleAuthMode() {
+    // Inverte o modo
     this.isLogin = !this.isLogin;
+
+    // Limpa o formulário e o erro
     this.authForm.reset();
     this.error = null;
+
+    // Atualiza os controles do formulário
+    this.updateFormControls();
   }
 
   onSubmit() {
@@ -40,11 +68,17 @@ export class AuthComponent {
       this.isSubmitting = true;
       this.error = null;
 
-      const { username, password } = this.authForm.value;
+      // Extrair apenas os valores dos campos habilitados
+      const formValue = this.authForm.getRawValue();
+      const { username, password } = formValue;
+
+      // Só incluir email e phone se estiver no modo de registro
+      const email = this.isLogin ? undefined : formValue.email;
+      const phone = this.isLogin ? undefined : formValue.phone;
 
       const authAction = this.isLogin
         ? this.authService.login(username, password)
-        : this.authService.register(username, password).pipe(
+        : this.authService.register(username, password, email, phone).pipe(
             tap(() => {
               // Após registro bem-sucedido, faz login automaticamente
               return this.authService.login(username, password);

@@ -17,6 +17,12 @@ export class User {
     @Column({ default: false })
     isMainAdmin: boolean;
 
+    @Column({ nullable: true })
+    email: string;
+
+    @Column({ nullable: true })
+    phone: string;
+
     @CreateDateColumn()
     created_at: Date;
 

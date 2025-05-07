@@ -1,7 +1,10 @@
 .auth-container {
   max-width: 600px;
+  min-width: 500px; /* Adicionando largura mínima para consistência */
+  width: 100%;      /* Garantindo que preencha a largura disponível */
   margin: 70px auto 0;
   padding: 2%;
+  box-sizing: border-box; /* Garantindo que padding não afete a largura */
 }
 
 .auth-card {
@@ -10,6 +13,10 @@
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   width: 100%;
+  min-height: 400px; /* Define uma altura mínima para o card */
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box; /* Garantindo que padding não afete a largura */
 }
 
 h1 {
@@ -28,6 +35,7 @@ h1 {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
+  flex: 1;
 }
 
 .form-group {
@@ -47,6 +55,8 @@ input {
   border-radius: 4px;
   font-size: 1rem;
   transition: border-color 0.2s;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 input:focus {

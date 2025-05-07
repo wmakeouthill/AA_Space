@@ -1,5 +1,5 @@
 import express from 'express';
-import { register, login, validateToken, promoteToAdmin, removeAdmin, transferMainAdmin, listAdmins } from '../controllers/auth.controller';
+import { register, login, validateToken, promoteToAdmin, removeAdmin, transferMainAdmin, listAdmins, listAllUsers } from '../controllers/auth.controller';
 import { authMiddleware } from '../middleware/auth.middleware';
 
 const router = express.Router();
@@ -12,6 +12,9 @@ router.get('/promote-check', (req, res) => {
 
 // Rota para listar todos os administradores
 router.get('/admins', authMiddleware, listAdmins);
+
+// Rota para listar todos os usuários
+router.get('/users', authMiddleware, listAllUsers);
 
 // Rota para promoção de administradores
 router.post('/make-admin', authMiddleware, promoteToAdmin);

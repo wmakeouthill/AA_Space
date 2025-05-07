@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.listAdmins = exports.transferMainAdmin = exports.removeAdmin = exports.promoteToAdmin = exports.validateToken = exports.login = exports.register = void 0;
+exports.listAllUsers = exports.listAdmins = exports.transferMainAdmin = exports.removeAdmin = exports.promoteToAdmin = exports.validateToken = exports.login = exports.register = void 0;
 const bcrypt_1 = __importDefault(require("bcrypt"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const database_1 = require("../config/database");
@@ -21,7 +21,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'seu_segredo_jwt_super_secreto';
 const TOKEN_EXPIRATION = '24h';
 const register = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const { username, password } = req.body;
+        const { username, password, email, phone } = req.body;
         if (!username || !password) {
             return res.status(400).json({ message: 'Usuário e senha são obrigatórios' });
         }
@@ -36,7 +36,9 @@ const register = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         // Cria novo usuário
         const user = userRepository.create({
             username,
-            password: hashedPassword
+            password: hashedPassword,
+            email: email || null,
+            phone: phone || null
         });
         const savedUser = yield userRepository.save(user);
         console.log('Usuário criado:', { id: savedUser.id, username: savedUser.username });
@@ -331,3 +333,37 @@ const listAdmins = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
     }
 });
 exports.listAdmins = listAdmins;
+const listAllUsers = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a, _b;
+    try {
+        // Verificar se o usuário que faz a solicitação é um administrador
+        const requestingUserId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id;
+        const isRequestingUserAdmin = (_b = req.user) === null || _b === void 0 ? void 0 : _b.isAdmin;
+        if (!requestingUserId) {
+            return res.status(401).json({ message: 'Usuário não autenticado' });
+        }
+        if (!isRequestingUserAdmin) {
+            return res.status(403).json({ message: 'Apenas administradores podem listar todos os usuários' });
+        }
+        const userRepository = database_1.AppDataSource.getRepository(entities_1.User);
+        // Buscar todos os usuários
+        const users = yield userRepository.find({
+            select: ['id', 'username', 'email', 'phone', 'isAdmin', 'isMainAdmin']
+        });
+        return res.status(200).json({
+            users: users.map(user => ({
+                id: user.id,
+                username: user.username,
+                email: user.email,
+                phone: user.phone,
+                isAdmin: user.isAdmin,
+                isMainAdmin: user.isMainAdmin
+            }))
+        });
+    }
+    catch (error) {
+        console.error('Erro ao listar usuários:', error);
+        res.status(500).json({ message: 'Erro interno do servidor' });
+    }
+});
+exports.listAllUsers = listAllUsers;

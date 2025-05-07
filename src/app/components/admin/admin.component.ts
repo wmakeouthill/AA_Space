@@ -13,6 +13,15 @@ interface AdminUser {
   isMainAdmin?: boolean;
 }
 
+interface User {
+  id: number;
+  username: string;
+  email?: string;
+  phone?: string;
+  isAdmin: boolean;
+  isMainAdmin?: boolean;
+}
+
 @Component({
   selector: 'app-admin',
   standalone: true,
@@ -24,6 +33,7 @@ export class AdminComponent implements OnInit {
   promoteForm: FormGroup;
   removeForm: FormGroup;
   transferForm: FormGroup;
+  searchForm: FormGroup;
   isSubmitting = false;
   isRemoveSubmitting = false;
   isTransferSubmitting = false;
@@ -32,8 +42,12 @@ export class AdminComponent implements OnInit {
   isAdmin = false;
   isMainAdmin = false;
   adminUsers: AdminUser[] = [];
+  allUsers: User[] = [];
+  filteredUsers: User[] = [];
   currentUsername: string | null = null;
   currentUserId: number | null = null;
+  isLoadingUsers = false;
+  searchTerm = '';
 
   constructor(
     private fb: FormBuilder,
@@ -52,12 +66,16 @@ export class AdminComponent implements OnInit {
     this.transferForm = this.fb.group({
       username: ['', [Validators.required]]
     });
+
+    this.searchForm = this.fb.group({
+      search: ['']
+    });
   }
 
   ngOnInit(): void {
     // Verifica se o usuário está autenticado e é administrador
     const isAuthenticated = this.authService.getToken() !== null;
-    
+
     if (!isAuthenticated) {
       this.router.navigate(['/auth']);
       return;
@@ -75,17 +93,26 @@ export class AdminComponent implements OnInit {
 
     // Inicializa a lista de administradores a partir da API
     this.fetchAdmins();
+
+    // Busca todos os usuários para a lista lateral
+    this.fetchAllUsers();
+
+    // Inicializa o listener para pesquisa
+    this.searchForm.get('search')?.valueChanges.subscribe(term => {
+      this.searchTerm = term;
+      this.filterUsers();
+    });
   }
 
   fetchAdmins(): void {
     // Limpa a lista de administradores
     this.adminUsers = [];
-    
+
     // Faz a chamada à API para buscar todos os administradores
     this.apiService.listAdmins().subscribe({
       next: (response) => {
         console.log('Administradores encontrados:', response);
-        
+
         if (response && response.admins && Array.isArray(response.admins)) {
           // Determina quem é o administrador principal para atualizar o estado local
           for (const admin of response.admins) {
@@ -94,11 +121,11 @@ export class AdminComponent implements OnInit {
               break;
             }
           }
-          
+
           // Processa cada administrador retornado pela API
           response.admins.forEach((admin: any) => {
             const isCurrentUser = admin.username === this.currentUsername;
-            
+
             this.adminUsers.push({
               id: admin.id,
               username: admin.username,
@@ -112,11 +139,52 @@ export class AdminComponent implements OnInit {
       error: (error) => {
         console.error('Erro ao buscar administradores:', error);
         this.error = 'Não foi possível buscar a lista de administradores.';
-        
+
         // Como fallback, adicionamos pelo menos o usuário atual
         this.initAdminUsers();
       }
     });
+  }
+
+  fetchAllUsers(): void {
+    this.isLoadingUsers = true;
+
+    this.apiService.listAllUsers().subscribe({
+      next: (response) => {
+        console.log('Usuários encontrados (resposta completa):', response);
+
+        if (response && response.users && Array.isArray(response.users)) {
+          this.allUsers = response.users;
+          this.filteredUsers = [...this.allUsers];
+
+          // Log detalhado para depurar informações de contato
+          console.log('Detalhes dos usuários:');
+          this.allUsers.forEach(user => {
+            console.log(`Usuário: ${user.username}, Email: ${user.email || 'não definido'}, Telefone: ${user.phone || 'não definido'}`);
+          });
+        }
+        this.isLoadingUsers = false;
+      },
+      error: (error) => {
+        console.error('Erro ao buscar usuários:', error);
+        this.error = 'Não foi possível buscar a lista de usuários.';
+        this.isLoadingUsers = false;
+      }
+    });
+  }
+
+  filterUsers(): void {
+    if (!this.searchTerm || this.searchTerm.trim() === '') {
+      this.filteredUsers = [...this.allUsers];
+      return;
+    }
+
+    const term = this.searchTerm.toLowerCase();
+    this.filteredUsers = this.allUsers.filter(user =>
+      user.username.toLowerCase().includes(term) ||
+      (user.email && user.email.toLowerCase().includes(term)) ||
+      (user.phone && user.phone.toLowerCase().includes(term))
+    );
   }
 
   // Método de fallback para inicializar a lista de administradores quando a API falhar
@@ -142,16 +210,18 @@ export class AdminComponent implements OnInit {
       this.successMessage = null;
 
       const username = this.promoteForm.value.username;
-      
+
       this.apiService.promoteToAdmin({ username }).subscribe({
         next: (response: any) => {
           console.log('Usuário promovido com sucesso:', response);
           this.successMessage = response.message || 'Usuário promovido a administrador com sucesso.';
           this.promoteForm.reset();
           this.isSubmitting = false;
-          
+
           // Atualiza a lista de administradores
           this.fetchAdmins();
+          // Também atualiza a lista de todos os usuários
+          this.fetchAllUsers();
         },
         error: (error) => {
           console.error('Erro ao promover usuário:', error);
@@ -174,10 +244,10 @@ export class AdminComponent implements OnInit {
       this.successMessage = null;
 
       const username = this.removeForm.value.username;
-      
+
       // Verificações locais antes de fazer a chamada de API
       const adminToRemove = this.adminUsers.find(admin => admin.username === username);
-      
+
       if (adminToRemove?.isMainAdmin) {
         this.error = 'Não é possível remover os privilégios do administrador principal.';
         this.isRemoveSubmitting = false;
@@ -189,16 +259,18 @@ export class AdminComponent implements OnInit {
         this.isRemoveSubmitting = false;
         return;
       }
-      
+
       this.apiService.removeAdmin(username).subscribe({
         next: (response: any) => {
           console.log('Privilégios de administrador removidos com sucesso:', response);
           this.successMessage = response.message || 'Privilégios de administrador removidos com sucesso.';
           this.removeForm.reset();
           this.isRemoveSubmitting = false;
-          
+
           // Atualiza a lista de administradores
           this.fetchAdmins();
+          // Também atualiza a lista de todos os usuários
+          this.fetchAllUsers();
         },
         error: (error) => {
           console.error('Erro ao remover privilégios de administrador:', error);
@@ -221,24 +293,26 @@ export class AdminComponent implements OnInit {
       this.successMessage = null;
 
       const username = this.transferForm.value.username;
-      
+
       // Verificações locais
       if (username === this.currentUsername) {
         this.error = 'Você já é o administrador principal.';
         this.isTransferSubmitting = false;
         return;
       }
-      
+
       this.apiService.transferMainAdmin(username).subscribe({
         next: (response: any) => {
           console.log('Título de administrador principal transferido com sucesso:', response);
           this.successMessage = response.message || 'Título de administrador principal transferido com sucesso.';
           this.transferForm.reset();
           this.isTransferSubmitting = false;
-          
+
           // Atualiza a interface depois da transferência
           this.isMainAdmin = false;
           this.fetchAdmins();
+          // Também atualiza a lista de todos os usuários
+          this.fetchAllUsers();
         },
         error: (error) => {
           console.error('Erro ao transferir título de administrador principal:', error);

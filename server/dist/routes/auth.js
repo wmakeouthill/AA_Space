@@ -14,6 +14,8 @@ router.get('/promote-check', (req, res) => {
 });
 // Rota para listar todos os administradores
 router.get('/admins', auth_middleware_1.authMiddleware, auth_controller_1.listAdmins);
+// Rota para listar todos os usuários
+router.get('/users', auth_middleware_1.authMiddleware, auth_controller_1.listAllUsers);
 // Rota para promoção de administradores
 router.post('/make-admin', auth_middleware_1.authMiddleware, auth_controller_1.promoteToAdmin);
 // Rota para remover privilégios de administrador

@@ -42,6 +42,33 @@
         </div>
       </div>
 
+      <!-- Campos opcionais somente na tela de registro -->
+      <ng-container *ngIf="!isLogin">
+        <div class="form-group">
+          <label for="email">Email (opcional)</label>
+          <input
+            type="email"
+            id="email"
+            formControlName="email"
+            placeholder="Seu email"
+            [class.error]="authForm.get('email')?.errors && authForm.get('email')?.touched"
+          >
+          <div class="error-message" *ngIf="authForm.get('email')?.errors?.['email'] && authForm.get('email')?.touched">
+            Email inválido
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="phone">Telefone (opcional)</label>
+          <input
+            type="text"
+            id="phone"
+            formControlName="phone"
+            placeholder="Seu telefone"
+          >
+        </div>
+      </ng-container>
+
       <button type="submit" [disabled]="!authForm.valid || isSubmitting" class="submit-button">
         {{ isSubmitting ? 'Processando...' : (isLogin ? 'Entrar' : 'Criar Conta') }}
       </button>

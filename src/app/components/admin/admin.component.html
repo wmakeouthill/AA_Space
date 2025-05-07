@@ -1,118 +1,173 @@
-<div class="admin-container">
-  <h1>Painel de Administração</h1>
+<div class="admin-page-container">
+  <div class="admin-main-content">
+    <div class="admin-container">
+      <h1>Painel de Administração</h1>
 
-  <div *ngIf="error" class="error-message">
-    {{ error }}
-  </div>
-
-  <div *ngIf="successMessage" class="success-message">
-    {{ successMessage }}
-  </div>
-
-  <div *ngIf="isAdmin" class="admin-panel">
-    <div class="admin-section">
-      <h2>Gerenciar Administradores</h2>
-
-      <!-- Lista de administradores atuais -->
-      <div class="admin-list-section">
-        <h3>Administradores Atuais</h3>
-        <div *ngIf="adminUsers.length > 0" class="admin-list">
-          <div *ngFor="let admin of adminUsers" class="admin-item">
-            <span class="admin-username">{{ admin.username }}</span>
-            <span *ngIf="admin.isMainAdmin" class="admin-badge">Principal</span>
-            <span *ngIf="admin.username === currentUsername && !admin.isMainAdmin" class="admin-badge">Você</span>
-          </div>
-        </div>
-        <p *ngIf="adminUsers.length === 0">Não há administradores cadastrados.</p>
+      <div *ngIf="error" class="error-message">
+        {{ error }}
       </div>
 
-      <!-- Formulário para promover usuários -->
-      <h3>Adicionar Administrador</h3>
-      <p>Promova usuários existentes a administradores.</p>
+      <div *ngIf="successMessage" class="success-message">
+        {{ successMessage }}
+      </div>
 
-      <form [formGroup]="promoteForm" (ngSubmit)="onPromoteUser()" class="admin-form">
-        <div class="form-group">
-          <label for="username">Nome de Usuário</label>
-          <input
-            type="text"
-            formControlName="username"
-            id="username"
-            placeholder="Digite o nome do usuário a promover"
-            [disabled]="isSubmitting"
-          >
-          <div class="error-message" *ngIf="promoteForm.get('username')?.errors?.['required'] && promoteForm.get('username')?.touched">
-            O nome de usuário é obrigatório
+      <div *ngIf="isAdmin" class="admin-panel">
+        <div class="admin-section">
+          <h2>Gerenciar Administradores</h2>
+
+          <!-- Lista de administradores atuais -->
+          <div class="admin-list-section">
+            <h3>Administradores Atuais</h3>
+            <div *ngIf="adminUsers.length > 0" class="admin-list">
+              <div *ngFor="let admin of adminUsers" class="admin-item">
+                <span class="admin-username">{{ admin.username }}</span>
+                <span *ngIf="admin.isMainAdmin" class="admin-badge">Principal</span>
+                <span *ngIf="admin.username === currentUsername && !admin.isMainAdmin" class="admin-badge">Você</span>
+              </div>
+            </div>
+            <p *ngIf="adminUsers.length === 0">Não há administradores cadastrados.</p>
           </div>
+
+          <!-- Formulário para promover usuários -->
+          <h3>Adicionar Administrador</h3>
+          <p>Promova usuários existentes a administradores.</p>
+
+          <form [formGroup]="promoteForm" (ngSubmit)="onPromoteUser()" class="admin-form">
+            <div class="form-group">
+              <label for="username">Nome de Usuário</label>
+              <input
+                type="text"
+                formControlName="username"
+                id="username"
+                placeholder="Digite o nome do usuário a promover"
+                [disabled]="isSubmitting"
+              >
+              <div class="error-message" *ngIf="promoteForm.get('username')?.errors?.['required'] && promoteForm.get('username')?.touched">
+                O nome de usuário é obrigatório
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              [disabled]="!promoteForm.valid || isSubmitting"
+              class="submit-button"
+            >
+              {{ isSubmitting ? 'Promovendo...' : 'Promover a Administrador' }}
+            </button>
+          </form>
         </div>
 
-        <button
-          type="submit"
-          [disabled]="!promoteForm.valid || isSubmitting"
-          class="submit-button"
+        <!-- Seção para remover privilégios de administrador -->
+        <div class="admin-section">
+          <h2>Remover Privilégios de Administrador</h2>
+          <p>Remova privilégios de administrador de usuários. Não é possível remover o administrador principal nem seus próprios privilégios.</p>
+
+          <form [formGroup]="removeForm" (ngSubmit)="onRemoveAdmin()" class="admin-form">
+            <div class="form-group">
+              <label for="remove-username">Nome de Usuário</label>
+              <input
+                type="text"
+                formControlName="username"
+                id="remove-username"
+                placeholder="Digite o nome do usuário a remover privilégios"
+                [disabled]="isRemoveSubmitting"
+              >
+              <div class="error-message" *ngIf="removeForm.get('username')?.errors?.['required'] && removeForm.get('username')?.touched">
+                O nome de usuário é obrigatório
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              [disabled]="!removeForm.valid || isRemoveSubmitting"
+              class="submit-button remove-button"
+            >
+              {{ isRemoveSubmitting ? 'Removendo...' : 'Remover Privilégios' }}
+            </button>
+          </form>
+        </div>
+
+        <!-- Seção para transferir título de administrador principal (apenas visível para o admin principal) -->
+        <div *ngIf="isMainAdmin" class="admin-section">
+          <h2>Transferir Título de Administrador Principal</h2>
+          <p>Transfira o título de administrador principal para outro administrador. <strong>ATENÇÃO:</strong> Após a transferência, seu nome de usuário será alterado e você precisará fazer login novamente.</p>
+
+          <form [formGroup]="transferForm" (ngSubmit)="onTransferMainAdmin()" class="admin-form">
+            <div class="form-group">
+              <label for="transfer-username">Nome de Usuário do Novo Admin Principal</label>
+              <input
+                type="text"
+                formControlName="username"
+                id="transfer-username"
+                placeholder="Digite o nome do usuário que receberá o título"
+                [disabled]="isTransferSubmitting"
+              >
+              <div class="error-message" *ngIf="transferForm.get('username')?.errors?.['required'] && transferForm.get('username')?.touched">
+                O nome de usuário é obrigatório
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              [disabled]="!transferForm.valid || isTransferSubmitting"
+              class="submit-button transfer-button"
+            >
+              {{ isTransferSubmitting ? 'Transferindo...' : 'Transferir Título' }}
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Seção lateral para listar todos os usuários -->
+  <div *ngIf="isAdmin" class="users-sidebar">
+    <div class="sidebar-header">
+      <h2>Lista de Usuários</h2>
+
+      <form [formGroup]="searchForm" class="search-form">
+        <input
+          type="text"
+          formControlName="search"
+          placeholder="Pesquisar usuários..."
+          class="search-input"
         >
-          {{ isSubmitting ? 'Promovendo...' : 'Promover a Administrador' }}
-        </button>
       </form>
     </div>
 
-    <!-- Seção para remover privilégios de administrador -->
-    <div class="admin-section">
-      <h2>Remover Privilégios de Administrador</h2>
-      <p>Remova privilégios de administrador de usuários. Não é possível remover o administrador principal nem seus próprios privilégios.</p>
+    <div class="users-list-container">
+      <div *ngIf="isLoadingUsers" class="loading-spinner">
+        Carregando...
+      </div>
 
-      <form [formGroup]="removeForm" (ngSubmit)="onRemoveAdmin()" class="admin-form">
-        <div class="form-group">
-          <label for="remove-username">Nome de Usuário</label>
-          <input
-            type="text"
-            formControlName="username"
-            id="remove-username"
-            placeholder="Digite o nome do usuário a remover privilégios"
-            [disabled]="isRemoveSubmitting"
-          >
-          <div class="error-message" *ngIf="removeForm.get('username')?.errors?.['required'] && removeForm.get('username')?.touched">
-            O nome de usuário é obrigatório
+      <div *ngIf="!isLoadingUsers && filteredUsers.length === 0" class="no-users-found">
+        <p>Nenhum usuário encontrado</p>
+      </div>
+
+      <div *ngIf="!isLoadingUsers" class="users-list">
+        <div *ngFor="let user of filteredUsers" class="user-item">
+          <div class="user-info">
+            <span class="user-name">{{ user.username }}</span>
+            <div class="user-badges">
+              <span *ngIf="user.isAdmin" class="user-badge admin-badge">Admin</span>
+              <span *ngIf="user.isMainAdmin" class="user-badge main-admin-badge">Principal</span>
+            </div>
+          </div>
+          <div class="contact-info">
+            <div *ngIf="user.email" class="contact-detail">
+              <span class="contact-icon">✉️</span>
+              <span class="contact-value">{{ user.email }}</span>
+            </div>
+            <div *ngIf="user.phone" class="contact-detail">
+              <span class="contact-icon">📞</span>
+              <span class="contact-value">{{ user.phone }}</span>
+            </div>
+            <div *ngIf="!user.email && !user.phone" class="no-contact-info">
+              <em>Sem informações de contato</em>
+            </div>
           </div>
         </div>
-
-        <button
-          type="submit"
-          [disabled]="!removeForm.valid || isRemoveSubmitting"
-          class="submit-button remove-button"
-        >
-          {{ isRemoveSubmitting ? 'Removendo...' : 'Remover Privilégios' }}
-        </button>
-      </form>
-    </div>
-
-    <!-- Seção para transferir título de administrador principal (apenas visível para o admin principal) -->
-    <div *ngIf="isMainAdmin" class="admin-section">
-      <h2>Transferir Título de Administrador Principal</h2>
-      <p>Transfira o título de administrador principal para outro administrador. <strong>ATENÇÃO:</strong> Após a transferência, seu nome de usuário será alterado e você precisará fazer login novamente.</p>
-
-      <form [formGroup]="transferForm" (ngSubmit)="onTransferMainAdmin()" class="admin-form">
-        <div class="form-group">
-          <label for="transfer-username">Nome de Usuário do Novo Admin Principal</label>
-          <input
-            type="text"
-            formControlName="username"
-            id="transfer-username"
-            placeholder="Digite o nome do usuário que receberá o título"
-            [disabled]="isTransferSubmitting"
-          >
-          <div class="error-message" *ngIf="transferForm.get('username')?.errors?.['required'] && transferForm.get('username')?.touched">
-            O nome de usuário é obrigatório
-          </div>
-        </div>
-
-        <button
-          type="submit"
-          [disabled]="!transferForm.valid || isTransferSubmitting"
-          class="submit-button transfer-button"
-        >
-          {{ isTransferSubmitting ? 'Transferindo...' : 'Transferir Título' }}
-        </button>
-      </form>
+      </div>
     </div>
   </div>
 </div>

@@ -131,8 +131,8 @@ export class AuthService {
     );
   }
 
-  register(username: string, password: string): Observable<any> {
-    return this.apiService.register({ username, password }).pipe(
+  register(username: string, password: string, email?: string, phone?: string): Observable<any> {
+    return this.apiService.register({ username, password, email, phone }).pipe(
       tap(response => {
         console.log('Register response:', response);
         if (response && response.token) {

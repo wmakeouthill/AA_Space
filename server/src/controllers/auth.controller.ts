@@ -13,7 +13,7 @@ interface AuthRequest extends Request {
 
 export const register = async (req: Request, res: Response) => {
     try {
-        const { username, password } = req.body;
+        const { username, password, email, phone } = req.body;
         if (!username || !password) {
             return res.status(400).json({ message: 'Usuário e senha são obrigatórios' });
         }
@@ -32,7 +32,9 @@ export const register = async (req: Request, res: Response) => {
         // Cria novo usuário
         const user = userRepository.create({
             username,
-            password: hashedPassword
+            password: hashedPassword,
+            email: email || null,
+            phone: phone || null
         });
 
         const savedUser = await userRepository.save(user);
@@ -273,12 +275,12 @@ export const transferMainAdmin = async (req: AuthRequest, res: Response) => {
         }
 
         const userRepository = AppDataSource.getRepository(User);
-        
+
         // Verificar se o usuário atual é o administrador principal
         const currentUser = await userRepository.findOne({
             where: { id: requestingUserId }
         });
-        
+
         if (!currentUser || !currentUser.isMainAdmin) {
             return res.status(403).json({ message: 'Apenas o administrador principal pode transferir o título' });
         }
@@ -318,13 +320,13 @@ export const transferMainAdmin = async (req: AuthRequest, res: Response) => {
             // Remover status de administrador principal do atual
             currentUser.isMainAdmin = false;
             await queryRunner.manager.save(currentUser);
-            
+
             // Definir o novo administrador principal
             userToPromote.isMainAdmin = true;
             await queryRunner.manager.save(userToPromote);
-            
+
             await queryRunner.commitTransaction();
-            
+
             return res.status(200).json({
                 message: `Título de administrador principal transferido com sucesso de '${currentUser.username}' para '${userToPromote.username}'.`,
                 oldMainAdmin: currentUser.username,
@@ -357,7 +359,7 @@ export const listAdmins = async (req: AuthRequest, res: Response) => {
         }
 
         const userRepository = AppDataSource.getRepository(User);
-        
+
         // Buscar todos os usuários que são administradores
         const admins = await userRepository.find({
             where: { isAdmin: true },
@@ -373,6 +375,54 @@ export const listAdmins = async (req: AuthRequest, res: Response) => {
         });
     } catch (error) {
         console.error('Erro ao listar administradores:', error);
+        res.status(500).json({ message: 'Erro interno do servidor' });
+    }
+};
+
+export const listAllUsers = async (req: AuthRequest, res: Response) => {
+    try {
+        // Verificar se o usuário que faz a solicitação é um administrador
+        const requestingUserId = req.user?.id;
+        const isRequestingUserAdmin = req.user?.isAdmin;
+
+        if (!requestingUserId) {
+            return res.status(401).json({ message: 'Usuário não autenticado' });
+        }
+
+        if (!isRequestingUserAdmin) {
+            return res.status(403).json({ message: 'Apenas administradores podem listar todos os usuários' });
+        }
+
+        const userRepository = AppDataSource.getRepository(User);
+
+        // Consulta SQL explícita para garantir que os campos email e phone sejam retornados
+        console.log('[DEBUG] Buscando todos os usuários com informações de contato');
+
+        const users = await userRepository.createQueryBuilder('user')
+            .select([
+                'user.id',
+                'user.username',
+                'user.email',
+                'user.phone',
+                'user.isAdmin',
+                'user.isMainAdmin'
+            ])
+            .getMany();
+
+        console.log('[DEBUG] Usuários encontrados:', users);
+
+        return res.status(200).json({
+            users: users.map(user => ({
+                id: user.id,
+                username: user.username,
+                email: user.email,
+                phone: user.phone,
+                isAdmin: user.isAdmin,
+                isMainAdmin: user.isMainAdmin
+            }))
+        });
+    } catch (error) {
+        console.error('Erro ao listar usuários:', error);
         res.status(500).json({ message: 'Erro interno do servidor' });
     }
 };
