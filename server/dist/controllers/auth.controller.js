@@ -346,10 +346,19 @@ const listAllUsers = (req, res) => __awaiter(void 0, void 0, void 0, function* (
             return res.status(403).json({ message: 'Apenas administradores podem listar todos os usuários' });
         }
         const userRepository = database_1.AppDataSource.getRepository(entities_1.User);
-        // Buscar todos os usuários
-        const users = yield userRepository.find({
-            select: ['id', 'username', 'email', 'phone', 'isAdmin', 'isMainAdmin']
-        });
+        // Consulta SQL explícita para garantir que os campos email e phone sejam retornados
+        console.log('[DEBUG] Buscando todos os usuários com informações de contato');
+        const users = yield userRepository.createQueryBuilder('user')
+            .select([
+            'user.id',
+            'user.username',
+            'user.email',
+            'user.phone',
+            'user.isAdmin',
+            'user.isMainAdmin'
+        ])
+            .getMany();
+        console.log('[DEBUG] Usuários encontrados:', users);
         return res.status(200).json({
             users: users.map(user => ({
                 id: user.id,

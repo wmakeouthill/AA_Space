@@ -9,7 +9,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.CommentLike = exports.PostLike = exports.Comment = exports.Post = exports.User = void 0;
+exports.ChatMessage = exports.ChatParticipant = exports.ChatConversation = exports.CommentLike = exports.PostLike = exports.Comment = exports.Post = exports.User = void 0;
 const typeorm_1 = require("typeorm");
 let User = class User {
 };
@@ -62,6 +62,18 @@ __decorate([
     (0, typeorm_1.OneToMany)(() => CommentLike, commentLike => commentLike.user),
     __metadata("design:type", Array)
 ], User.prototype, "commentLikes", void 0);
+__decorate([
+    (0, typeorm_1.OneToMany)(() => ChatConversation, conversation => conversation.createdBy),
+    __metadata("design:type", Array)
+], User.prototype, "createdConversations", void 0);
+__decorate([
+    (0, typeorm_1.OneToMany)(() => ChatParticipant, participant => participant.user),
+    __metadata("design:type", Array)
+], User.prototype, "chatParticipations", void 0);
+__decorate([
+    (0, typeorm_1.OneToMany)(() => ChatMessage, message => message.sender),
+    __metadata("design:type", Array)
+], User.prototype, "chatMessages", void 0);
 exports.User = User = __decorate([
     (0, typeorm_1.Entity)()
 ], User);
@@ -205,3 +217,123 @@ __decorate([
 exports.CommentLike = CommentLike = __decorate([
     (0, typeorm_1.Entity)()
 ], CommentLike);
+// Novas entidades para o sistema de chat
+let ChatConversation = class ChatConversation {
+};
+exports.ChatConversation = ChatConversation;
+__decorate([
+    (0, typeorm_1.PrimaryGeneratedColumn)(),
+    __metadata("design:type", Number)
+], ChatConversation.prototype, "id", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ nullable: true }),
+    __metadata("design:type", String)
+], ChatConversation.prototype, "name", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'is_group', default: false }),
+    __metadata("design:type", Boolean)
+], ChatConversation.prototype, "isGroup", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'created_by', nullable: true }),
+    __metadata("design:type", Number)
+], ChatConversation.prototype, "createdById", void 0);
+__decorate([
+    (0, typeorm_1.CreateDateColumn)({ name: 'created_at' }),
+    __metadata("design:type", Date)
+], ChatConversation.prototype, "createdAt", void 0);
+__decorate([
+    (0, typeorm_1.UpdateDateColumn)({ name: 'updated_at' }),
+    __metadata("design:type", Date)
+], ChatConversation.prototype, "updatedAt", void 0);
+__decorate([
+    (0, typeorm_1.ManyToOne)(() => User, user => user.createdConversations),
+    (0, typeorm_1.JoinColumn)({ name: 'created_by' }),
+    __metadata("design:type", User)
+], ChatConversation.prototype, "createdBy", void 0);
+__decorate([
+    (0, typeorm_1.OneToMany)(() => ChatParticipant, participant => participant.conversation),
+    __metadata("design:type", Array)
+], ChatConversation.prototype, "participants", void 0);
+__decorate([
+    (0, typeorm_1.OneToMany)(() => ChatMessage, message => message.conversation),
+    __metadata("design:type", Array)
+], ChatConversation.prototype, "messages", void 0);
+exports.ChatConversation = ChatConversation = __decorate([
+    (0, typeorm_1.Entity)('chat_conversation')
+], ChatConversation);
+let ChatParticipant = class ChatParticipant {
+};
+exports.ChatParticipant = ChatParticipant;
+__decorate([
+    (0, typeorm_1.PrimaryGeneratedColumn)(),
+    __metadata("design:type", Number)
+], ChatParticipant.prototype, "id", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'conversation_id' }),
+    __metadata("design:type", Number)
+], ChatParticipant.prototype, "conversationId", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'user_id' }),
+    __metadata("design:type", Number)
+], ChatParticipant.prototype, "userId", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'is_admin', default: false }),
+    __metadata("design:type", Boolean)
+], ChatParticipant.prototype, "isAdmin", void 0);
+__decorate([
+    (0, typeorm_1.CreateDateColumn)({ name: 'joined_at' }),
+    __metadata("design:type", Date)
+], ChatParticipant.prototype, "joinedAt", void 0);
+__decorate([
+    (0, typeorm_1.ManyToOne)(() => ChatConversation, conversation => conversation.participants),
+    (0, typeorm_1.JoinColumn)({ name: 'conversation_id' }),
+    __metadata("design:type", ChatConversation)
+], ChatParticipant.prototype, "conversation", void 0);
+__decorate([
+    (0, typeorm_1.ManyToOne)(() => User, user => user.chatParticipations),
+    (0, typeorm_1.JoinColumn)({ name: 'user_id' }),
+    __metadata("design:type", User)
+], ChatParticipant.prototype, "user", void 0);
+exports.ChatParticipant = ChatParticipant = __decorate([
+    (0, typeorm_1.Entity)('chat_participant')
+], ChatParticipant);
+let ChatMessage = class ChatMessage {
+};
+exports.ChatMessage = ChatMessage;
+__decorate([
+    (0, typeorm_1.PrimaryGeneratedColumn)(),
+    __metadata("design:type", Number)
+], ChatMessage.prototype, "id", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'conversation_id' }),
+    __metadata("design:type", Number)
+], ChatMessage.prototype, "conversationId", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'sender_id' }),
+    __metadata("design:type", Number)
+], ChatMessage.prototype, "senderId", void 0);
+__decorate([
+    (0, typeorm_1.Column)(),
+    __metadata("design:type", String)
+], ChatMessage.prototype, "content", void 0);
+__decorate([
+    (0, typeorm_1.CreateDateColumn)({ name: 'created_at' }),
+    __metadata("design:type", Date)
+], ChatMessage.prototype, "createdAt", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'is_read', default: false }),
+    __metadata("design:type", Boolean)
+], ChatMessage.prototype, "isRead", void 0);
+__decorate([
+    (0, typeorm_1.ManyToOne)(() => ChatConversation, conversation => conversation.messages),
+    (0, typeorm_1.JoinColumn)({ name: 'conversation_id' }),
+    __metadata("design:type", ChatConversation)
+], ChatMessage.prototype, "conversation", void 0);
+__decorate([
+    (0, typeorm_1.ManyToOne)(() => User, user => user.chatMessages),
+    (0, typeorm_1.JoinColumn)({ name: 'sender_id' }),
+    __metadata("design:type", User)
+], ChatMessage.prototype, "sender", void 0);
+exports.ChatMessage = ChatMessage = __decorate([
+    (0, typeorm_1.Entity)('chat_message')
+], ChatMessage);

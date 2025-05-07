@@ -15,17 +15,22 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
 const dotenv_1 = __importDefault(require("dotenv"));
+const path_1 = __importDefault(require("path"));
 const database_1 = require("./config/database");
 const auth_1 = __importDefault(require("./routes/auth"));
 const posts_1 = __importDefault(require("./routes/posts"));
+const chat_1 = __importDefault(require("./routes/chat"));
 dotenv_1.default.config();
 const app = (0, express_1.default)();
 const port = Number(process.env.PORT || 3001);
+const isCodespacesEnv = process.env.CODESPACES === 'true' || process.env.GITHUB_CODESPACES === 'true';
 // Lista de origens permitidas
 const allowedOrigins = [
     'http://localhost:4200',
     'https://localhost:4200',
     /^https:\/\/.*\.app\.github\.dev$/, // Permite qualquer subdomínio do GitHub Codespaces
+    /^https:\/\/.*\.github\.dev$/, // Formato alternativo de domínio Codespaces
+    /^https:\/\/.*\.github\.io$/ // Suporte para GitHub Pages
 ];
 // Configuração CORS detalhada
 const corsOptions = {
@@ -65,6 +70,7 @@ app.use((req, res, next) => {
     console.log(`[${timestamp}] ${req.method} ${req.url}`);
     console.log('Headers:', req.headers);
     console.log('Origin:', req.get('origin'));
+    console.log('Environment:', isCodespacesEnv ? 'GitHub Codespaces' : 'Local Development');
     next();
 });
 // Aplica CORS
@@ -90,14 +96,32 @@ app.get('/api/health', (req, res) => {
     res.json({
         status: 'OK',
         timestamp: new Date(),
+        environment: isCodespacesEnv ? 'GitHub Codespaces' : 'Local',
         corsConfig: corsOptions,
         headers: req.headers,
         origin: req.headers.origin
     });
 });
-// Configuração das rotas
+// Configuração das rotas API
 app.use('/api/auth', auth_1.default);
-app.use('/api/posts', posts_1.default); // As rotas do posts já têm seu próprio middleware de autenticação
+app.use('/api/posts', posts_1.default);
+app.use('/api/chat', chat_1.default);
+// Em ambiente de produção ou Codespaces, configure para servir arquivos estáticos do Angular
+if (process.env.NODE_ENV === 'production' || isCodespacesEnv) {
+    // Caminho correto para os arquivos compilados do Angular
+    const distPath = path_1.default.join(__dirname, '../../dist/aa-space');
+    console.log('Servindo arquivos estáticos do Angular de:', distPath);
+    // Servir arquivos estáticos
+    app.use(express_1.default.static(distPath));
+    // Todas as requisições não tratadas pela API serão redirecionadas para o Angular
+    app.get('*', (req, res, next) => {
+        // Se a URL começar com /api, passa para os handlers de API
+        if (req.url.startsWith('/api')) {
+            return next();
+        }
+        res.sendFile(path_1.default.join(distPath, 'index.html'));
+    });
+}
 // Tratamento de erros global
 app.use((err, req, res, next) => {
     console.error('Error:', err);
@@ -112,6 +136,7 @@ const startServer = () => __awaiter(void 0, void 0, void 0, function* () {
         yield database_1.AppDataSource.initialize();
         console.log('Database initialized successfully!');
         console.log('Database path:', database_1.AppDataSource.options.database);
+        console.log('Environment:', isCodespacesEnv ? 'GitHub Codespaces' : 'Local Development');
         app.listen(port, '0.0.0.0', () => {
             console.log(`Server is running at http://localhost:${port}`);
             console.log('CORS enabled for:', allowedOrigins);

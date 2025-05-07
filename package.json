@@ -6,7 +6,10 @@
     "start": "ng serve",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test"
+    "test": "ng test",
+    "start:codespaces": "npm run build && cd server && npm start",
+    "build:codespaces": "ng build --configuration production --base-href /",
+    "setup:codespaces": "npm run build:codespaces && npm run start:codespaces"
   },
   "private": true,
   "dependencies": {

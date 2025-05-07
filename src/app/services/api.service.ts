@@ -8,9 +8,31 @@ import { Post, Comment, LikeResponse } from '../models/post.interface';
   providedIn: 'root'
 })
 export class ApiService {
-  private readonly API_URL = 'http://localhost:3001/api';
+  // URL dinâmica que funciona tanto em localhost quanto em GitHub Codespaces
+  private readonly API_URL = this.getApiUrl();
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient) {
+    console.log('API_URL configurada como:', this.API_URL);
+  }
+
+  // Método para detectar o ambiente e fornecer a URL correta
+  private getApiUrl(): string {
+    const currentUrl = window.location.origin;
+    console.log('Origem atual detectada:', currentUrl);
+    
+    // Se estamos no GitHub Codespaces (contém .app.github.dev ou similar)
+    if (currentUrl.includes('.github.dev') || currentUrl.includes('.github.io')) {
+      // No ambiente Codespaces, precisamos usar a porta 3001 explicitamente
+      // Substituímos a porta atual (provavelmente 4200) por 3001
+      const apiUrl = currentUrl.replace(/-\d+\.app\.github\.dev$/, '-3001.app.github.dev/api');
+      console.log('Ambiente Codespaces detectado, usando API URL:', apiUrl);
+      return apiUrl;
+    } 
+    
+    // Caso contrário, usamos o localhost padrão
+    console.log('Ambiente local detectado, usando localhost:3001');
+    return 'http://localhost:3001/api';
+  }
 
   // Auth endpoints
   login(credentials: { username: string; password: string }): Observable<any> {
