@@ -85,7 +85,9 @@ npm run migration:run
 
 Isso criará o arquivo de banco de dados SQLite e aplicará todas as migrações necessárias, incluindo:
 - Criação das tabelas principais (User, Post, Comment, PostLike, CommentLike)
+- Tabelas do sistema de chat (ChatConversation, ChatParticipant, ChatMessage)
 - Adição de colunas especiais (isAdmin, isMainAdmin)
+- Adição de informações de contato (email, telefone)
 - Criação do usuário administrador padrão (usuário: admin, senha: admin123)
 
 ## Executando o Projeto
@@ -100,7 +102,7 @@ npm run start  # Para versão compilada
 
 2. Em outro terminal, inicie o frontend:
 ```bash
-ng serve
+npm start
 ```
 
 O frontend estará disponível em `http://localhost:4200` e o backend em `http://localhost:3001`.
@@ -136,9 +138,15 @@ O sistema permite:
 - Criação de posts anônimos ou identificados
 - Sistema de comentários
 - Sistema de curtidas em posts e comentários
+- Sistema de chat (novo!)
+  - Conversas privadas entre usuários
+  - Grupos de chat com múltiplos participantes
+  - Status de leitura de mensagens
+  - Administradores de grupos de chat
 - Modo convidado com nickname
 - Interface responsiva e amigável
 - Painel de administração para gerenciar usuários
+- Armazenamento de informações de contato (email, telefone)
 
 ## Estrutura do Banco de Dados
 
@@ -147,22 +155,48 @@ O projeto utiliza SQLite3 com TypeORM e possui as seguintes entidades:
 - User (Usuários)
   - Inclui flags `isAdmin` para administradores
   - Inclui flag `isMainAdmin` para identificar o administrador principal
+  - Armazena informações de contato (email, telefone)
 - Post (Postagens)
 - Comment (Comentários)
 - PostLike (Curtidas em posts)
 - CommentLike (Curtidas em comentários)
+- ChatConversation (Conversas de chat)
+- ChatParticipant (Participantes de chat)
+- ChatMessage (Mensagens de chat)
 
 ## Desenvolvimento
 
+- Para iniciar o servidor em modo de desenvolvimento:
+```bash
+cd server
+npm run dev
+```
+
 - Para executar os testes:
 ```bash
-ng test
+npm test
 ```
 
 - Para criar uma build de produção:
 ```bash
-ng build --prod
+npm run build
 ```
+
+## Scripts Disponíveis
+
+### Frontend:
+- `npm start`: Inicia o servidor de desenvolvimento Angular
+- `npm run build`: Compila o projeto para produção
+- `npm run watch`: Compila o projeto em modo de observação
+- `npm test`: Executa os testes do frontend
+
+### Backend:
+- `npm start`: Inicia o servidor a partir da versão compilada
+- `npm run dev`: Inicia o servidor em modo de desenvolvimento com hot reload
+- `npm run build`: Compila o código TypeScript
+- `npm run migration:run`: Executa as migrações pendentes
+- `npm run migration:revert`: Reverte a última migração aplicada
+- `npm run schema:refresh`: Recria o esquema do banco de dados do zero
 
 ## Solução de Problemas
 
@@ -170,14 +204,14 @@ ng build --prod
 Se encontrar erros relacionados a migrações já existentes:
 ```bash
 cd server
-npm run migration:show  # Mostra quais migrações estão aplicadas
-```
-
-Para forçar a re-execução de uma migração:
-```bash
-cd server
 npm run migration:revert  # Reverte a última migração
 npm run migration:run     # Executa novamente as migrações
+```
+
+Para reiniciar completamente o banco de dados:
+```bash
+cd server
+npm run schema:refresh
 ```
 
 ### Problemas de Login ou Acesso
@@ -207,6 +241,17 @@ npm run migration:run     # Executa novamente as migrações
 - POST /api/posts/:postId/like - Curtir/descurtir um post
 - POST /api/posts/:postId/comments/:commentId/like - Curtir/descurtir um comentário
 
+### Chat (Novo!)
+- GET /api/chat/conversations - Lista conversas do usuário
+- GET /api/chat/conversations/:id - Obtém detalhes de uma conversa
+- POST /api/chat/conversations - Cria uma nova conversa
+- POST /api/chat/conversations/:id/messages - Envia uma mensagem
+- GET /api/chat/conversations/:id/messages - Lista mensagens de uma conversa
+- POST /api/chat/conversations/:id/participants - Adiciona participante(s)
+- DELETE /api/chat/conversations/:id/participants/:userId - Remove um participante
+- PUT /api/chat/conversations/:id/participants/:userId/admin - Altera status de administrador
+- PUT /api/chat/messages/:id/read - Marca mensagem como lida
+
 ## Contribuição
 
 1. Faça o fork do projeto
@@ -214,3 +259,11 @@ npm run migration:run     # Executa novamente as migrações
 3. Faça commit das suas mudanças (`git commit -m 'Add some AmazingFeature'`)
 4. Faça push para a branch (`git push origin feature/AmazingFeature`)
 5. Abra um Pull Request
+
+## Atualizações Recentes (Maio 2025)
+
+- Adição do sistema de chat completo com conversas privadas e em grupo
+- Suporte para armazenamento de informações de contato (email, telefone)
+- Melhorias na interface do usuário e experiência de navegação
+- Otimizações de desempenho no backend
+- Atualização para Angular 19
