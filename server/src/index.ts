@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import { AppDataSource } from './config/database';
 import authRoutes from './routes/auth';
 import postRoutes from './routes/posts';
+import chatRoutes from './routes/chat';
 
 dotenv.config();
 
@@ -98,6 +99,7 @@ app.get('/api/health', (req: Request, res: Response) => {
 // Configuração das rotas
 app.use('/api/auth', authRoutes);
 app.use('/api/posts', postRoutes); // As rotas do posts já têm seu próprio middleware de autenticação
+app.use('/api/chat', chatRoutes); // Novas rotas para o chat
 
 // Tratamento de erros global
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {

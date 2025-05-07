@@ -5,6 +5,7 @@ import { CreatePostComponent } from './components/create-post/create-post.compon
 import { AuthComponent } from './components/auth/auth.component';
 import { WelcomeDialogComponent } from './components/welcome-dialog/welcome-dialog.component';
 import { AdminComponent } from './components/admin/admin.component';
+import { ChatComponent } from './components/chat/chat.component';
 import { authGuard } from './guards/auth.guard';
 
 export const routes: Routes = [
@@ -14,5 +15,6 @@ export const routes: Routes = [
   { path: 'create', component: CreatePostComponent, canActivate: [authGuard] },
   { path: 'auth', component: AuthComponent },
   { path: 'admin', component: AdminComponent, canActivate: [authGuard] },
+  { path: 'chat', component: ChatComponent, canActivate: [authGuard] },
   { path: '**', redirectTo: '' }
 ];

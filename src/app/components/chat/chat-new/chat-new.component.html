@@ -1,0 +1,56 @@
+<div class="chat-new-container">
+  <button class="new-chat-button" (click)="openNewChatModal()">+ Nova Conversa</button>
+</div>
+
+<div class="modal" *ngIf="showModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2>{{ isGroup ? 'Criar Grupo' : 'Nova Conversa' }}</h2>
+      <button class="close-button" (click)="closeModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="chat-type-selector">
+        <button
+          [class.active]="!isGroup"
+          (click)="isGroup = false">Conversa Direta</button>
+        <button
+          [class.active]="isGroup"
+          (click)="isGroup = true">Grupo</button>
+      </div>
+
+      <div *ngIf="isGroup" class="form-group">
+        <label for="group-name">Nome do Grupo:</label>
+        <input
+          type="text"
+          id="group-name"
+          [(ngModel)]="groupName"
+          placeholder="Digite o nome do grupo">
+      </div>
+
+      <div class="form-group">
+        <label>{{ isGroup ? 'Adicionar Participantes:' : 'Selecionar Usuário:' }}</label>
+        <div class="user-list">
+          <div
+            *ngFor="let user of users"
+            class="user-item"
+            [class.selected]="isUserSelected(user.id)"
+            (click)="toggleUserSelection(user.id)">
+            <div class="user-avatar">
+              <img [src]="'assets/images/user.png'" alt="Avatar">
+            </div>
+            <div class="user-name">{{ user.username }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="cancel-button" (click)="closeModal()">Cancelar</button>
+      <button
+        class="create-button"
+        [disabled]="!canCreate()"
+        (click)="createChat()">
+        {{ isGroup ? 'Criar Grupo' : 'Iniciar Conversa' }}
+      </button>
+    </div>
+  </div>
+</div>

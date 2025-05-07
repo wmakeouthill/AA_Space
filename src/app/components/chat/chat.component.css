@@ -1,0 +1,34 @@
+.chat-container {
+  display: flex;
+  height: calc(90vh - 80px); /* Altura fixa considerando o header */
+  width: 100%;
+  margin-top: 70px; /* Compensar o header fixo */
+  position: relative;
+  overflow: hidden; /* Impedir que o conteúdo estoure */
+  max-width: 1400px; /* Largura máxima para telas muito grandes */
+  margin-left: auto;
+  margin-right: auto;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); /* Sombra leve para destacar o componente */
+}
+
+.chat-sidebar {
+  width: 300px;
+  min-width: 300px; /* Garante que a sidebar não diminua */
+  max-width: 300px; /* Garante que a sidebar não aumente */
+  border-right: 1px solid #e0e0e0;
+  display: flex;
+  flex-direction: column;
+  background-color: #f5f5f5;
+  height: 100%; /* Ocupa toda a altura disponível */
+  overflow-y: auto; /* Rolagem se o conteúdo for muito grande */
+}
+
+.chat-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background-color: white;
+  height: 100%; /* Ocupa toda a altura disponível */
+  min-width: 0; /* Permite que o conteúdo seja comprimido se necessário */
+  overflow: hidden; /* Impedir que o conteúdo estoure */
+}

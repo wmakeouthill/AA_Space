@@ -1,0 +1,172 @@
+.conversation-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  position: relative;
+  overflow: hidden; /* Evitar vazamento de conteúdo */
+}
+
+.conversation-header {
+  padding: 10px 15px;
+  border-bottom: 1px solid #e0e0e0;
+  background-color: #f9f9f9;
+  z-index: 1;
+  flex-shrink: 0; /* Impede que o cabeçalho diminua */
+  height: 60px; /* Altura fixa para o cabeçalho */
+  display: flex;
+  align-items: center;
+}
+
+.conversation-info h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: #333;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.participants {
+  font-size: 0.8rem;
+  color: #666;
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.conversation-messages {
+  flex: 1;
+  min-height: 200px; /* Altura mínima para a área de mensagens */
+  overflow-y: auto;
+  padding: 15px;
+  background-color: #f0f2f5;
+  display: flex;
+  flex-direction: column;
+}
+
+.no-messages {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  color: #999;
+  font-style: italic;
+}
+
+.message {
+  margin-bottom: 10px;
+  max-width: 70%;
+  display: flex;
+  flex-direction: column; /* Organiza os elementos da mensagem verticalmente */
+}
+
+.message-sent {
+  align-self: flex-end;
+}
+
+.message-received {
+  align-self: flex-start;
+}
+
+.message-bubble {
+  padding: 10px 12px;
+  border-radius: 18px;
+  position: relative;
+}
+
+.message-sent .message-bubble {
+  background-color: #d1e7fd;
+  border-bottom-right-radius: 4px;
+}
+
+.message-received .message-bubble {
+  background-color: white;
+  border-bottom-left-radius: 4px;
+}
+
+.message-sender {
+  font-size: 0.8rem;
+  font-weight: bold;
+  color: #666;
+  margin-bottom: 2px;
+}
+
+.message-content {
+  word-wrap: break-word;
+  white-space: pre-wrap;
+}
+
+.message-time {
+  font-size: 0.7rem;
+  color: #999;
+  text-align: right;
+  margin-top: 3px;
+}
+
+.message-input-container {
+  padding: 10px 15px;
+  background: white;
+  border-top: 1px solid #e0e0e0;
+  flex-shrink: 0; /* Impede que o container de entrada diminua */
+  height: 70px; /* Altura fixa para o container de entrada */
+  box-sizing: border-box; /* Padding não afeta a altura */
+  display: flex;
+  align-items: center;
+}
+
+.message-input-wrapper {
+  display: flex;
+  align-items: center;
+  background-color: #f1f1f1;
+  border-radius: 24px;
+  padding: 5px 15px;
+  height: 50px; /* Altura fixa para o wrapper de entrada */
+  box-sizing: border-box; /* Para que padding não afete a altura */
+  width: 100%;
+}
+
+.message-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  padding: 10px 0;
+  resize: none;
+  max-height: 40px; /* Altura máxima para a área de texto */
+  min-height: 40px; /* Altura mínima para a área de texto */
+  font-family: inherit;
+  font-size: 14px; /* Tamanho de fonte consistente */
+}
+
+.send-button {
+  background-color: #1890ff;
+  color: white;
+  border: none;
+  border-radius: 24px;
+  padding: 8px 16px;
+  cursor: pointer;
+  margin-left: 10px;
+  outline: none;
+  font-weight: bold;
+  height: 40px; /* Altura fixa para o botão */
+  min-width: 80px; /* Largura mínima para o botão */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.send-button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+.no-conversation-selected {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  background-color: #f9f9f9;
+  font-style: italic;
+  color: #999;
+}

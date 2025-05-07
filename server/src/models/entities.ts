@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, OneToMany } from "typeorm";
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, OneToMany, UpdateDateColumn, JoinColumn } from "typeorm";
 
 @Entity()
 export class User {
@@ -37,6 +37,16 @@ export class User {
 
     @OneToMany(() => CommentLike, commentLike => commentLike.user)
     commentLikes: CommentLike[];
+
+    // Novas relações para o chat
+    @OneToMany(() => ChatConversation, conversation => conversation.createdBy)
+    createdConversations: ChatConversation[];
+
+    @OneToMany(() => ChatParticipant, participant => participant.user)
+    chatParticipations: ChatParticipant[];
+
+    @OneToMany(() => ChatMessage, message => message.sender)
+    chatMessages: ChatMessage[];
 }
 
 @Entity()
@@ -136,4 +146,92 @@ export class CommentLike {
 
     @ManyToOne(() => User, user => user.commentLikes)
     user: User;
+}
+
+// Novas entidades para o sistema de chat
+
+@Entity('chat_conversation')
+export class ChatConversation {
+    @PrimaryGeneratedColumn()
+    id: number;
+
+    @Column({ nullable: true })
+    name: string;
+
+    @Column({ name: 'is_group', default: false })
+    isGroup: boolean;
+
+    @Column({ name: 'created_by', nullable: true })
+    createdById: number;
+
+    @CreateDateColumn({ name: 'created_at' })
+    createdAt: Date;
+
+    @UpdateDateColumn({ name: 'updated_at' })
+    updatedAt: Date;
+
+    @ManyToOne(() => User, user => user.createdConversations)
+    @JoinColumn({ name: 'created_by' })
+    createdBy: User;
+
+    @OneToMany(() => ChatParticipant, participant => participant.conversation)
+    participants: ChatParticipant[];
+
+    @OneToMany(() => ChatMessage, message => message.conversation)
+    messages: ChatMessage[];
+}
+
+@Entity('chat_participant')
+export class ChatParticipant {
+    @PrimaryGeneratedColumn()
+    id: number;
+
+    @Column({ name: 'conversation_id' })
+    conversationId: number;
+
+    @Column({ name: 'user_id' })
+    userId: number;
+
+    @Column({ name: 'is_admin', default: false })
+    isAdmin: boolean;
+
+    @CreateDateColumn({ name: 'joined_at' })
+    joinedAt: Date;
+
+    @ManyToOne(() => ChatConversation, conversation => conversation.participants)
+    @JoinColumn({ name: 'conversation_id' })
+    conversation: ChatConversation;
+
+    @ManyToOne(() => User, user => user.chatParticipations)
+    @JoinColumn({ name: 'user_id' })
+    user: User;
+}
+
+@Entity('chat_message')
+export class ChatMessage {
+    @PrimaryGeneratedColumn()
+    id: number;
+
+    @Column({ name: 'conversation_id' })
+    conversationId: number;
+
+    @Column({ name: 'sender_id' })
+    senderId: number;
+
+    @Column()
+    content: string;
+
+    @CreateDateColumn({ name: 'created_at' })
+    createdAt: Date;
+
+    @Column({ name: 'is_read', default: false })
+    isRead: boolean;
+
+    @ManyToOne(() => ChatConversation, conversation => conversation.messages)
+    @JoinColumn({ name: 'conversation_id' })
+    conversation: ChatConversation;
+
+    @ManyToOne(() => User, user => user.chatMessages)
+    @JoinColumn({ name: 'sender_id' })
+    sender: User;
 }

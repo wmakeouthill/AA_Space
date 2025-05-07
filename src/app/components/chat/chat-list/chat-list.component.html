@@ -1,0 +1,29 @@
+<div class="chat-list-container">
+  <div class="chat-list-header">
+    <h3>Conversas</h3>
+  </div>
+  <div class="chat-list">
+    <div *ngFor="let chat of chats" class="chat-item" [class.active]="selectedChatId === chat.id" (click)="selectChat(chat)">
+      <div class="chat-avatar">
+        <img [src]="chat.isGroup ? 'assets/images/group.png' : 'assets/images/user.png'" alt="Avatar">
+      </div>
+      <div class="chat-info">
+        <div class="chat-name">{{ chat.name || getParticipantName(chat) }}</div>
+        <div class="chat-last-message" *ngIf="chat.lastMessage">
+          {{ chat.lastMessage.content | slice:0:30 }}{{ chat.lastMessage.content.length > 30 ? '...' : '' }}
+        </div>
+      </div>
+      <div class="chat-meta">
+        <div class="chat-time" *ngIf="chat.lastMessage">
+          {{ chat.lastMessage.timestamp | date:'shortTime' }}
+        </div>
+        <div class="chat-unread" *ngIf="chat.lastMessage && !chat.lastMessage.read && chat.lastMessage.senderId !== currentUserId">
+          <span class="badge">●</span>
+        </div>
+      </div>
+    </div>
+    <div *ngIf="chats.length === 0" class="no-chats">
+      <p>Nenhuma conversa encontrada</p>
+    </div>
+  </div>
+</div>
