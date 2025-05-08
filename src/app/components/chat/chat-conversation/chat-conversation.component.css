@@ -2,17 +2,20 @@
   display: flex;
   flex-direction: column;
   height: 100%;
+  width: 100%;
   overflow: hidden;
+  position: relative;
 }
 
 .conversation-header {
-  flex-shrink: 0;
+  flex: 0 0 auto;
   height: 60px;
   padding: 10px 15px;
   border-bottom: 1px solid #e0e0e0;
   background-color: #f9f9f9;
   display: flex;
   align-items: center;
+  z-index: 10;
 }
 
 .conversation-info h3 {
@@ -35,13 +38,14 @@
 
 .conversation-messages {
   flex: 1;
-  overflow-y: auto; /* Alterado de scroll para auto para melhor comportamento */
+  overflow-y: auto; /* Auto para usar scroll apenas quando necessário */
   padding: 15px;
   background-color: #f0f2f5;
   display: flex;
   flex-direction: column; /* Garantindo que as mensagens fiquem em coluna */
-  height: 100%; /* Garantir que ocupe toda a altura disponível */
-  position: relative; /* Para referência de posicionamento absoluto se necessário */
+  min-height: 0; /* Importante para permitir que o flex-child possa encolher */
+  height: 0; /* Crucial para fazer o flex funcionar corretamente */
+  position: relative; /* Para referência de posicionamento */
 }
 
 /* Estilos da barra de rolagem para Firefox */
@@ -76,6 +80,20 @@
   height: 100%;
   color: #999;
   font-style: italic;
+}
+
+.conversation-messages:after {
+  content: "";
+  display: block;
+  height: 20px; /* Espaço extra no final para melhor visualização */
+  width: 100%;
+}
+
+.conversation-messages:after {
+  content: "";
+  display: block;
+  height: 20px; /* Espaço extra no final para melhor visualização */
+  width: 100%;
 }
 
 .message {
@@ -157,6 +175,7 @@
 
 .message-input-container {
   flex-shrink: 0;
+  flex-grow: 0; /* Garante que não expande */
   height: 70px;
   padding: 10px 15px;
   background: white;
@@ -164,6 +183,7 @@
   box-sizing: border-box;
   display: flex;
   align-items: center;
+  z-index: 10;
 }
 
 .message-input-wrapper {
@@ -220,4 +240,12 @@
   background-color: #f9f9f9;
   font-style: italic;
   color: #999;
+}
+
+/* Garantir que a área de mensagens seja escrolável apenas quando necessário */
+@media screen and (min-height: 500px) {
+  .conversation-messages {
+    /* Altura mínima apenas para telas maiores */
+    min-height: 300px;
+  }
 }

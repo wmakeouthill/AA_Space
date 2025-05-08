@@ -33,4 +33,5 @@
   background-color: white;
   height: 100%; /* Ocupa toda a altura disponível */
   overflow: hidden; /* Impedir que o conteúdo estoure */
+  position: relative; /* Para posicionamento adequado dos filhos */
 }

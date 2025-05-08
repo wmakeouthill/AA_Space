@@ -1,17 +1,18 @@
-import { Component, ElementRef, Input, OnChanges, SimpleChanges, ViewChild } from '@angular/core';
+import { Component, ElementRef, Input, OnChanges, SimpleChanges, ViewChild, AfterViewChecked } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Chat, Message } from '../../../models/chat/chat.interface';
 import { ChatService } from '../../../services/chat.service';
+import { MessagesScrollDirective } from './messages-scroll.directive';
 
 @Component({
   selector: 'app-chat-conversation',
   templateUrl: './chat-conversation.component.html',
   styleUrls: ['./chat-conversation.component.css'],
   standalone: true,
-  imports: [CommonModule, FormsModule]
+  imports: [CommonModule, FormsModule, MessagesScrollDirective]
 })
-export class ChatConversationComponent implements OnChanges {
+export class ChatConversationComponent implements OnChanges, AfterViewChecked {
   @Input() selectedChat: Chat | null = null;
   @ViewChild('messagesContainer') private messagesContainer!: ElementRef;
 
@@ -134,9 +135,21 @@ export class ChatConversationComponent implements OnChanges {
           this.newMessage = '';
           this.sending = false;
 
+          console.log('Mensagem enviada, rolando para o final');
+          
+          // Rolando para o final após adicionar a mensagem
+          // A execução em múltiplos tempos aumenta a chance de sucesso
+          this.scrollToBottom(); // Imediato
+          
           setTimeout(() => {
+            console.log('Tentativa 1 após enviar mensagem');
             this.scrollToBottom();
-          });
+          }, 50);
+          
+          setTimeout(() => {
+            console.log('Tentativa 2 após enviar mensagem');
+            this.scrollToBottom();
+          }, 200);
         },
         error: (err) => {
           console.error('Erro ao enviar mensagem:', err);
@@ -159,9 +172,18 @@ export class ChatConversationComponent implements OnChanges {
           this.messages = messages;
           this.loading = false;
 
+          // Rolando para o final após renderização das mensagens
+          // Usando um delay maior para garantir que o DOM tenha tempo de renderizar
           setTimeout(() => {
+            console.log('Rolando para o final após carregar mensagens');
             this.scrollToBottom();
-          });
+            
+            // Uma segunda tentativa com um delay maior se necessário
+            setTimeout(() => {
+              console.log('Segunda tentativa de rolagem');
+              this.scrollToBottom();
+            }, 300);
+          }, 100);
         },
         error: (err) => {
           console.error('Erro ao carregar mensagens:', err);
@@ -171,12 +193,36 @@ export class ChatConversationComponent implements OnChanges {
       });
   }
 
+  // Método para acionar a rolagem para o final - versão simplificada para debug
   private scrollToBottom(): void {
     try {
-      const container = this.messagesContainer.nativeElement;
-      container.scrollTop = container.scrollHeight;
-    } catch (error) {
-      console.error('Erro ao rolar para o final:', error);
+      // Esperamos um pouco para garantir que a UI foi atualizada
+      setTimeout(() => {
+        if (this.messagesContainer && this.messagesContainer.nativeElement) {
+          const element = this.messagesContainer.nativeElement;
+          // Informação crucial para debug
+          console.log('ANTES da rolagem:', {
+            scrollHeight: element.scrollHeight,
+            clientHeight: element.clientHeight,
+            scrollTop: element.scrollTop,
+            offsetHeight: element.offsetHeight
+          });
+          
+          // Forçando a rolagem para o final
+          element.scrollTop = element.scrollHeight;
+          
+          console.log('DEPOIS da rolagem:', {
+            scrollTop: element.scrollTop
+          });
+        }
+      }, 50);
+    } catch (err) {
+      console.error('Erro ao rolar mensagens para o final:', err);
     }
+  }
+  
+  // Hook do ciclo de vida que executa após o conteúdo da view ser verificado
+  ngAfterViewChecked() {
+    // Não implementamos lógica aqui para evitar múltiplas chamadas durante ciclos de detecção
   }
 }
