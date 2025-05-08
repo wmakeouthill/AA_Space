@@ -13,12 +13,34 @@
   height: 50px; /* Altura fixa para o cabeçalho */
   display: flex;
   align-items: center;
+  z-index: 1; /* Garante que o cabeçalho fique acima da lista */
 }
 
 .chat-list {
   flex: 1;
   overflow-y: auto;
   padding: 0;
+  scrollbar-width: thin; /* Para Firefox */
+  max-height: calc(100% - 50px); /* Altura máxima considerando o cabeçalho */
+}
+
+/* Estilizando a barra de rolagem para navegadores baseados em WebKit (Chrome, Safari) */
+.chat-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.chat-list::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 10px;
+}
+
+.chat-list::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 10px;
+}
+
+.chat-list::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3);
 }
 
 .chat-item {

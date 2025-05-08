@@ -3,7 +3,6 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Chat, Message } from '../../../models/chat/chat.interface';
 import { ChatService } from '../../../services/chat.service';
-import { environment } from '../../../../environments/environment';
 
 @Component({
   selector: 'app-chat-conversation',
@@ -26,6 +25,7 @@ export class ChatConversationComponent implements OnChanges {
 
   constructor(private chatService: ChatService) {
     this.currentUserId = this.chatService.getCurrentUserId();
+    console.log(`[CHAT CONV] ID do usuário atual: ${this.currentUserId}`);
   }
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -173,9 +173,10 @@ export class ChatConversationComponent implements OnChanges {
 
   private scrollToBottom(): void {
     try {
-      this.messagesContainer.nativeElement.scrollTop = this.messagesContainer.nativeElement.scrollHeight;
-    } catch (err) {
-      console.error('Erro ao rolar mensagens para o final:', err);
+      const container = this.messagesContainer.nativeElement;
+      container.scrollTop = container.scrollHeight;
+    } catch (error) {
+      console.error('Erro ao rolar para o final:', error);
     }
   }
 }

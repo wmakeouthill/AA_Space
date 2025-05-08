@@ -2,17 +2,15 @@
   display: flex;
   flex-direction: column;
   height: 100%;
-  position: relative;
-  overflow: hidden; /* Evitar vazamento de conteúdo */
+  overflow: hidden;
 }
 
 .conversation-header {
+  flex-shrink: 0;
+  height: 60px;
   padding: 10px 15px;
   border-bottom: 1px solid #e0e0e0;
   background-color: #f9f9f9;
-  z-index: 1;
-  flex-shrink: 0; /* Impede que o cabeçalho diminua */
-  height: 60px; /* Altura fixa para o cabeçalho */
   display: flex;
   align-items: center;
 }
@@ -37,12 +35,38 @@
 
 .conversation-messages {
   flex: 1;
-  min-height: 200px; /* Altura mínima para a área de mensagens */
-  overflow-y: auto;
+  overflow-y: auto; /* Alterado de scroll para auto para melhor comportamento */
   padding: 15px;
   background-color: #f0f2f5;
   display: flex;
-  flex-direction: column;
+  flex-direction: column; /* Garantindo que as mensagens fiquem em coluna */
+  height: 100%; /* Garantir que ocupe toda a altura disponível */
+  position: relative; /* Para referência de posicionamento absoluto se necessário */
+}
+
+/* Estilos da barra de rolagem para Firefox */
+.conversation-messages {
+  scrollbar-width: thin;
+  scrollbar-color: #888 #f1f1f1;
+}
+
+/* Estilos da barra de rolagem para Chrome, Edge e Safari */
+.conversation-messages::-webkit-scrollbar {
+  width: 8px; /* Reduzido para ser menos intrusivo */
+}
+
+.conversation-messages::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+.conversation-messages::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 10px;
+}
+
+.conversation-messages::-webkit-scrollbar-thumb:hover {
+  background: #555;
 }
 
 .no-messages {
@@ -56,19 +80,23 @@
 
 .message {
   margin-bottom: 16px;
-  max-width: 80%;
+  max-width: 70%;
+  min-width: 100px;
   display: flex;
   align-items: flex-end;
+  width: 100%; /* Importante para o alinhamento */
 }
 
 .message-sent {
   align-self: flex-end;
   flex-direction: row-reverse;
+  justify-content: flex-start; /* Alinha à direita */
 }
 
 .message-received {
   align-self: flex-start;
   flex-direction: row;
+  justify-content: flex-start; /* Alinha à esquerda */
 }
 
 .message-avatar {
@@ -128,12 +156,12 @@
 }
 
 .message-input-container {
+  flex-shrink: 0;
+  height: 70px;
   padding: 10px 15px;
   background: white;
   border-top: 1px solid #e0e0e0;
-  flex-shrink: 0; /* Impede que o container de entrada diminua */
-  height: 70px; /* Altura fixa para o container de entrada */
-  box-sizing: border-box; /* Padding não afeta a altura */
+  box-sizing: border-box;
   display: flex;
   align-items: center;
 }
@@ -144,8 +172,8 @@
   background-color: #f1f1f1;
   border-radius: 24px;
   padding: 5px 15px;
-  height: 50px; /* Altura fixa para o wrapper de entrada */
-  box-sizing: border-box; /* Para que padding não afete a altura */
+  height: 50px;
+  box-sizing: border-box;
   width: 100%;
 }
 
@@ -156,10 +184,10 @@
   background: transparent;
   padding: 10px 0;
   resize: none;
-  max-height: 40px; /* Altura máxima para a área de texto */
-  min-height: 40px; /* Altura mínima para a área de texto */
+  max-height: 40px;
+  min-height: 40px;
   font-family: inherit;
-  font-size: 14px; /* Tamanho de fonte consistente */
+  font-size: 14px;
 }
 
 .send-button {
@@ -172,8 +200,8 @@
   margin-left: 10px;
   outline: none;
   font-weight: bold;
-  height: 40px; /* Altura fixa para o botão */
-  min-width: 80px; /* Largura mínima para o botão */
+  height: 40px;
+  min-width: 80px;
   display: flex;
   align-items: center;
   justify-content: center;

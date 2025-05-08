@@ -32,6 +32,7 @@ export class ChatListComponent implements OnInit, OnDestroy {
 
   constructor(private chatService: ChatService) {
     this.currentUserId = this.chatService.getCurrentUserId();
+    console.log(`[CHAT LIST] ID do usuário atual: ${this.currentUserId}`);
 
     // Configura o listener para atualizar a lista quando um chat for criado
     this.chatCreatedHandler = (event: CustomEvent<Chat>) => {

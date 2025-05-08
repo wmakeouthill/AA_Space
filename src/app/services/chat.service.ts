@@ -140,6 +140,12 @@ export class ChatService {
 
   // Retorna o ID do usuário atual
   getCurrentUserId(): number {
-    return this.currentUserId;
+    const userId = this.authService.getUserId();
+    console.log(`[CHAT SERVICE] Obtendo ID do usuário atual: ${userId}`);
+    if (!userId) {
+      console.error('[CHAT SERVICE] ID do usuário não encontrado! Utilizando 0 como fallback.');
+      return 0;
+    }
+    return parseInt(userId);
   }
 }
