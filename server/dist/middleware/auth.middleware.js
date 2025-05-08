@@ -16,50 +16,51 @@ exports.authMiddleware = void 0;
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const database_1 = require("../config/database");
 const entities_1 = require("../models/entities");
+const JWT_SECRET = process.env.JWT_SECRET || 'seu_segredo_jwt_super_secreto';
 const authMiddleware = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
-    // Adiciona logs para diagnóstico
-    console.log(`[AUTH MIDDLEWARE] Método: ${req.method}, URL: ${req.url}`);
-    console.log(`[AUTH MIDDLEWARE] Headers Authorization:`, req.headers.authorization);
-    const token = (_a = req.headers.authorization) === null || _a === void 0 ? void 0 : _a.split(' ')[1];
-    console.log(`[AUTH MIDDLEWARE] Token presente: ${!!token}`);
-    if (!token) {
-        console.log('[AUTH MIDDLEWARE] Sem token, continuando...');
-        return next();
-    }
     try {
-        const JWT_SECRET = process.env.JWT_SECRET || 'seu_segredo_jwt_super_secreto';
+        console.log(`[AUTH MIDDLEWARE] Método: ${req.method}, URL: ${req.url}`);
+        console.log(`[AUTH MIDDLEWARE] Headers Authorization: ${req.headers.authorization}`);
+        // Permitir acesso sem autenticação para algumas rotas públicas
+        if ((req.method === 'GET' && (req.url === '/posts' || req.url.startsWith('/posts/'))) ||
+            req.url === '/health') {
+            console.log('[AUTH MIDDLEWARE] Rota pública, permitindo acesso sem autenticação');
+            return next();
+        }
+        const authHeader = req.headers.authorization;
+        console.log('[AUTH MIDDLEWARE] Token presente:', !!authHeader);
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+            // Para rotas específicas que permitem acesso como convidado
+            if ((req.method === 'POST' && req.url.startsWith('/posts')) ||
+                (req.method === 'POST' && req.url.includes('/comments'))) {
+                console.log('[AUTH MIDDLEWARE] Permitindo acesso como convidado para criar posts/comentários');
+                return next();
+            }
+            return res.status(401).json({ message: 'Token não fornecido ou inválido' });
+        }
+        const token = authHeader.split(' ')[1];
+        // Verificar o token JWT
         const decoded = jsonwebtoken_1.default.verify(token, JWT_SECRET);
         console.log('[AUTH MIDDLEWARE] Token verificado:', decoded);
-        // Buscar informações atualizadas do usuário do banco de dados
+        // Verificar se o usuário existe no banco de dados
         const userRepository = database_1.AppDataSource.getRepository(entities_1.User);
-        const user = yield userRepository.findOne({
-            where: { id: decoded.id }
-        });
-        if (user) {
-            // Adicionar informações do usuário ao request
-            req.user = {
-                id: user.id,
-                username: user.username,
-                isAdmin: !!user.isAdmin // Garante que seja boolean (true/false)
-            };
-            console.log(`[AUTH MIDDLEWARE] Usuário encontrado: ${user.username}, isAdmin: ${user.isAdmin}`);
+        const user = yield userRepository.findOne({ where: { id: decoded.id } });
+        if (!user) {
+            console.log('[AUTH MIDDLEWARE] Usuário não encontrado no banco de dados');
+            return res.status(401).json({ message: 'Usuário não encontrado' });
         }
-        else {
-            console.log(`[AUTH MIDDLEWARE] Usuário não encontrado no banco de dados para id: ${decoded.id}`);
-            // Usar informações do token se o usuário não for encontrado no banco
-            req.user = {
-                id: decoded.id,
-                username: decoded.username,
-                isAdmin: decoded.isAdmin
-            };
-        }
+        // Adicionar informações do usuário ao objeto de requisição
+        req.user = {
+            id: user.id,
+            username: user.username,
+            isAdmin: user.isAdmin
+        };
+        console.log(`[AUTH MIDDLEWARE] Usuário encontrado: ${user.username}, isAdmin: ${user.isAdmin}`);
         next();
     }
     catch (error) {
-        console.error('[AUTH MIDDLEWARE] Erro ao verificar token:', error);
-        // Não enviamos erro, apenas continuamos sem autenticação
-        next();
+        console.error('[AUTH MIDDLEWARE] Erro:', error);
+        return res.status(401).json({ message: 'Token inválido ou expirado' });
     }
 });
 exports.authMiddleware = authMiddleware;

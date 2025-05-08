@@ -3,11 +3,11 @@
     <div class="profile-image-container">
       <img [src]="profileImage || defaultImage" alt="Imagem de perfil" class="profile-image" (click)="toggleEnlargedImage($event)">
       <div class="profile-image-overlay" *ngIf="showProfileOptions">
-        <label for="file-upload" class="upload-label">
+        <label for="file-upload" class="upload-label" (click)="$event.stopPropagation()">
           Alterar
           <input type="file" id="file-upload" style="display:none" accept="image/*" (change)="onFileSelected($event)">
         </label>
-        <button class="remove-button" *ngIf="profileImage" (click)="removeProfileImage()">Remover</button>
+        <button class="remove-button" *ngIf="profileImage" (click)="removeProfileImage(); $event.stopPropagation()">Remover</button>
         <button class="view-button" *ngIf="profileImage" (click)="toggleEnlargedImage($event)">Ampliar</button>
       </div>
     </div>

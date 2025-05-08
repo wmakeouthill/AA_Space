@@ -16,10 +16,16 @@ const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
 const dotenv_1 = __importDefault(require("dotenv"));
 const path_1 = __importDefault(require("path"));
+const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
+const fs_1 = __importDefault(require("fs"));
 const database_1 = require("./config/database");
+const entities_1 = require("./models/entities");
 const auth_1 = __importDefault(require("./routes/auth"));
 const posts_1 = __importDefault(require("./routes/posts"));
 const chat_1 = __importDefault(require("./routes/chat"));
+const profile_1 = __importDefault(require("./routes/profile"));
+// Chave secreta para JWT - deve ser igual à usada no controlador de auth
+const JWT_SECRET = process.env.JWT_SECRET || 'seu_segredo_jwt_super_secreto';
 dotenv_1.default.config();
 const app = (0, express_1.default)();
 const port = Number(process.env.PORT || 3001);
@@ -76,7 +82,7 @@ app.use((req, res, next) => {
 // Aplica CORS
 app.use((0, cors_1.default)(corsOptions));
 // Parse JSON bodies
-app.use(express_1.default.json());
+app.use(express_1.default.json({ limit: '50mb' })); // Aumentando o limite para permitir uploads de imagens
 // Headers adicionais para CORS
 app.use((req, res, next) => {
     const origin = req.headers.origin;
@@ -91,6 +97,12 @@ app.use((req, res, next) => {
     }
     next();
 });
+// Configuração para servir os arquivos de upload
+// Fornecendo acesso aos uploads com a URL completa (sem /api)
+console.log('Diretório de uploads configurado:', path_1.default.join(__dirname, '../uploads'));
+app.use('/uploads', express_1.default.static(path_1.default.join(__dirname, '../uploads')));
+// Rota alternativa para acessar uploads através da API (caso o cliente esteja tentando acessar via /api)
+app.use('/api/uploads', express_1.default.static(path_1.default.join(__dirname, '../uploads')));
 // Rota de health check
 app.get('/api/health', (req, res) => {
     res.json({
@@ -102,10 +114,98 @@ app.get('/api/health', (req, res) => {
         origin: req.headers.origin
     });
 });
+// Rota para diagnóstico de arquivos de upload
+app.get('/api/uploads/check', (req, res) => {
+    try {
+        const uploadsDir = path_1.default.resolve(path_1.default.join(__dirname, '../uploads'));
+        const profilesDir = path_1.default.join(uploadsDir, 'profiles');
+        // Verificar se os diretórios existem
+        const uploadsExists = fs_1.default.existsSync(uploadsDir);
+        const profilesExists = fs_1.default.existsSync(profilesDir);
+        let files = [];
+        if (profilesExists) {
+            // Listar arquivos no diretório de perfis
+            files = fs_1.default.readdirSync(profilesDir).map(file => {
+                const filePath = path_1.default.join(profilesDir, file);
+                const stats = fs_1.default.statSync(filePath);
+                return {
+                    name: file,
+                    path: `/uploads/profiles/${file}`,
+                    size: stats.size,
+                    created: stats.birthtime,
+                    permissions: stats.mode.toString(8).substring(stats.mode.toString(8).length - 3)
+                };
+            });
+        }
+        // Verificar informações sobre o host
+        const hostname = req.headers.host || 'unknown';
+        const origin = req.headers.origin || 'unknown';
+        const forwardedHost = req.headers['x-forwarded-host'] || 'none';
+        // Adicionar URLs de exemplo para testes
+        const apiUrl = origin.replace(/-4200\./, '-3001.');
+        const testUrls = files.slice(0, 3).map(file => `${apiUrl}${file.path}`);
+        res.json({
+            status: 'OK',
+            uploadsPath: uploadsDir,
+            profilesPath: profilesDir,
+            uploadsExists,
+            profilesExists,
+            filesCount: files.length,
+            files: files,
+            requestInfo: {
+                hostname,
+                origin,
+                forwardedHost
+            },
+            testUrls
+        });
+    }
+    catch (error) {
+        console.error('Erro ao verificar diretórios de upload:', error);
+        res.status(500).json({
+            status: 'ERROR',
+            message: 'Erro ao verificar diretórios de upload',
+            details: error.message
+        });
+    }
+});
 // Configuração das rotas API
 app.use('/api/auth', auth_1.default);
 app.use('/api/posts', posts_1.default);
 app.use('/api/chat', chat_1.default);
+app.use('/api/profile', profile_1.default);
+// Rota explícita de fallback para o perfil do usuário atual
+app.get('/api/profile/me', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    console.log('[FALLBACK ROUTE] Interceptada requisição para /api/profile/me');
+    try {
+        const authHeader = req.headers.authorization;
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+            return res.status(401).json({ message: 'Token não fornecido ou inválido' });
+        }
+        const token = authHeader.split(' ')[1];
+        // Verificar o token JWT
+        const decoded = jsonwebtoken_1.default.verify(token, JWT_SECRET);
+        // Verificar se o usuário existe no banco de dados
+        const userRepository = database_1.AppDataSource.getRepository(entities_1.User);
+        const user = yield userRepository.findOne({ where: { id: decoded.id } });
+        if (!user) {
+            return res.status(401).json({ message: 'Usuário não encontrado' });
+        }
+        console.log(`[FALLBACK ROUTE] Retornando perfil para usuário ${user.username}`);
+        return res.status(200).json({
+            id: user.id,
+            username: user.username,
+            email: user.email,
+            phone: user.phone,
+            profileImage: user.profileImage,
+            isAdmin: user.isAdmin
+        });
+    }
+    catch (error) {
+        console.error('[FALLBACK ROUTE] Erro ao buscar perfil do usuário:', error);
+        return res.status(401).json({ message: 'Token inválido ou expirado' });
+    }
+}));
 // Em ambiente de produção ou Codespaces, configure para servir arquivos estáticos do Angular
 if (process.env.NODE_ENV === 'production' || isCodespacesEnv) {
     // Caminho correto para os arquivos compilados do Angular

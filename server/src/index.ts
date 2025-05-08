@@ -2,11 +2,17 @@ import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
+import jwt from 'jsonwebtoken';
+import fs from 'fs';
 import { AppDataSource } from './config/database';
+import { User } from './models/entities';
 import authRoutes from './routes/auth';
 import postRoutes from './routes/posts';
 import chatRoutes from './routes/chat';
 import profileRoutes from './routes/profile';
+
+// Chave secreta para JWT - deve ser igual à usada no controlador de auth
+const JWT_SECRET = process.env.JWT_SECRET || 'seu_segredo_jwt_super_secreto';
 
 dotenv.config();
 
@@ -91,8 +97,13 @@ app.use((req: Request, res: Response, next: NextFunction) => {
     next();
 });
 
-// Diretório para servir os arquivos de upload
+// Configuração para servir os arquivos de upload
+// Fornecendo acesso aos uploads com a URL completa (sem /api)
+console.log('Diretório de uploads configurado:', path.join(__dirname, '../uploads'));
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+
+// Rota alternativa para acessar uploads através da API (caso o cliente esteja tentando acessar via /api)
+app.use('/api/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // Rota de health check
 app.get('/api/health', (req: Request, res: Response) => {
@@ -106,11 +117,120 @@ app.get('/api/health', (req: Request, res: Response) => {
     });
 });
 
+// Rota para diagnóstico de arquivos de upload
+app.get('/api/uploads/check', (req: Request, res: Response) => {
+    try {
+        const uploadsDir = path.resolve(path.join(__dirname, '../uploads'));
+        const profilesDir = path.join(uploadsDir, 'profiles');
+        
+        // Verificar se os diretórios existem
+        const uploadsExists = fs.existsSync(uploadsDir);
+        const profilesExists = fs.existsSync(profilesDir);
+        
+        // Definir tipagem explícita para a variável files
+        interface FileInfo {
+            name: string;
+            path: string;
+            size: number;
+            created: Date;
+            permissions: string;
+        }
+        
+        let files: FileInfo[] = [];
+        
+        if (profilesExists) {
+            // Listar arquivos no diretório de perfis
+            files = fs.readdirSync(profilesDir).map(file => {
+                const filePath = path.join(profilesDir, file);
+                const stats = fs.statSync(filePath);
+                return {
+                    name: file,
+                    path: `/uploads/profiles/${file}`,
+                    size: stats.size,
+                    created: stats.birthtime,
+                    permissions: stats.mode.toString(8).substring(stats.mode.toString(8).length - 3)
+                };
+            });
+        }
+        
+        // Verificar informações sobre o host
+        const hostname = req.headers.host || 'unknown';
+        const origin = req.headers.origin || 'unknown';
+        const forwardedHost = req.headers['x-forwarded-host'] || 'none';
+        
+        // Adicionar URLs de exemplo para testes
+        const apiUrl = (origin as string).replace(/-4200\./, '-3001.');
+        const testUrls = files.slice(0, 3).map(file => `${apiUrl}${file.path}`);
+        
+        res.json({
+            status: 'OK',
+            uploadsPath: uploadsDir,
+            profilesPath: profilesDir,
+            uploadsExists,
+            profilesExists,
+            filesCount: files.length,
+            files: files,
+            requestInfo: {
+                hostname,
+                origin,
+                forwardedHost
+            },
+            testUrls
+        });
+    } catch (error) {
+        console.error('Erro ao verificar diretórios de upload:', error);
+        res.status(500).json({
+            status: 'ERROR',
+            message: 'Erro ao verificar diretórios de upload',
+            details: (error as Error).message
+        });
+    }
+});
+
 // Configuração das rotas API
 app.use('/api/auth', authRoutes);
 app.use('/api/posts', postRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/profile', profileRoutes);
+
+// Rota explícita de fallback para o perfil do usuário atual
+app.get('/api/profile/me', async (req: Request, res: Response) => {
+    console.log('[FALLBACK ROUTE] Interceptada requisição para /api/profile/me');
+    
+    try {
+        const authHeader = req.headers.authorization;
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+            return res.status(401).json({ message: 'Token não fornecido ou inválido' });
+        }
+
+        const token = authHeader.split(' ')[1];
+        
+        // Verificar o token JWT
+        const decoded = jwt.verify(token, JWT_SECRET) as { id: number; username: string; isAdmin?: boolean };
+        
+        // Verificar se o usuário existe no banco de dados
+        const userRepository = AppDataSource.getRepository(User);
+        const user = await userRepository.findOne({ where: { id: decoded.id } });
+
+        if (!user) {
+            return res.status(401).json({ message: 'Usuário não encontrado' });
+        }
+        
+        console.log(`[FALLBACK ROUTE] Retornando perfil para usuário ${user.username}`);
+        
+        return res.status(200).json({
+            id: user.id,
+            username: user.username,
+            email: user.email,
+            phone: user.phone,
+            profileImage: user.profileImage,
+            isAdmin: user.isAdmin
+        });
+    } catch (error) {
+        console.error('[FALLBACK ROUTE] Erro ao buscar perfil do usuário:', error);
+        return res.status(401).json({ message: 'Token inválido ou expirado' });
+    }
+});
 
 // Em ambiente de produção ou Codespaces, configure para servir arquivos estáticos do Angular
 if (process.env.NODE_ENV === 'production' || isCodespacesEnv) {

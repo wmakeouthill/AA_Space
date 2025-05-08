@@ -9,6 +9,7 @@ import { CreateFirstAdmin1746558605356 } from './src/migrations/1746558605356-Cr
 import { AddIsMainAdminColumn1746565106921 } from './src/migrations/1746565106921-AddIsMainAdminColumn';
 import { AddContactInfoColumns1746574982521 } from './src/migrations/1746574982521-AddContactInfoColumns';
 import { AddChatTables1746588461222 } from './src/migrations/1746588461222-AddChatTables';
+import { AddProfileImageColumn1746589000000 } from './src/migrations/1746589000000-AddProfileImageColumn';
 
 // Importando as entidades
 import { User, Post, Comment, PostLike, CommentLike, ChatConversation, ChatParticipant, ChatMessage } from './src/models/entities';
@@ -30,7 +31,8 @@ const AppDataSource = new DataSource({
         CreateFirstAdmin1746558605356,
         AddIsMainAdminColumn1746565106921,
         AddContactInfoColumns1746574982521,
-        AddChatTables1746588461222
+        AddChatTables1746588461222,
+        AddProfileImageColumn1746589000000 // Adicionando migração para perfil de imagem
     ]
 });
 

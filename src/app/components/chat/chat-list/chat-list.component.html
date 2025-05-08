@@ -5,7 +5,7 @@
   <div class="chat-list">
     <div *ngFor="let chat of chats" class="chat-item" [class.active]="selectedChatId === chat.id" (click)="selectChat(chat)">
       <div class="chat-avatar">
-        <img [src]="chat.isGroup ? 'assets/images/group.png' : 'assets/images/user.png'" alt="Avatar">
+wf        <img [src]="getParticipantProfileImage(chat)" alt="Avatar">
       </div>
       <div class="chat-info">
         <div class="chat-name">{{ chat.name || getParticipantName(chat) }}</div>

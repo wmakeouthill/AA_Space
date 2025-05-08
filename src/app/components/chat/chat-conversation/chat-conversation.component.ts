@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Chat, Message } from '../../../models/chat/chat.interface';
 import { ChatService } from '../../../services/chat.service';
+import { environment } from '../../../../environments/environment';
 
 @Component({
   selector: 'app-chat-conversation',
@@ -21,7 +22,7 @@ export class ChatConversationComponent implements OnChanges {
   loading = false;
   error: string | null = null;
   sending = false;
-  defaultImage: string = 'assets/images/user.png';
+  defaultImage: string = '/assets/images/user.png'; // Updated to use absolute path
 
   constructor(private chatService: ChatService) {
     this.currentUserId = this.chatService.getCurrentUserId();
@@ -55,20 +56,47 @@ export class ChatConversationComponent implements OnChanges {
     return participant?.username || 'Usuário';
   }
 
+  // Método para formatar URL da imagem para funcionar no GitHub Codespaces
+  formatImageUrl(imagePath: string): string {
+    if (!imagePath) return this.defaultImage;
+    
+    // Se o caminho já começar com http(s), não modificar
+    if (imagePath.startsWith('http')) return imagePath;
+    
+    // Se o caminho for uma imagem base64, não modificar
+    if (imagePath.startsWith('data:')) return imagePath;
+    
+    // Se não começar com barra, adicionar
+    if (!imagePath.startsWith('/')) {
+      imagePath = '/' + imagePath;
+    }
+    
+    // Para imagens de assets, usar a porta do frontend
+    if (imagePath.includes('/assets/')) {
+      return `${document.location.origin}${imagePath}`;
+    }
+    
+    // Para uploads de imagens de perfil, usar a porta do backend
+    const origin = document.location.origin;
+    const apiOrigin = origin.replace(/-4200\./, '-3001.');
+    
+    return `${apiOrigin}${imagePath}`;
+  }
+
   // Método para obter a imagem de perfil de um usuário pelo ID
   getProfileImage(userId: number): string {
-    if (!this.selectedChat) return this.defaultImage;
+    if (!this.selectedChat) return this.formatImageUrl(this.defaultImage);
 
     // Verificar se é um participante do chat
     const participant = this.selectedChat.participants.find(p => p.id === userId);
     
     // Se o participante tiver uma imagem de perfil definida, use-a
     if (participant?.profileImage) {
-      return participant.profileImage;
+      return this.formatImageUrl(participant.profileImage);
     }
     
     // Caso contrário, use a imagem padrão
-    return this.defaultImage;
+    return this.formatImageUrl(this.defaultImage);
   }
 
   // Método para obter a imagem de perfil do usuário atual
@@ -76,19 +104,19 @@ export class ChatConversationComponent implements OnChanges {
     // Primeiro, tenta pegar do localStorage (solução temporária)
     const savedImage = localStorage.getItem('user_profile_image');
     if (savedImage) {
-      return savedImage;
+      return savedImage; // já é base64 ou URL completa
     }
     
     // Se não encontrar no localStorage, verifica nos participantes do chat
     if (this.selectedChat) {
       const currentUser = this.selectedChat.participants.find(p => p.id === this.currentUserId);
       if (currentUser?.profileImage) {
-        return currentUser.profileImage;
+        return this.formatImageUrl(currentUser.profileImage);
       }
     }
     
     // Caso não encontre em nenhum lugar, retorna a imagem padrão
-    return this.defaultImage;
+    return this.formatImageUrl(this.defaultImage);
   }
 
   sendMessage(): void {

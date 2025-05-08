@@ -24,6 +24,8 @@ export class ChatListComponent implements OnInit, OnDestroy {
   currentUserId: number;
   loading = false;
   error: string | null = null;
+  defaultImage: string = '/assets/images/user.png'; // Updated to use absolute path
+  defaultGroupImage: string = '/assets/images/group.png'; // Updated to use absolute path
 
   // Listener para evento de chat criado
   private chatCreatedHandler: (event: CustomEvent<Chat>) => void;
@@ -134,5 +136,48 @@ export class ChatListComponent implements OnInit, OnDestroy {
       // Se for outro dia, mostra a data abreviada
       return messageDate.toLocaleDateString([], { day: '2-digit', month: '2-digit' });
     }
+  }
+
+  // Método para formatar URL da imagem para funcionar no GitHub Codespaces
+  formatImageUrl(imagePath: string): string {
+    if (!imagePath) return this.defaultImage;
+    
+    // Se o caminho já começar com http(s), não modificar
+    if (imagePath.startsWith('http')) return imagePath;
+    
+    // Se o caminho for uma imagem base64, não modificar
+    if (imagePath.startsWith('data:')) return imagePath;
+    
+    // Se não começar com barra, adicionar
+    if (!imagePath.startsWith('/')) {
+      imagePath = '/' + imagePath;
+    }
+    
+    // Para imagens de assets, usar a porta do frontend
+    if (imagePath.includes('/assets/')) {
+      return `${document.location.origin}${imagePath}`;
+    }
+    
+    // Para uploads de imagens de perfil, usar a porta do backend
+    const origin = document.location.origin;
+    const apiOrigin = origin.replace(/-4200\./, '-3001.');
+    
+    return `${apiOrigin}${imagePath}`;
+  }
+
+  // Método para obter a imagem de perfil do participante
+  getParticipantProfileImage(chat: Chat): string {
+    if (chat.isGroup) {
+      return this.formatImageUrl(this.defaultGroupImage);
+    }
+
+    // Para chat direto, mostra a imagem do outro participante
+    const otherParticipant = chat.participants.find(p => p.id !== this.currentUserId);
+    
+    if (otherParticipant?.profileImage) {
+      return this.formatImageUrl(otherParticipant.profileImage);
+    }
+    
+    return this.formatImageUrl(this.defaultImage);
   }
 }

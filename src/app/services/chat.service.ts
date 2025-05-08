@@ -61,6 +61,7 @@ export class ChatService {
           content: msg.content,
           senderId: msg.senderId,
           senderName: msg.senderName,
+          senderProfileImage: msg.senderProfileImage, // Incluir a imagem de perfil do remetente
           timestamp: new Date(msg.timestamp),
           read: msg.read
         }));
@@ -86,6 +87,7 @@ export class ChatService {
           content: msgData.content,
           senderId: msgData.senderId,
           senderName: msgData.senderName,
+          senderProfileImage: msgData.senderProfileImage, // Incluir a imagem de perfil do remetente
           timestamp: new Date(msgData.timestamp),
           read: msgData.read
         };
