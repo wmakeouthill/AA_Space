@@ -73,6 +73,7 @@ export const getUserConversations = async (req: Request, res: Response) => {
                 participants: conv.participants.map(p => ({
                     id: p.userId,
                     username: p.user.username,
+                    profileImage: p.user.profileImage,
                     isAdmin: p.isAdmin
                 })),
                 lastMessage: lastMessage ? {
@@ -153,6 +154,7 @@ export const getConversationMessages = async (req: Request, res: Response) => {
             content: msg.content,
             senderId: msg.senderId,
             senderName: msg.sender.username,
+            profileImage: msg.sender.profileImage,
             timestamp: msg.createdAt,
             read: msg.isRead
         }));
@@ -224,6 +226,7 @@ export const sendMessage = async (req: Request, res: Response) => {
                 content: newMessage.content,
                 senderId: newMessage.senderId,
                 senderName: sender.username,
+                profileImage: sender.profileImage,
                 timestamp: newMessage.createdAt,
                 read: newMessage.isRead
             }
@@ -308,8 +311,16 @@ export const createConversation = async (req: Request, res: Response) => {
                                 name: otherParticipant?.username || 'Usuário',
                                 isGroup: false,
                                 participants: [
-                                    { id: userId, username: existingUsers.find(u => u.id === userId)?.username || 'Você' },
-                                    { id: participants[0], username: otherParticipant?.username || 'Usuário' }
+                                    { 
+                                        id: userId, 
+                                        username: existingUsers.find(u => u.id === userId)?.username || 'Você',
+                                        profileImage: existingUsers.find(u => u.id === userId)?.profileImage
+                                    },
+                                    { 
+                                        id: participants[0], 
+                                        username: otherParticipant?.username || 'Usuário',
+                                        profileImage: otherParticipant?.profileImage
+                                    }
                                 ],
                                 createdAt: conversation.createdAt,
                                 updatedAt: conversation.updatedAt
@@ -347,6 +358,7 @@ export const createConversation = async (req: Request, res: Response) => {
         const participantUsers = existingUsers.map(user => ({
             id: user.id,
             username: user.username,
+            profileImage: user.profileImage,
             isAdmin: user.id === userId
         }));
 
@@ -391,7 +403,8 @@ export const getAvailableUsers = async (req: Request, res: Response) => {
             .map(user => ({
                 id: user.id,
                 username: user.username,
-                email: user.email
+                email: user.email,
+                profileImage: user.profileImage
             }));
 
         res.json({ users: availableUsers });

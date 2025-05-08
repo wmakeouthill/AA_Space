@@ -21,6 +21,7 @@ export class ChatNewComponent implements OnInit {
   currentUserId: number;
   loading = false;
   error: string | null = null;
+  defaultImage: string = '/assets/images/user.png';
 
   // Lista de usuários disponíveis
   users: User[] = [];
@@ -166,5 +167,42 @@ export class ChatNewComponent implements OnInit {
         this.loading = false;
       }
     });
+  }
+
+  // Método para formatar URL da imagem para funcionar no GitHub Codespaces
+  formatImageUrl(imagePath: string): string {
+    if (!imagePath) return this.defaultImage;
+    
+    // Se o caminho já começar com http(s), não modificar
+    if (imagePath.startsWith('http')) return imagePath;
+    
+    // Se o caminho for uma imagem base64, não modificar
+    if (imagePath.startsWith('data:')) return imagePath;
+    
+    // Se não começar com barra, adicionar
+    if (!imagePath.startsWith('/')) {
+      imagePath = '/' + imagePath;
+    }
+    
+    // Modificar o caminho para imagens de assets para usar a pasta do servidor
+    if (imagePath.includes('/assets/')) {
+      imagePath = imagePath.replace('/assets/', '/uploads/assets/');
+    }
+    
+    // Usar sempre a porta 3001 para todas as imagens (backend)
+    const origin = document.location.origin;
+    const apiOrigin = origin.replace(/-4200\./, '-3001.');
+    
+    return `${apiOrigin}${imagePath}`;
+  }
+  
+  // Método para obter a imagem de perfil do usuário
+  getUserProfileImage(user: User): string {
+    if (user.profileImage) {
+      console.log(`[CHAT NEW] Usando imagem de perfil para ${user.username}: ${user.profileImage}`);
+      return this.formatImageUrl(user.profileImage);
+    }
+    console.log(`[CHAT NEW] Usando imagem padrão para ${user.username}`);
+    return this.formatImageUrl(this.defaultImage);
   }
 }

@@ -153,12 +153,12 @@ export class ChatListComponent implements OnInit, OnDestroy {
       imagePath = '/' + imagePath;
     }
     
-    // Para imagens de assets, usar a porta do frontend
+    // Modificar o caminho para imagens de assets para usar a pasta do servidor
     if (imagePath.includes('/assets/')) {
-      return `${document.location.origin}${imagePath}`;
+      imagePath = imagePath.replace('/assets/', '/uploads/assets/');
     }
     
-    // Para uploads de imagens de perfil, usar a porta do backend
+    // Usar sempre a porta 3001 para todas as imagens (backend)
     const origin = document.location.origin;
     const apiOrigin = origin.replace(/-4200\./, '-3001.');
     
@@ -174,10 +174,14 @@ export class ChatListComponent implements OnInit, OnDestroy {
     // Para chat direto, mostra a imagem do outro participante
     const otherParticipant = chat.participants.find(p => p.id !== this.currentUserId);
     
+    console.log(`[DEBUG] Participante encontrado:`, otherParticipant);
+    
     if (otherParticipant?.profileImage) {
+      console.log(`[CHAT LIST] Usando imagem de perfil para ${otherParticipant.username}: ${otherParticipant.profileImage}`);
       return this.formatImageUrl(otherParticipant.profileImage);
     }
     
+    console.log(`[CHAT LIST] Usando imagem padrão para ${otherParticipant?.username || 'usuário desconhecido'}`);
     return this.formatImageUrl(this.defaultImage);
   }
 }

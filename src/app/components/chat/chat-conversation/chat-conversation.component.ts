@@ -71,12 +71,12 @@ export class ChatConversationComponent implements OnChanges {
       imagePath = '/' + imagePath;
     }
     
-    // Para imagens de assets, usar a porta do frontend
+    // Modificar o caminho para imagens de assets para usar a pasta do servidor
     if (imagePath.includes('/assets/')) {
-      return `${document.location.origin}${imagePath}`;
+      imagePath = imagePath.replace('/assets/', '/uploads/assets/');
     }
     
-    // Para uploads de imagens de perfil, usar a porta do backend
+    // Usar sempre a porta 3001 para todas as imagens (backend)
     const origin = document.location.origin;
     const apiOrigin = origin.replace(/-4200\./, '-3001.');
     
@@ -90,32 +90,31 @@ export class ChatConversationComponent implements OnChanges {
     // Verificar se é um participante do chat
     const participant = this.selectedChat.participants.find(p => p.id === userId);
     
+    console.log(`[DEBUG] Participante ${userId} encontrado:`, participant);
+    
     // Se o participante tiver uma imagem de perfil definida, use-a
     if (participant?.profileImage) {
+      console.log(`[CHAT CONV] Usando imagem de perfil para ${participant.username}: ${participant.profileImage}`);
       return this.formatImageUrl(participant.profileImage);
     }
     
-    // Caso contrário, use a imagem padrão
+    console.log(`[CHAT CONV] Usando imagem padrão para usuário ${userId}`);
     return this.formatImageUrl(this.defaultImage);
   }
 
   // Método para obter a imagem de perfil do usuário atual
   getCurrentUserProfileImage(): string {
-    // Primeiro, tenta pegar do localStorage (solução temporária)
-    const savedImage = localStorage.getItem('user_profile_image');
-    if (savedImage) {
-      return savedImage; // já é base64 ou URL completa
-    }
-    
     // Se não encontrar no localStorage, verifica nos participantes do chat
     if (this.selectedChat) {
       const currentUser = this.selectedChat.participants.find(p => p.id === this.currentUserId);
       if (currentUser?.profileImage) {
+        console.log(`[CHAT CONV] Usando imagem do usuário atual: ${currentUser.profileImage}`);
         return this.formatImageUrl(currentUser.profileImage);
       }
     }
     
     // Caso não encontre em nenhum lugar, retorna a imagem padrão
+    console.log(`[CHAT CONV] Usando imagem padrão para usuário atual`);
     return this.formatImageUrl(this.defaultImage);
   }
 

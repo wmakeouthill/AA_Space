@@ -58,7 +58,7 @@
             [class.selected]="isUserSelected(user.id)"
             (click)="toggleUserSelection(user.id)">
             <div class="user-avatar">
-              <img [src]="'assets/images/user.png'" alt="Avatar">
+              <img [src]="getUserProfileImage(user)" alt="Avatar">
             </div>
             <div class="user-info">
               <div class="user-name">{{ user.username }}</div>
