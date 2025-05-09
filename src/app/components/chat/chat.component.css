@@ -1,7 +1,7 @@
 .chat-container {
   display: flex;
-  height: calc(80vh - 70px); /* Altura reduzida para caber melhor na tela */
-  max-height: calc(80vh - 70px); /* Garante que não ultrapasse a altura visível */
+  height: calc(85vh - 70px); /* Altura aumentada para melhor visualização */
+  max-height: calc(85vh - 70px); /* Garante que não ultrapasse a altura visível */
   width: 100%;
   margin-top: 70px; /* Compensar o header fixo */
   position: relative;
@@ -34,4 +34,22 @@
   height: 100%; /* Ocupa toda a altura disponível */
   overflow: hidden; /* Impedir que o conteúdo estoure */
   position: relative; /* Para posicionamento adequado dos filhos */
+  max-height: 100%; /* Garante que respeite a altura do container pai */
+}
+
+/* Estilos para garantir que a área de conversa e entrada de mensagem se comportem corretamente */
+app-chat-conversation {
+  flex: 1;
+  overflow: hidden;
+  display: block;
+  min-height: 0; /* Importante para que o flex funcione corretamente */
+}
+
+app-chat-input {
+  flex: 0 0 auto;
+  min-height: 70px;
+  border-top: 1px solid #e0e0e0;
+  background: white;
+  z-index: 10;
+  position: relative;
 }

@@ -32,7 +32,6 @@ export class ChatListComponent implements OnInit, OnDestroy {
 
   constructor(private chatService: ChatService) {
     this.currentUserId = this.chatService.getCurrentUserId();
-    console.log(`[CHAT LIST] ID do usuário atual: ${this.currentUserId}`);
 
     // Configura o listener para atualizar a lista quando um chat for criado
     this.chatCreatedHandler = (event: CustomEvent<Chat>) => {
@@ -60,11 +59,21 @@ export class ChatListComponent implements OnInit, OnDestroy {
 
     // Adiciona o listener de evento global para chat criado
     window.addEventListener('chat:created', this.chatCreatedHandler);
+    
+    // Adiciona o listener para atualização de imagem de perfil usando o handler definido
+    window.addEventListener('profile:imageUpdated', this.profileImageUpdatedHandler);
   }
 
+  // Handler para evento de atualização de imagem de perfil
+  private profileImageUpdatedHandler = () => {
+    console.log('[CHAT LIST] Evento de atualização de imagem detectado, recarregando chats');
+    this.loadChats(); // Recarrega todos os chats para atualizar imagens
+  };
+
   ngOnDestroy(): void {
-    // Limpa o listener de evento quando o componente for destruído
+    // Limpa os listeners de evento quando o componente for destruído
     window.removeEventListener('chat:created', this.chatCreatedHandler);
+    window.removeEventListener('profile:imageUpdated', this.profileImageUpdatedHandler);
   }
 
   loadChats(): void {
@@ -139,6 +148,9 @@ export class ChatListComponent implements OnInit, OnDestroy {
     }
   }
 
+  // Cache estático de timestamps para URLs de imagem
+  private static imageTimestamps: Record<string, number> = {};
+
   // Método para formatar URL da imagem para funcionar no GitHub Codespaces
   formatImageUrl(imagePath: string): string {
     if (!imagePath) return this.defaultImage;
@@ -163,6 +175,16 @@ export class ChatListComponent implements OnInit, OnDestroy {
     const origin = document.location.origin;
     const apiOrigin = origin.replace(/-4200\./, '-3001.');
     
+    // Usar timestamp consistente por caminho para evitar ExpressionChangedAfterItHasBeenCheckedError
+    if (imagePath.includes('/uploads/profiles/')) {
+      // Se não temos um timestamp para este caminho, criar um
+      if (!ChatListComponent.imageTimestamps[imagePath]) {
+        ChatListComponent.imageTimestamps[imagePath] = Date.now();
+      }
+      
+      return `${apiOrigin}${imagePath}?t=${ChatListComponent.imageTimestamps[imagePath]}`;
+    }
+    
     return `${apiOrigin}${imagePath}`;
   }
 
@@ -175,14 +197,10 @@ export class ChatListComponent implements OnInit, OnDestroy {
     // Para chat direto, mostra a imagem do outro participante
     const otherParticipant = chat.participants.find(p => p.id !== this.currentUserId);
     
-    console.log(`[DEBUG] Participante encontrado:`, otherParticipant);
-    
     if (otherParticipant?.profileImage) {
-      console.log(`[CHAT LIST] Usando imagem de perfil para ${otherParticipant.username}: ${otherParticipant.profileImage}`);
       return this.formatImageUrl(otherParticipant.profileImage);
     }
     
-    console.log(`[CHAT LIST] Usando imagem padrão para ${otherParticipant?.username || 'usuário desconhecido'}`);
     return this.formatImageUrl(this.defaultImage);
   }
 }

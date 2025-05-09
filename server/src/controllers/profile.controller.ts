@@ -23,6 +23,12 @@ try {
         // Garantir permissões adequadas
         fs.chmodSync(UPLOAD_DIR, 0o777);
     }
+    
+    // Verificar se é possível escrever no diretório
+    const testFile = path.join(UPLOAD_DIR, '.test-write');
+    fs.writeFileSync(testFile, 'test');
+    fs.unlinkSync(testFile);
+    console.log('[PROFILE CONTROLLER] Teste de gravação no diretório bem-sucedido');
 } catch (error) {
     console.error('[PROFILE CONTROLLER] Erro ao verificar/criar diretório de uploads:', error);
 }
@@ -80,6 +86,14 @@ export const uploadProfileImage = async (req: Request, res: Response) => {
             console.log('[PROFILE CONTROLLER] Usuário não autenticado');
             return res.status(401).json({ message: 'Usuário não autenticado' });
         }
+        
+        // Registrar cabeçalhos para debug
+        console.log('[PROFILE CONTROLLER] Cabeçalhos da requisição:', {
+            contentType: req.headers['content-type'],
+            origin: req.headers.origin,
+            host: req.headers.host,
+            authorization: req.headers.authorization ? 'Present (not shown)' : 'Missing'
+        });
         
         // Verificar se a requisição contém uma imagem
         const { profileImage } = req.body;

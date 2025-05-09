@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { ChatListComponent } from './chat-list/chat-list.component';
 import { ChatConversationComponent } from './chat-conversation/chat-conversation.component';
+import { ChatInputComponent } from './chat-conversation/chat-input/chat-input.component';
 import { ChatNewComponent } from './chat-new/chat-new.component';
 import { ChatProfileComponent } from './chat-profile/chat-profile.component';
 import { ChatService } from '../../services/chat.service';
@@ -18,6 +19,7 @@ import { Chat } from '../../models/chat/chat.interface';
     RouterModule,
     ChatListComponent,
     ChatConversationComponent,
+    ChatInputComponent,
     ChatNewComponent,
     ChatProfileComponent
   ]
@@ -45,5 +47,39 @@ export class ChatComponent implements OnInit {
     // Em uma aplicação maior, seria melhor usar um serviço de estado como NGRX
     const event = new CustomEvent('chat:created', { detail: chat });
     window.dispatchEvent(event);
+  }
+  
+  sending = false; // Variável para controlar o estado de envio
+  
+  onMessageSent(message: string): void {
+    if (!this.selectedChat) return;
+    
+    this.sending = true;
+    
+    // Acessa o componente de conversa para processar o envio da mensagem
+    // Em uma aplicação real, isso seria feito através de um serviço
+    const conversationComponent = document.querySelector('app-chat-conversation');
+    if (conversationComponent && typeof (conversationComponent as any).onMessageSent === 'function') {
+      (conversationComponent as any).onMessageSent(message);
+    }
+    
+    // Em um caso real, você usaria um serviço:
+    /*
+    this.chatService.sendMessage(this.selectedChat.id, message).subscribe({
+      next: (response) => {
+        // Manipular o sucesso
+        this.sending = false;
+      },
+      error: (error) => {
+        console.error('Erro ao enviar mensagem:', error);
+        this.sending = false;
+      }
+    });
+    */
+    
+    // Simulação
+    setTimeout(() => {
+      this.sending = false;
+    }, 500);
   }
 }

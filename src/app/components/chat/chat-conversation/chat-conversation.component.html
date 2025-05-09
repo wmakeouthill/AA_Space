@@ -1,62 +1,20 @@
 <div class="conversation-container" *ngIf="selectedChat; else noChat">
-  <div class="conversation-header">
-    <div class="conversation-info">
-      <h3>{{ selectedChat.name || getParticipantName(selectedChat) }}</h3>
-      <div class="participants" *ngIf="selectedChat.isGroup">
-        {{ selectedChat.participants.length }} participantes
-      </div>
-    </div>
-  </div>
-
-  <div class="conversation-messages" #messagesContainer appMessagesScroll [messages]="messages">
-    <div *ngIf="messages.length === 0" class="no-messages">
-      <p>Não há mensagens nessa conversa ainda</p>
-    </div>
-    <div *ngFor="let message of messages"
-         class="message"
-         [ngClass]="{'message-sent': message.senderId === currentUserId, 'message-received': message.senderId !== currentUserId}">
-      
-      <div class="message-avatar" *ngIf="message.senderId !== currentUserId">
-        <img [src]="getProfileImage(message.senderId)" alt="Avatar" class="avatar-image">
-      </div>
-      
-      <div class="message-content-wrapper">
-        <div class="message-bubble">
-          <div class="message-sender" *ngIf="message.senderId !== currentUserId && selectedChat.isGroup">
-            {{ getUserName(message.senderId) }}
-          </div>
-          <div class="message-content">{{ message.content }}</div>
-          <div class="message-time">{{ message.timestamp | date:'shortTime' }}</div>
-        </div>
-      </div>
-      
-      <div class="message-avatar sender-avatar" *ngIf="message.senderId === currentUserId">
-        <img [src]="getCurrentUserProfileImage()" alt="Seu avatar" class="avatar-image">
-      </div>
-    </div>
-  </div>
-
-  <div class="message-input-container">
-    <form (ngSubmit)="sendMessage()">
-      <div class="message-input-wrapper">
-        <textarea
-          class="message-input"
-          [(ngModel)]="newMessage"
-          name="newMessage"
-          placeholder="Digite uma mensagem..."
-          rows="1"
-          (keydown.enter)="$event.preventDefault(); sendMessage();"
-          [disabled]="!selectedChat"
-        ></textarea>
-        <button
-          type="submit"
-          class="send-button"
-          [disabled]="!newMessage.trim()">
-          Enviar
-        </button>
-      </div>
-    </form>
-  </div>
+  <!-- Cabeçalho do chat -->
+  <app-chat-header 
+    [chat]="selectedChat" 
+    [currentUserId]="currentUserId">
+  </app-chat-header>
+  
+  <!-- Área de mensagens com scroll -->
+  <app-chat-messages 
+    [messages]="messages"
+    [currentUserId]="currentUserId"
+    [isGroup]="selectedChat.isGroup"
+    [participants]="selectedChat.participants"
+    [defaultImage]="defaultImage">
+  </app-chat-messages>
+  
+  <!-- Removido app-chat-input daqui para ser colocado no componente pai -->
 </div>
 
 <ng-template #noChat>

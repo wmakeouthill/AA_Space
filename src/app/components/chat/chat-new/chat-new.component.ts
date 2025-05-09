@@ -35,6 +35,19 @@ export class ChatNewComponent implements OnInit {
   ngOnInit(): void {
     // Carregar lista de usuários disponíveis ao inicializar
     this.loadAvailableUsers();
+    
+    // Adiciona listener para atualização de imagem de perfil
+    window.addEventListener('profile:imageUpdated', () => {
+      console.log('[CHAT NEW] Evento de atualização de imagem detectado, recarregando usuários');
+      this.loadAvailableUsers(); // Recarrega a lista de usuários para atualizar imagens
+    });
+  }
+  
+  ngOnDestroy(): void {
+    // Remove event listener quando o componente é destruído
+    window.removeEventListener('profile:imageUpdated', () => {
+      console.log('[CHAT NEW] Removendo listener de atualização de imagem');
+    });
   }
 
   loadAvailableUsers(): void {
@@ -192,6 +205,12 @@ export class ChatNewComponent implements OnInit {
     // Usar sempre a porta 3001 para todas as imagens (backend)
     const origin = document.location.origin;
     const apiOrigin = origin.replace(/-4200\./, '-3001.');
+    
+    // Adicionar timestamp para evitar cache do navegador quando for uma imagem de perfil
+    if (imagePath.includes('/uploads/profiles/')) {
+      const timestamp = new Date().getTime();
+      return `${apiOrigin}${imagePath}?t=${timestamp}`;
+    }
     
     return `${apiOrigin}${imagePath}`;
   }

@@ -6,5 +6,11 @@
   </div>
   <div class="chat-main">
     <app-chat-conversation [selectedChat]="selectedChat"></app-chat-conversation>
+    <!-- Área de entrada de mensagens movida para fora do componente de conversa -->
+    <app-chat-input 
+      *ngIf="selectedChat"
+      [disabled]="!selectedChat || sending" 
+      (sendMessage)="onMessageSent($event)">
+    </app-chat-input>
   </div>
 </div>

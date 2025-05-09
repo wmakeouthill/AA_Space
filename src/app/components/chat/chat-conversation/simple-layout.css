@@ -1,0 +1,197 @@
+/* filepath: /workspaces/AA_Space/src/app/components/chat/chat-conversation/simple-layout.css */
+/**
+ * Arquivo CSS alternativo para o componente de conversa - use se precisar de uma solução mais simples
+ */
+
+.chat-layout {
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  background-color: #fff;
+  height: 100%;
+  overflow: hidden;
+  min-height: 530px;
+}
+
+.chat-header {
+  height: 60px;
+  min-height: 60px;
+  padding: 10px 15px;
+  border-bottom: 1px solid #e0e0e0;
+  background-color: #f9f9f9;
+  z-index: 10;
+}
+
+.chat-messages {
+  height: 400px;
+  min-height: 400px;
+  max-height: 400px;
+  overflow-y: scroll !important; /* Força a barra de rolagem */
+  overflow-x: hidden;
+  padding: 15px;
+  background-color: #f0f2f5;
+  display: block; /* Mudamos para block em vez de flex para evitar problemas */
+  position: relative;
+  scrollbar-width: thin;
+  scrollbar-color: #1a5f7a #e1e9ef;
+  -webkit-overflow-scrolling: touch;
+  /* Hack para forçar a barra de rolagem no Chrome */
+  &::-webkit-scrollbar {
+    width: 6px;
+    background-color: #e1e9ef;
+  }
+  /* Força a barra de rolagem no Firefox */
+  scrollbar-width: thin;
+  scrollbar-color: #1a5f7a #e1e9ef;
+}
+
+/* Estilos para a barra de rolagem */
+.chat-messages::-webkit-scrollbar {
+  width: 6px;
+}
+
+.chat-messages::-webkit-scrollbar-thumb {
+  background-color: #1a5f7a;
+  border-radius: 3px;
+}
+
+.chat-messages::-webkit-scrollbar-thumb:hover {
+  background-color: #104b60;
+}
+
+.chat-messages::-webkit-scrollbar-track {
+  background-color: #e1e9ef;
+}
+
+/* Classe adicional para forçar o scroll */
+.forced-scroll {
+  overflow-y: scroll !important;
+  display: block !important;
+  height: 400px !important;
+  min-height: 400px !important;
+  max-height: 400px !important;
+}
+
+/* ID específico para garantir especificidade CSS */
+#chat-messages-container {
+  overflow-y: scroll !important;
+  -webkit-overflow-scrolling: touch;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Estilos para mensagens vazias */
+.no-messages {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-grow: 1;
+  height: 100%;
+  color: #999;
+  font-style: italic;
+}
+
+/* Estilos para mensagens */
+.message-sent {
+  align-self: flex-end;
+  margin-bottom: 12px;
+  max-width: 70%;
+  display: flex;
+  flex-direction: column;
+}
+
+.message-received {
+  align-self: flex-start;
+  margin-bottom: 12px;
+  max-width: 70%;
+  display: flex;
+  flex-direction: column;
+}
+
+.message-bubble {
+  padding: 10px 12px;
+  border-radius: 18px;
+  position: relative;
+}
+
+.message-sent .message-bubble {
+  background-color: #d1e7fd;
+  border-bottom-right-radius: 4px;
+}
+
+.message-received .message-bubble {
+  background-color: white;
+  border-bottom-left-radius: 4px;
+}
+
+.message-sender {
+  font-size: 0.8rem;
+  font-weight: bold;
+  color: #666;
+  margin-bottom: 2px;
+}
+
+.message-content {
+  word-wrap: break-word;
+  white-space: pre-wrap;
+}
+
+.message-time {
+  font-size: 0.7rem;
+  color: #999;
+  text-align: right;
+  margin-top: 3px;
+}
+
+/* Wrapper para as mensagens dentro do container principal */
+.messages-wrapper {
+  display: block; /* Mudamos para block em vez de flex para evitar problemas */
+  width: 100%;
+  /* Removemos outras propriedades que podem estar interferindo */
+}
+
+/* Espaço extra no final da lista de mensagens */
+.message-end-spacer {
+  height: 20px;
+  width: 100%;
+  flex-shrink: 0;
+}
+
+.chat-input {
+  height: 70px;
+  min-height: 70px;
+  padding: 10px 15px;
+  border-top: 1px solid #e0e0e0;
+  background-color: white;
+  display: flex;
+  z-index: 10;
+  box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.05);
+}
+
+.chat-input form {
+  display: flex;
+  width: 100%;
+}
+
+.chat-input input {
+  flex: 1;
+  border: 1px solid #ddd;
+  border-radius: 24px;
+  padding: 8px 16px;
+  outline: none;
+  margin-right: 10px;
+}
+
+.chat-input button {
+  background-color: #1890ff;
+  color: white;
+  border: none;
+  border-radius: 24px;
+  padding: 8px 16px;
+  cursor: pointer;
+}
+
+.chat-input button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}

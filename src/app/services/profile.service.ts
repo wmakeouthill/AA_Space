@@ -30,9 +30,18 @@ export class ProfileService {
 
   // Obter perfil do usuário atual
   getCurrentUserProfile(): Observable<UserProfile> {
-    return this.http.get<UserProfile>(`${this.apiUrl}/me`).pipe(
+    const headers = { 'Content-Type': 'application/json' };
+    return this.http.get<UserProfile>(`${this.apiUrl}/me`, { headers, withCredentials: true }).pipe(
       catchError(error => {
         console.error('Erro ao buscar perfil de usuário:', error);
+        
+        if (error.status === 401) {
+          // Disparar evento de autenticação expirada para que o usuário faça login novamente
+          const authError = new CustomEvent('auth:error', { detail: { message: 'Sessão expirada' } });
+          window.dispatchEvent(authError);
+          return throwError(() => new Error('Sua sessão expirou. Por favor, faça login novamente.'));
+        }
+        
         return throwError(() => new Error('Falha ao buscar perfil de usuário.'));
       })
     );
@@ -40,9 +49,18 @@ export class ProfileService {
 
   // Obter perfil de um usuário por ID
   getUserProfile(userId: number): Observable<UserProfile> {
-    return this.http.get<UserProfile>(`${this.apiUrl}/${userId}`).pipe(
+    const headers = { 'Content-Type': 'application/json' };
+    return this.http.get<UserProfile>(`${this.apiUrl}/${userId}`, { headers, withCredentials: true }).pipe(
       catchError(error => {
         console.error('Erro ao buscar perfil de usuário:', error);
+        
+        if (error.status === 401) {
+          // Disparar evento de autenticação expirada para que o usuário faça login novamente
+          const authError = new CustomEvent('auth:error', { detail: { message: 'Sessão expirada' } });
+          window.dispatchEvent(authError);
+          return throwError(() => new Error('Sua sessão expirou. Por favor, faça login novamente.'));
+        }
+        
         return throwError(() => new Error('Falha ao buscar perfil de usuário.'));
       })
     );
@@ -50,11 +68,25 @@ export class ProfileService {
 
   // Upload de imagem de perfil com compressão
   uploadProfileImage(imageFile: File): Observable<{ profileImage: string }> {
+    const headers = { 'Content-Type': 'application/json' };
+    
     return this.compressImage(imageFile).pipe(
       map(compressedImage => ({ profileImage: compressedImage })),
-      mergeMap(imageData => this.http.post<any>(`${this.apiUrl}/image`, imageData)),
+      mergeMap(imageData => this.http.post<any>(
+        `${this.apiUrl}/image`, 
+        imageData,
+        { headers, withCredentials: true }
+      )),
       catchError(error => {
         console.error('Erro ao upload de imagem de perfil:', error);
+        
+        if (error.status === 401) {
+          // Disparar evento de autenticação expirada para que o usuário faça login novamente
+          const authError = new CustomEvent('auth:error', { detail: { message: 'Sessão expirada' } });
+          window.dispatchEvent(authError);
+          return throwError(() => new Error('Sua sessão expirou. Por favor, faça login novamente.'));
+        }
+        
         return throwError(() => new Error('Falha ao fazer upload da imagem de perfil.'));
       })
     );
@@ -62,9 +94,26 @@ export class ProfileService {
 
   // Upload de imagem de perfil diretamente como base64
   uploadProfileImageBase64(base64Image: string): Observable<{ profileImage: string }> {
-    return this.http.post<any>(`${this.apiUrl}/image`, { profileImage: base64Image }).pipe(
+    // Adicionar cabeçalhos para evitar problemas de CORS e autenticação
+    const headers = { 'Content-Type': 'application/json' };
+    
+    console.log('[PROFILE SERVICE] Iniciando upload de imagem base64, URL:', `${this.apiUrl}/image`);
+    
+    return this.http.post<any>(
+      `${this.apiUrl}/image`, 
+      { profileImage: base64Image },
+      { headers, withCredentials: true }
+    ).pipe(
       catchError(error => {
         console.error('Erro ao upload de imagem de perfil:', error);
+        
+        if (error.status === 401) {
+          // Disparar evento de autenticação expirada para que o usuário faça login novamente
+          const authError = new CustomEvent('auth:error', { detail: { message: 'Sessão expirada' } });
+          window.dispatchEvent(authError);
+          return throwError(() => new Error('Sua sessão expirou. Por favor, faça login novamente.'));
+        }
+        
         return throwError(() => new Error('Falha ao fazer upload da imagem de perfil.'));
       })
     );
@@ -72,9 +121,22 @@ export class ProfileService {
 
   // Remover imagem de perfil
   removeProfileImage(): Observable<any> {
-    return this.http.delete(`${this.apiUrl}/image`).pipe(
+    const headers = { 'Content-Type': 'application/json' };
+    
+    return this.http.delete(`${this.apiUrl}/image`, { 
+      headers, 
+      withCredentials: true 
+    }).pipe(
       catchError(error => {
         console.error('Erro ao remover imagem de perfil:', error);
+        
+        if (error.status === 401) {
+          // Disparar evento de autenticação expirada para que o usuário faça login novamente
+          const authError = new CustomEvent('auth:error', { detail: { message: 'Sessão expirada' } });
+          window.dispatchEvent(authError);
+          return throwError(() => new Error('Sua sessão expirou. Por favor, faça login novamente.'));
+        }
+        
         return throwError(() => new Error('Falha ao remover imagem de perfil.'));
       })
     );
