@@ -9,9 +9,9 @@ import { ChatComponent } from './components/chat/chat.component';
 import { authGuard } from './guards/auth.guard';
 
 export const routes: Routes = [
-  { path: '', component: HomeComponent },
+  { path: '', component: HomeComponent }, // HomePage é acessível sem o guard
   { path: 'welcome', component: WelcomeDialogComponent },
-  { path: 'post/:id', component: PostComponent },
+  { path: 'post/:id', component: PostComponent }, // Post view também é acessível sem o guard
   { path: 'create', component: CreatePostComponent, canActivate: [authGuard] },
   { path: 'auth', component: AuthComponent },
   { path: 'admin', component: AdminComponent, canActivate: [authGuard] },

@@ -8,27 +8,27 @@ export const authGuard: CanActivateFn = (route, state) => {
   const authService = inject(AuthService);
   const router = inject(Router);
   const token = authService.getToken();
-  
+
   // Se já tem um token no localStorage, considera inicialmente autenticado
   // e faz a validação do token em segundo plano
   if (token) {
     console.log('AuthGuard: Token encontrado, permitindo acesso inicial');
-    
+
     // Valida o token em segundo plano
     authService.validateToken().pipe(
       catchError(() => of(null))
     ).subscribe(result => {
       if (!authService.getToken()) {
         console.log('AuthGuard: Token invalidado após verificação, redirecionando');
-        router.navigate(['/auth']);
+        router.navigate(['/welcome']);
       }
     });
-    
+
     return true;
   }
-  
-  // Se não tem token, redireciona para login
-  console.log('AuthGuard: Sem token, redirecionando para login');
-  router.navigate(['/auth']);
+
+  // Se não tem token, redireciona para welcome
+  console.log('AuthGuard: Sem token, redirecionando para welcome');
+  router.navigate(['/welcome']);
   return false;
 };

@@ -37,6 +37,7 @@ export class WelcomeDialogComponent {
   }
 
   onGuestAnonymous() {
+    console.log('Modo Anônimo selecionado');
     this.guestService.setGuestNickname('Anônimo');
     this.close();
   }
@@ -44,12 +45,14 @@ export class WelcomeDialogComponent {
   onSubmitNickname() {
     if (this.nicknameForm.valid) {
       const nickname = this.nicknameForm.value.nickname;
+      console.log('Apelido definido:', nickname);
       this.guestService.setGuestNickname(nickname);
       this.close();
     }
   }
 
   private close() {
+    console.log('Redirecionando para home após definir modo de acesso');
     this.router.navigate(['/']);
   }
 }

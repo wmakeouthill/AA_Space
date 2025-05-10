@@ -13,11 +13,11 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
     { path: '/api/auth/register', method: 'POST' }
   ];
 
-  // Verifica se é uma rota pública estática
+  // Verifica se é uma rota pública estática ou qualquer rota GET para posts
   const isPublicRoute = publicRoutes.some(pattern => {
     const pathMatches = req.url.endsWith(pattern.path);
     return pathMatches && req.method === pattern.method;
-  });
+  }) || (req.method === 'GET' && req.url.includes('/api/posts'));
 
   return next(req).pipe(
     catchError((error: HttpErrorResponse) => {

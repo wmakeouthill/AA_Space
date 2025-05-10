@@ -36,9 +36,13 @@ export class HomeComponent implements OnInit {
     const isAuthenticated = this.authService.getToken() !== null;
     const hasGuestNickname = this.guestService.hasGuestNickname();
 
+    // Verifica e permite acesso com base no tipo de usuário
     if (!isAuthenticated && !hasGuestNickname) {
+      console.log('Home: Usuário não autenticado e sem apelido, redirecionando para welcome');
       this.router.navigate(['/welcome']);
       return;
+    } else {
+      console.log('Home: Acesso permitido - Autenticado:', isAuthenticated, 'Nickname:', this.guestService.getGuestNickname());
     }
 
     // Obtém o ID do usuário atual se estiver autenticado
@@ -139,12 +143,12 @@ export class HomeComponent implements OnInit {
     // Se for administrador, pode excluir qualquer post
     const isUserAdmin = this.authService.isAdmin();
     console.log('Verificando permissões para post home - isAdmin:', isUserAdmin);
-    
+
     if (isUserAdmin) {
       console.log('Usuário é administrador, permissão concedida para o post');
       return true;
     }
-    
+
     // Para usuários não-administradores, verifica autoria normal
     if (!this.userId || !post.user) return false;
     return post.user.id === this.userId;
