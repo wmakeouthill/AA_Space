@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit, ViewChild, ElementRef, ChangeDetectorRef, HostListener } from '@angular/core';
+import { Component, OnDestroy, OnInit, ViewChild, ElementRef, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
@@ -15,7 +15,7 @@ import { ProfileService } from '../../../services/profile.service';
 export class ChatProfileComponent implements OnInit, OnDestroy {
   profileImage: string | null = null;
   defaultImage = 'assets/images/user.png';
-  username: string = 'Nome do Usuário';
+  username: string = 'Nome do Usuário'; // Default value
   isUploading = false;
   error: string | null = null;
   showEnlargedImage = false;
@@ -25,7 +25,7 @@ export class ChatProfileComponent implements OnInit, OnDestroy {
 
   @ViewChild('profileImageInput') profileImageInput!: ElementRef<HTMLInputElement>;
   @ViewChild('avatarMenu') avatarMenu!: ElementRef;
-  @ViewChild('clickableProfileImage') clickableProfileImage!: ElementRef<HTMLImageElement>;
+  @ViewChild('profileTrigger') profileTrigger!: ElementRef<HTMLElement>;
 
   constructor(
     private authService: AuthService,
@@ -37,18 +37,22 @@ export class ChatProfileComponent implements OnInit, OnDestroy {
     this.userInfoSubscription = this.authService.getUserInfo().subscribe({
       next: (user) => {
         if (user && user.id) {
-          this.username = user.username;
+          if (user.username) {
+            this.username = user.username;
+          } else {
+            this.username = 'Usuário (sem nome)'; // Fallback if username is missing
+          }
           this.loadProfileImage();
         } else {
           this.username = 'Convidado';
           this.profileImage = this.defaultImage;
-          this.cdr.detectChanges();
         }
+        this.cdr.detectChanges(); // Ensure UI updates
       },
-      error: () => {
+      error: (err) => {
         this.username = 'Convidado';
         this.profileImage = this.defaultImage;
-        this.cdr.detectChanges();
+        this.cdr.detectChanges(); // Ensure UI updates
       }
     });
   }
@@ -81,58 +85,14 @@ export class ChatProfileComponent implements OnInit, OnDestroy {
   }
 
   toggleProfileMenu(event: MouseEvent): void {
+    console.log('[ChatProfileComponent] toggleProfileMenu CALLED'); // LOG 1
     event.stopPropagation();
-    console.log('[ChatProfileComponent] toggleProfileMenu. Current showProfileMenu:', this.showProfileMenu);
+    console.log('[ChatProfileComponent] Current showProfileMenu before toggle:', this.showProfileMenu); // LOG 2
     this.showProfileMenu = !this.showProfileMenu;
-    console.log('[ChatProfileComponent] New showProfileMenu:', this.showProfileMenu);
-    this.cdr.detectChanges();
-    if (this.showProfileMenu) {
-      console.log('[ChatProfileComponent] Menu is intended to be open. Pausing with debugger...');
-      // debugger; // PAUSE HERE WHEN MENU SHOULD BE OPEN - Commented out for now
-    }
-    console.log('[ChatProfileComponent] Exiting toggleProfileMenu. Final showProfileMenu:', this.showProfileMenu);
+    console.log('[ChatProfileComponent] New showProfileMenu after toggle:', this.showProfileMenu); // LOG 3
+    this.cdr.detectChanges(); // Ensure Angular picks up the change
+    console.log('[ChatProfileComponent] detectChanges called after toggle'); // LOG 4
   }
-
-  /*
-  @HostListener('document:click', ['$event'])
-  onDocumentClick(event: MouseEvent): void {
-    // If the menu isn't even supposed to be open, do nothing.
-    if (!this.showProfileMenu) {
-      return;
-    }
-
-    const clickedElement = event.target as HTMLElement;
-
-    // Check if ViewChild references are available
-    if (!this.clickableProfileImage || !this.clickableProfileImage.nativeElement ||
-        !this.avatarMenu || !this.avatarMenu.nativeElement) {
-      console.warn('[ChatProfileComponent] onDocumentClick: ViewChild elements not ready, but showProfileMenu is true. Target:', clickedElement);
-      return;
-    }
-
-    const avatarImageElement = this.clickableProfileImage.nativeElement;
-    const menuElement = this.avatarMenu.nativeElement;
-
-    const isClickOnAvatarImage = avatarImageElement.contains(clickedElement);
-    const isClickOnMenu = menuElement.contains(clickedElement);
-
-    console.log(`[ChatProfileComponent] onDocumentClick: showProfileMenu=${this.showProfileMenu}, clickOnImage=${isClickOnAvatarImage}, clickOnMenu=${isClickOnMenu}, target=${clickedElement.tagName}, imageElem=${avatarImageElement.tagName}, menuElem=${menuElement.tagName}`);
-
-    if (isClickOnAvatarImage) {
-      console.log('[ChatProfileComponent] Click detected on avatar image. toggleProfileMenu should have handled this.');
-      return;
-    }
-
-    if (isClickOnMenu) {
-      console.log('[ChatProfileComponent] Click detected inside avatar menu. Menu\'s own stopPropagation should have handled this.');
-      return;
-    }
-
-    console.log('[ChatProfileComponent] Document click detected outside menu and image. Closing menu.');
-    this.showProfileMenu = false;
-    this.cdr.detectChanges();
-  }
-  */
 
   selectProfileImageFile(): void {
     this.profileImageInput.nativeElement.click();
@@ -163,13 +123,11 @@ export class ChatProfileComponent implements OnInit, OnDestroy {
             if (response && response.profileImage) {
               this.profileImage = response.profileImage;
             }
-            console.log('Imagem de perfil enviada com sucesso:', response);
             this.cdr.detectChanges();
           },
           error: (err) => {
             this.isUploading = false;
             this.error = 'Erro ao enviar imagem. Tente novamente.';
-            console.error('Erro ao enviar imagem de perfil:', err);
             this.cdr.detectChanges();
           }
         });
@@ -188,13 +146,11 @@ export class ChatProfileComponent implements OnInit, OnDestroy {
       next: (response) => {
         this.isUploading = false;
         this.profileImage = this.defaultImage;
-        console.log('Imagem de perfil removida com sucesso.');
         this.cdr.detectChanges();
       },
       error: (err) => {
         this.isUploading = false;
         this.error = 'Erro ao remover imagem. Tente novamente.';
-        console.error('Erro ao remover imagem de perfil:', err);
         this.cdr.detectChanges();
       }
     });

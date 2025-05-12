@@ -67,12 +67,11 @@ export const getPost = async (req: Request, res: Response) => {
         const { id } = req.params;
         const userId = (req as AuthRequest).user?.id;
 
-        console.log(`[GET POST] Buscando post ${id} para usuário ${userId}`);
+        console.log(`[GET POST V3] Iniciando busca para post ${id}. UserID recebido da requisição: ${userId}`);
 
         const postRepository = AppDataSource.getRepository(Post);
         const postLikeRepository = AppDataSource.getRepository(PostLike);
 
-        // Modificado para incluir um join com postLikes e user
         const post = await postRepository
             .createQueryBuilder('post')
             .leftJoinAndSelect('post.user', 'user')
@@ -82,28 +81,31 @@ export const getPost = async (req: Request, res: Response) => {
             .getOne();
 
         if (!post) {
+            console.log(`[GET POST V3] Post ${id} não encontrado.`);
             return res.status(404).json({ message: 'Post não encontrado' });
         }
+        console.log(`[GET POST V3] Post ${id} encontrado. Detalhes: ${JSON.stringify(post)}`);
 
-        // Verifica se o usuário atual tem um like neste post
-        const userLike = userId ? await postLikeRepository.findOne({
-            where: {
-                post: { id: post.id },
-                user: { id: userId }
-            }
-        }) : null;
-
-        console.log(`[GET POST] Like do usuário encontrado: ${!!userLike}`);
+        let userLike = null;
+        if (userId) {
+            console.log(`[GET POST V3] Verificando like para UserID: ${userId} e PostID: ${post.id}`);
+            userLike = await postLikeRepository.findOne({
+                where: {
+                    post: { id: post.id },
+                    user: { id: userId }
+                }
+            });
+            console.log(`[GET POST V3] Resultado da busca por like existente (userLike): ${JSON.stringify(userLike)}`);
+        } else {
+            console.log(`[GET POST V3] UserID não fornecido, userLike será null.`);
+        }
 
         const totalLikes = await postLikeRepository.count({
             where: {
                 post: { id: post.id }
             }
         });
-
-        console.log(`[GET POST] Total de likes: ${totalLikes}`);
-
-        const author = post.anonymous ? 'Anônimo' : (post.originalAuthor || post.author);
+        const author = post.anonymous ? 'Anônimo' : (post.originalAuthor || post.author); // Definição de author corrigida
 
         // Preserva explicitamente a informação do usuário autor
         const formattedPost = {
@@ -123,7 +125,7 @@ export const getPost = async (req: Request, res: Response) => {
         // Para debug
         console.log(`[GET POST] Resposta final - post.user: ${post.user ? JSON.stringify(post.user) : 'null'}`);
         console.log(`[GET POST] Resposta final - formattedPost.user_id: ${formattedPost.user_id}`);
-        console.log(`[GET POST] Resposta final - userLiked: ${!!userLike}, totalLikes: ${totalLikes}`);
+        console.log(`[GET POST V3] Enviando resposta para post ${id}: userLiked = ${!!userLike}, totalLikes = ${totalLikes}`);
 
         res.json(formattedPost);
     } catch (error) {
@@ -248,9 +250,10 @@ export const likePost = async (req: AuthRequest, res: Response) => {
         const { postId } = req.params;
         const userId = req.user?.id;
 
-        console.log(`[LIKE POST] Recebida requisição de like - postId: ${postId}, userId: ${userId}`);
+        console.log(`[LIKE POST V3] Iniciando - PostID: ${postId}, UserID da requisição: ${userId}`);
 
         if (!userId) {
+            console.log('[LIKE POST V3] Usuário não autenticado, retornando 401.');
             return res.status(401).json({ message: 'Usuário não autenticado' });
         }
 
@@ -262,39 +265,45 @@ export const likePost = async (req: AuthRequest, res: Response) => {
         });
 
         if (!post) {
+            console.log(`[LIKE POST V3] Post ${postId} não encontrado, retornando 404.`);
             return res.status(404).json({ message: 'Post não encontrado' });
         }
+        console.log(`[LIKE POST V3] Post ${postId} encontrado.`);
 
         // Verifica se já existe um like deste usuário
+        console.log(`[LIKE POST V3] Verificando like existente para UserID: ${userId}, PostID: ${parseInt(postId)}`);
         let existingLike = await postLikeRepository.findOne({
             where: {
                 post: { id: parseInt(postId) },
                 user: { id: userId }
             }
         });
-
-        console.log(`[LIKE POST] Like existente: ${!!existingLike}`);
+        console.log(`[LIKE POST V3] Resultado da busca por like existente (existingLike): ${JSON.stringify(existingLike)}`);
 
         // Se existe like, remove; se não existe, cria
         if (existingLike) {
+            console.log(`[LIKE POST V3] Removendo like existente. ID do like: ${existingLike.id}`);
             await postLikeRepository.remove(existingLike);
-            console.log(`[LIKE POST] Like removido para post ${postId}`);
+            console.log(`[LIKE POST V3] Like removido para post ${postId}`);
         } else {
-            const newLike = postLikeRepository.create({
+            console.log(`[LIKE POST V3] Criando novo like para UserID: ${userId}, PostID: ${parseInt(postId)}`);
+            const newLikeEntity = postLikeRepository.create({
                 post: { id: parseInt(postId) },
                 user: { id: userId }
             });
-            await postLikeRepository.save(newLike);
-            console.log(`[LIKE POST] Novo like criado para post ${postId}`);
+            const newLike = await postLikeRepository.save(newLikeEntity);
+            console.log(`[LIKE POST V3] Novo like salvo. Detalhes: ${JSON.stringify(newLike)}`);
         }
 
         // Verifica novamente se existe like para retornar o estado atual
+        console.log(`[LIKE POST V3] Verificando estado final do like para UserID: ${userId}, PostID: ${parseInt(postId)}`);
         const userHasLike = await postLikeRepository.findOne({
             where: {
                 post: { id: parseInt(postId) },
                 user: { id: userId }
             }
         });
+        console.log(`[LIKE POST V3] Resultado da verificação final (userHasLike): ${JSON.stringify(userHasLike)}`);
 
         // Conta o total de likes (de todos os usuários)
         const totalLikes = await postLikeRepository.count({
@@ -303,7 +312,7 @@ export const likePost = async (req: AuthRequest, res: Response) => {
             }
         });
 
-        console.log(`[LIKE POST] Estado final - userHasLike: ${!!userHasLike}, totalLikes: ${totalLikes}`);
+        console.log(`[LIKE POST V3] Enviando resposta: userLiked = ${!!userHasLike}, totalLikes = ${totalLikes}`);
 
         return res.json({
             message: userHasLike ? 'Post curtido' : 'Like removido',
@@ -311,7 +320,7 @@ export const likePost = async (req: AuthRequest, res: Response) => {
             userLiked: !!userHasLike
         });
     } catch (error) {
-        console.error('[LIKE POST] Erro:', error);
+        console.error('[LIKE POST V3] Erro:', error);
         res.status(500).json({ message: 'Erro interno do servidor' });
     }
 };
@@ -456,7 +465,7 @@ export const deletePost = async (req: AuthRequest, res: Response) => {
         const commentRepository = AppDataSource.getRepository(Comment);
         const postLikeRepository = AppDataSource.getRepository(PostLike);
         const commentLikeRepository = AppDataSource.getRepository(CommentLike);
-        
+
         // Busca o post para verificar se o usuário atual é o autor
         const post = await postRepository.findOne({
             where: { id: postId },
@@ -526,7 +535,7 @@ export const deleteComment = async (req: AuthRequest, res: Response) => {
 
         const commentRepository = AppDataSource.getRepository(Comment);
         const commentLikeRepository = AppDataSource.getRepository(CommentLike);
-        
+
         // Busca o comentário para verificar se o usuário atual é o autor
         const comment = await commentRepository.findOne({
             where: { id: commentIdInt },

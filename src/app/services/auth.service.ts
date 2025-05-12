@@ -22,7 +22,7 @@ export class AuthService {
   constructor(private apiService: ApiService) {
     // Inicializa o estado de autenticação baseado na presença do token
     const hasToken = this.hasToken();
-    console.log('AuthService inicializado, token existe:', hasToken);
+    // console.log('AuthService inicializado, token existe:', hasToken);
     this.isAuthenticatedSubject.next(hasToken);
   }
 
@@ -51,63 +51,63 @@ export class AuthService {
 
   validateToken(): Observable<any> {
     if (this.tokenValidationInProgress) {
-      console.log('Validação de token já em andamento, ignorando chamada duplicada');
+      // console.log('Validação de token já em andamento, ignorando chamada duplicada');
       return of(null);
     }
 
     const token = this.getToken();
     if (!token) {
-      console.log('Sem token para validar');
+      // console.log('Sem token para validar');
       this.isAuthenticatedSubject.next(false);
       return of(null);
     }
 
-    console.log('Iniciando validação de token:', token.substring(0, 15) + '...');
+    // console.log('Iniciando validação de token:', token.substring(0, 15) + '...');
     this.tokenValidationInProgress = true;
 
     return this.apiService.validateToken().pipe(
       tap(response => {
         this.tokenValidationInProgress = false;
-        console.log('Resposta da validação de token:', response);
+        // console.log('Resposta da validação de token:', response);
 
         if (response && response.valid) {
-          console.log('Token validado com sucesso');
+          // console.log('Token validado com sucesso');
           this.isAuthenticatedSubject.next(true);
 
           // Atualiza o nome de usuário caso tenha mudado
           if (response.username) {
-            console.log('Atualizando nome de usuário:', response.username);
+            // console.log('Atualizando nome de usuário:', response.username);
             localStorage.setItem(this.USERNAME_KEY, response.username);
           }
 
           // Salva o ID do usuário no localStorage
           if (response.userId) {
-            console.log('Atualizando ID do usuário:', response.userId);
+            // console.log('Atualizando ID do usuário:', response.userId);
             localStorage.setItem(this.USER_ID_KEY, response.userId.toString());
           }
 
           // Salva a flag isAdmin no localStorage
           if (response.isAdmin !== undefined) {
-            console.log('Atualizando status de admin:', response.isAdmin);
+            // console.log('Atualizando status de admin:', response.isAdmin);
             localStorage.setItem(this.IS_ADMIN_KEY, response.isAdmin ? 'true' : 'false');
           }
         } else {
-          console.log('Resposta de validação inválida');
+          // console.log('Resposta de validação inválida');
           this.logout();
         }
       }),
       catchError(error => {
         this.tokenValidationInProgress = false;
-        console.error('Erro ao validar token:', error);
+        // console.error('Erro ao validar token:', error);
 
         // Verifica se o erro é de autenticação (401)
         if (error.status === 401) {
-          console.log('Token inválido ou expirado, fazendo logout');
+          // console.log('Token inválido ou expirado, fazendo logout');
           this.logout();
         } else {
           // Para outros erros (ex: servidor indisponível), mantemos o usuário logado
           // para evitar logout desnecessário durante problemas de conectividade temporários
-          console.log('Erro de serviço, mantendo estado de autenticação atual');
+          // console.log('Erro de serviço, mantendo estado de autenticação atual');
         }
 
         return of(null);
@@ -118,7 +118,7 @@ export class AuthService {
   login(username: string, password: string): Observable<any> {
     return this.apiService.login({ username, password }).pipe(
       tap(response => {
-        console.log('Login response:', response);
+        // console.log('Login response:', response);
         if (response && response.token) {
           // Salva os dados no localStorage para persistir entre recargas
           localStorage.setItem(this.TOKEN_KEY, response.token);
@@ -134,9 +134,9 @@ export class AuthService {
             const tokenParts = response.token.split('.');
             if (tokenParts.length === 3) {
               const tokenPayload = JSON.parse(atob(tokenParts[1]));
-              console.log('Token payload:', tokenPayload);
+              // console.log('Token payload:', tokenPayload);
               if (tokenPayload.id) {
-                console.log('Salvando ID do usuário do token:', tokenPayload.id);
+                // console.log('Salvando ID do usuário do token:', tokenPayload.id);
                 localStorage.setItem(this.USER_ID_KEY, String(tokenPayload.id));
               }
 
@@ -146,7 +146,7 @@ export class AuthService {
               }
             }
           } catch (e) {
-            console.error('Erro ao decodificar token:', e);
+            // console.error('Erro ao decodificar token:', e);
           }
 
           this.isAuthenticatedSubject.next(true);
@@ -158,7 +158,7 @@ export class AuthService {
   register(username: string, password: string, email?: string, phone?: string): Observable<any> {
     return this.apiService.register({ username, password, email, phone }).pipe(
       tap(response => {
-        console.log('Register response:', response);
+        // console.log('Register response:', response);
         if (response && response.token) {
           localStorage.setItem(this.TOKEN_KEY, response.token);
           localStorage.setItem(this.USERNAME_KEY, response.username);
@@ -230,7 +230,7 @@ export class AuthService {
           }
         }),
         catchError(error => {
-          console.error('Erro ao obter informações do usuário:', error);
+          // console.error('Erro ao obter informações do usuário:', error);
           this.logout();
           throw error;
         }),
@@ -267,7 +267,7 @@ export class AuthService {
   forceAdminForUserAdmin() {
     const username = this.getUsername();
     if (username === 'admin') {
-      console.log('Forçando status de administrador para usuário admin');
+      // console.log('Forçando status de administrador para usuário admin');
       localStorage.setItem(this.IS_ADMIN_KEY, 'true');
 
       // Tentar atualizar o token também
@@ -292,10 +292,10 @@ export class AuthService {
 
             // Armazenar o token atualizado
             localStorage.setItem(this.TOKEN_KEY, updatedToken);
-            console.log('Token atualizado com informação de admin');
+            // console.log('Token atualizado com informação de admin');
           }
         } catch (e) {
-          console.error('Erro ao processar token:', e);
+          // console.error('Erro ao processar token:', e);
         }
       }
     }

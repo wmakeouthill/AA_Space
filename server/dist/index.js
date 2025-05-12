@@ -12,12 +12,15 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.broadcastMessageToChat = broadcastMessageToChat;
 const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
 const dotenv_1 = __importDefault(require("dotenv"));
 const path_1 = __importDefault(require("path"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const fs_1 = __importDefault(require("fs"));
+const http_1 = __importDefault(require("http")); // Added
+const ws_1 = require("ws"); // Added
 const database_1 = require("./config/database");
 const entities_1 = require("./models/entities");
 const auth_1 = __importDefault(require("./routes/auth"));
@@ -25,11 +28,83 @@ const posts_1 = __importDefault(require("./routes/posts"));
 const chat_1 = __importDefault(require("./routes/chat"));
 const profile_1 = __importDefault(require("./routes/profile"));
 // Chave secreta para JWT - deve ser igual à usada no controlador de auth
-const JWT_SECRET = process.env.JWT_SECRET || 'seu_segredo_jwt_super_secreto';
+const JWT_SECRET = process.env.JWT_SECRET || 'bondedobumbiboladao';
 dotenv_1.default.config();
 const app = (0, express_1.default)();
 const port = Number(process.env.PORT || 3001);
 const isCodespacesEnv = process.env.CODESPACES === 'true' || process.env.GITHUB_CODESPACES === 'true';
+// Create HTTP server
+const server = http_1.default.createServer(app); // Added
+// Create WebSocket server
+const wss = new ws_1.WebSocketServer({ server }); // Added
+// Store active WebSocket connections (you'll need a more robust way to manage this, e.g., by chatId)
+const clients = new Map(); // Example: Map<chatId, Set<WebSocket>>
+wss.on('connection', (ws, req) => {
+    // Extract chatId from the URL, e.g., /1, /2
+    const url = req.url; // In a real setup, req.url might be undefined here depending on ws version and setup.
+    // It's often better to get the path from the initial HTTP upgrade request if possible,
+    // or pass it via a subprotocol or initial message.
+    // For now, let's assume the path is directly available or can be derived.
+    // A common pattern is to expect the chatId in the path, like /<chatId>
+    // Example: ws://localhost:3001/2
+    const pathParts = url ? url.split('/').filter(part => part) : [];
+    const chatId = pathParts[0]; // This assumes the URL is like /<chatId>
+    if (!chatId) {
+        console.log('[WSS] Connection attempt without chatId, closing.');
+        ws.close();
+        return;
+    }
+    console.log(`[WSS] Client connected to chat: ${chatId}`);
+    if (!clients.has(chatId)) {
+        clients.set(chatId, new Set());
+    }
+    clients.get(chatId).add(ws);
+    ws.on('message', (message) => {
+        // For this application, the client primarily listens.
+        // If clients were to send messages over WS, you'd handle them here.
+        console.log(`[WSS] Received message on chat ${chatId}: ${message.toString()}`);
+        // Example: Broadcast to other clients in the same chat
+        // clients.get(chatId)?.forEach(client => {
+        //     if (client !== ws && client.readyState === WebSocket.OPEN) {
+        //         client.send(message.toString());
+        //     }
+        // });
+    });
+    ws.on('close', () => {
+        var _a, _b;
+        console.log(`[WSS] Client disconnected from chat: ${chatId}`);
+        (_a = clients.get(chatId)) === null || _a === void 0 ? void 0 : _a.delete(ws);
+        if (((_b = clients.get(chatId)) === null || _b === void 0 ? void 0 : _b.size) === 0) {
+            clients.delete(chatId);
+        }
+    });
+    ws.on('error', (error) => {
+        var _a, _b;
+        console.error(`[WSS] Error on chat ${chatId}:`, error);
+        // Ensure client is removed on error as well
+        (_a = clients.get(chatId)) === null || _a === void 0 ? void 0 : _a.delete(ws);
+        if (((_b = clients.get(chatId)) === null || _b === void 0 ? void 0 : _b.size) === 0) {
+            clients.delete(chatId);
+        }
+    });
+});
+// Function to broadcast messages to a specific chat room
+// You will call this from your chat.controller.ts after a message is saved
+function broadcastMessageToChat(chatId, message) {
+    const chatClients = clients.get(chatId.toString()); // Ensure chatId is a string
+    if (chatClients) {
+        const messageString = JSON.stringify(message);
+        console.log(`[WSS] Broadcasting to chat ${chatId}:`, messageString);
+        chatClients.forEach(client => {
+            if (client.readyState === ws_1.WebSocket.OPEN) {
+                client.send(messageString);
+            }
+        });
+    }
+    else {
+        console.log(`[WSS] No clients connected to chat ${chatId} to broadcast message.`);
+    }
+}
 // Lista de origens permitidas
 const allowedOrigins = [
     'http://localhost:4200',
@@ -274,7 +349,8 @@ const startServer = () => __awaiter(void 0, void 0, void 0, function* () {
         console.log('Database initialized successfully!');
         console.log('Database path:', database_1.AppDataSource.options.database);
         console.log('Environment:', isCodespacesEnv ? 'GitHub Codespaces' : 'Local Development');
-        app.listen(port, '0.0.0.0', () => {
+        // Start the HTTP server (which now also handles WebSocket upgrades)
+        server.listen(port, '0.0.0.0', () => {
             console.log(`Server is running at http://localhost:${port}`);
             console.log('CORS enabled for:', allowedOrigins);
             console.log('Available routes:');

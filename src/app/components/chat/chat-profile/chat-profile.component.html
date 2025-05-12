@@ -1,10 +1,9 @@
 <div class="profile-container">
-  <div class="profile">
+  <div class="profile" #profileTrigger (click)="toggleProfileMenu($event)"> <!-- MOVED (click) here, ADDED #profileTrigger -->
     <div class="profile-image-container">
-      <img #clickableProfileImage [src]="profileImage || defaultImage"
+      <img [src]="profileImage || defaultImage"
            alt="Imagem de perfil"
-           class="profile-image"
-            (click)="toggleProfileMenu($event)">
+           class="profile-image"> <!-- REMOVED #clickableProfileImage and (click) -->
 
       <div #avatarMenu class="avatar-menu" *ngIf="showProfileMenu" (click)="$event.stopPropagation()">
         <button (click)="selectProfileImageFile()">Alterar Foto</button>

@@ -17,7 +17,7 @@ const bcrypt_1 = __importDefault(require("bcrypt"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const database_1 = require("../config/database");
 const entities_1 = require("../models/entities");
-const JWT_SECRET = process.env.JWT_SECRET || 'seu_segredo_jwt_super_secreto';
+const JWT_SECRET = process.env.JWT_SECRET || 'bondedobumbiboladao';
 const TOKEN_EXPIRATION = '24h';
 const register = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {

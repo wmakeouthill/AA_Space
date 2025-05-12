@@ -5,6 +5,7 @@ import { In } from 'typeorm';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as crypto from 'crypto';
+import { broadcastMessageToChat } from '../index'; // Importar a função
 
 interface AuthRequest extends Request {
     user?: { id: number; username: string; isAdmin?: boolean };
@@ -260,30 +261,39 @@ export const sendMessage = async (req: Request, res: Response) => {
             conversationId,
             senderId: userId,
             content,
-            isRead: false
+            isRead: false // Default para false, será atualizado quando lido
         });
 
-        await messageRepository.save(newMessage);
+        const savedMessage = await messageRepository.save(newMessage);
 
         await conversationRepository.update(
             { id: conversationId },
             { updatedAt: new Date() }
         );
 
-        res.status(201).json({
-            message: {
-                id: newMessage.id,
-                content: newMessage.content,
-                senderId: newMessage.senderId,
-                senderName: sender.username,
-                profileImage: sender.profileImage,
-                timestamp: newMessage.createdAt,
-                read: newMessage.isRead
-            }
+        // Preparar a mensagem para o frontend e para o broadcast
+        const messageForFrontend = {
+            id: savedMessage.id,
+            content: savedMessage.content,
+            senderId: sender.id,
+            senderName: sender.username,
+            senderProfileImage: sender.profileImage, // O frontend irá formatar a URL completa
+            timestamp: savedMessage.createdAt,
+            read: savedMessage.isRead
+        };
+
+        // Transmitir a mensagem via WebSocket para os clientes conectados na conversa
+        broadcastMessageToChat(conversationId.toString(), messageForFrontend);
+
+        // Responder à requisição HTTP
+        return res.status(201).json({
+            message: 'Mensagem enviada com sucesso', // Mensagem de sucesso para HTTP
+            chatMessage: messageForFrontend // A mensagem enviada
         });
+
     } catch (error) {
         console.error('Erro ao enviar mensagem:', error);
-        res.status(500).json({ message: 'Erro interno do servidor' });
+        res.status(500).json({ message: 'Erro interno do servidor ao enviar mensagem', details: (error as Error).message });
     }
 };
 

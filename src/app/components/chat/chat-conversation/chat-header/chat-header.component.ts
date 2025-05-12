@@ -145,20 +145,13 @@ export class ChatHeaderComponent implements OnChanges {
 
   ngOnChanges(): void {
     if (this.chat) {
-      console.log('=== CHAT HEADER DEBUG INFO ===');
-      console.log(`Chat ID: ${this.chat.id}, É grupo? ${this.chat.isGroup}`);
-      console.log(`ID do usuário atual: ${this.currentUserId} (tipo: ${typeof this.currentUserId})`);
-
-      if (this.chat.participants && this.chat.participants.length > 0) {
-        console.log('Participantes:');
-        this.chat.participants.forEach(p => {
-          console.log(`- ID: ${p.id} (tipo: ${typeof p.id}), Nome: ${p.username}, Imagem: ${p.profileImage || 'não definida'}`);
-        });
-      }
+      // console.log(`[CHAT HEADER] ngOnChanges - Chat ID: ${this.chat.id}, É grupo? ${this.chat.isGroup}`);
+      // console.log(`[CHAT HEADER] ngOnChanges - ID do usuário atual: ${this.currentUserId} (tipo: ${typeof this.currentUserId})`);
 
       if (!this.chat.isGroup && this.chat.participants?.length > 0) {
+        // console.log('[CHAT HEADER] ngOnChanges - Participantes:', this.chat.participants.map(p => ({ id: p.id, type: typeof p.id, name: p.username, image: p.profileImage })));
         this.otherParticipant = this.chatService.getOtherParticipant(this.chat);
-        console.log('Outro participante armazenado:', this.otherParticipant);
+        // console.log('[CHAT HEADER] ngOnChanges - Outro participante armazenado:', this.otherParticipant);
       }
     }
   }
@@ -224,7 +217,6 @@ export class ChatHeaderComponent implements OnChanges {
       next: (response) => {
         if (this.chat) {
           this.chat.avatarPath = response.avatarPath;
-          console.log('Avatar do grupo atualizado com sucesso:', response.fullImageUrl);
         }
         this.showGroupAvatarMenu = false; // Fecha o menu
       },
@@ -249,7 +241,6 @@ export class ChatHeaderComponent implements OnChanges {
       next: (response) => {
         if (this.chat) {
           this.chat.avatarPath = null;
-          console.log('Avatar do grupo removido com sucesso.', response.message);
         }
         this.showGroupAvatarMenu = false; // Fecha o menu
       },

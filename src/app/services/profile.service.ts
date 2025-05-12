@@ -30,7 +30,7 @@ export class ProfileService {  private apiUrl: string;
   ) {
     const baseApiUrl = (this.apiService as any).API_URL;
     this.apiUrl = `${baseApiUrl}/profile`;
-    console.log('ProfileService usando URL da API:', this.apiUrl);
+    // console.log('ProfileService usando URL da API:', this.apiUrl);
   }  formatImageUrl(imagePath: string | undefined): string {
     // Handle base64 images
     if (imagePath?.startsWith('data:')) {
@@ -52,7 +52,7 @@ export class ProfileService {  private apiUrl: string;
       const timestamp = Date.now();
       const path = `/uploads/profiles/${imagePath}`;
       const url = `${this.API_ORIGIN}${path}?t=${timestamp}`;
-      console.log(`[PROFILE SERVICE] Image filename detected, formatted URL with timestamp: ${url}`);
+      // console.log(`[PROFILE SERVICE] Image filename detected, formatted URL with timestamp: ${url}`);
       return url;
     }
 
@@ -63,13 +63,13 @@ export class ProfileService {  private apiUrl: string;
       // Add a timestamp to prevent caching
       const timestamp = Date.now();
       const url = `${this.API_ORIGIN}${path}?t=${timestamp}`;
-      console.log(`[PROFILE SERVICE] Profiles path detected, formatted URL with timestamp: ${url}`);
+      // console.log(`[PROFILE SERVICE] Profiles path detected, formatted URL with timestamp: ${url}`);
       return url;
     }
 
     // Default case - ensure correct path prefix
     const path = imagePath.startsWith('/') ? imagePath : `/uploads/${imagePath}`;
-    console.log(`[PROFILE SERVICE] Default case, formatted URL: ${this.API_ORIGIN}${path}`);
+    // console.log(`[PROFILE SERVICE] Default case, formatted URL: ${this.API_ORIGIN}${path}`);
     return `${this.API_ORIGIN}${path}`;
   }
   isDefaultImage(imagePath: string | undefined): boolean {
@@ -86,31 +86,31 @@ export class ProfileService {  private apiUrl: string;
     } else {
       // If there's no token, we can expect a 401, so no need to even make the call
       // or handle it in a way that makes sense for your app (e.g., redirect to login)
-      console.warn('[PROFILE SERVICE] No token found. User is likely not authenticated. Using fallback.');
+      // console.warn('[PROFILE SERVICE] No token found. User is likely not authenticated. Using fallback.');
       // Option 1: Return an observable that errors, to be caught by the component
       // return throwError(() => new Error('Not authenticated'));
       // Option 2: Return fallback, but be aware this hides the auth issue
       return this.getFallbackUserProfile(); // Current behavior
     }
 
-    console.log('[PROFILE SERVICE] Getting current user profile with token:', token ? token.substring(0, 15) + '...' : 'none');
+    // console.log('[PROFILE SERVICE] Getting current user profile with token:', token ? token.substring(0, 15) + '...' : 'none');
 
     return this.http.get<UserProfile>(`${this.apiUrl}/me`, { headers }).pipe(
       map(profile => {
-        console.log('[PROFILE SERVICE] Profile received from server:', profile);
+        // console.log('[PROFILE SERVICE] Profile received from server:', profile);
 
         // Format the profile image URL if exists
         if (profile?.profileImage) {
           profile.profileImage = this.formatImageUrl(profile.profileImage);
-          console.log('[PROFILE SERVICE] Formatted profile image URL:', profile.profileImage);
+          // console.log('[PROFILE SERVICE] Formatted profile image URL:', profile.profileImage);
         }
 
         return profile;
       }),
       catchError(error => {
-        console.error('[PROFILE SERVICE] Error fetching profile, status: ' + (error.status !== undefined ? error.status : 'unknown'), error);
+        // console.error('[PROFILE SERVICE] Error fetching profile, status: ' + (error.status !== undefined ? error.status : 'unknown'), error);
         if (error.status === 401) {
-          console.warn('[PROFILE SERVICE] Unauthorized (401) fetching profile. Token might be invalid or expired. Using fallback.');
+          // console.warn('[PROFILE SERVICE] Unauthorized (401) fetching profile. Token might be invalid or expired. Using fallback.');
           // Optionally, trigger a logout or a specific auth error event
           // this.authService.logout(); // Example: force logout
           // window.dispatchEvent(new CustomEvent('auth:expired'));
@@ -123,7 +123,7 @@ export class ProfileService {  private apiUrl: string;
 
   // Método auxiliar para obter perfil de fallback (mock)
   private getFallbackUserProfile(): Observable<UserProfile> {
-    console.log('[PROFILE SERVICE] Usando perfil de fallback');
+    // console.log('[PROFILE SERVICE] Usando perfil de fallback');
     const username = this.authService.getUsername() || 'Usuário';
     const id = parseInt(this.authService.getUserId() || '1');
 
@@ -145,12 +145,12 @@ export class ProfileService {  private apiUrl: string;
         profileImage: this.formatImageUrl(profile.profileImage)
       })),
       catchError(error => {
-        console.error('Erro ao buscar perfil de usuário:', error);
+        // console.error('Erro ao buscar perfil de usuário:', error);
 
         if (error.status === 401) {
           // Em desenvolvimento, tentar continuar com dados mockados
           if (this.apiService && (this.apiService as any).isDevMode) {
-            console.log('[PROFILE SERVICE] Usando dados mockados para ID:', userId);
+            // console.log('[PROFILE SERVICE] Usando dados mockados para ID:', userId);
             return of({
               id: userId,
               username: `Usuário ${userId}`,
@@ -173,7 +173,7 @@ export class ProfileService {  private apiUrl: string;
   // Upload de imagem de perfil com compressão
   uploadProfileImage(imageFile: File): Observable<{ profileImage: string }> {
     const headers = { 'Content-Type': 'application/json' };
-    console.log('[PROFILE SERVICE] Iniciando upload de imagem...');
+    // console.log('[PROFILE SERVICE] Iniciando upload de imagem...');
     return this.compressImage(imageFile).pipe(
       map(compressedImage => ({ profileImage: compressedImage })),
       mergeMap(imageData => this.http.post<any>(
@@ -186,7 +186,7 @@ export class ProfileService {  private apiUrl: string;
         profileImage: this.formatImageUrl(response.profileImage)
       })),
       catchError(error => {
-        console.error('Erro ao upload de imagem de perfil:', error);
+        // console.error('Erro ao upload de imagem de perfil:', error);
 
         if (error.status === 401) {
           // Disparar evento de autenticação expirada para que o usuário faça login novamente
@@ -203,7 +203,7 @@ export class ProfileService {  private apiUrl: string;
   // Upload de imagem de perfil diretamente como base64
   uploadProfileImageBase64(base64Image: string): Observable<{ profileImage: string }> {
     const headers = { 'Content-Type': 'application/json' };
-    console.log('[PROFILE SERVICE] Iniciando upload de imagem base64, URL:', `${this.apiUrl}/image`);
+    // console.log('[PROFILE SERVICE] Iniciando upload de imagem base64, URL:', `${this.apiUrl}/image`);
 
     return this.http.post<any>(
       `${this.apiUrl}/image`,
@@ -215,7 +215,7 @@ export class ProfileService {  private apiUrl: string;
         profileImage: this.formatImageUrl(response.profileImage)
       })),
       catchError(error => {
-        console.error('Erro ao upload de imagem de perfil base64:', error);
+        // console.error('Erro ao upload de imagem de perfil base64:', error);
 
         if (error.status === 401) {
           // Disparar evento de autenticação expirada para que o usuário faça login novamente
@@ -241,7 +241,7 @@ export class ProfileService {  private apiUrl: string;
         profileImage: this.formatImageUrl(undefined) // Retorna a URL da imagem padrão
       })),
       catchError(error => {
-        console.error('Erro ao remover imagem de perfil:', error);
+        // console.error('Erro ao remover imagem de perfil:', error);
 
         if (error.status === 401) {
           // Disparar evento de autenticação expirada para que o usuário faça login novamente

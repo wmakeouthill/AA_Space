@@ -23,7 +23,6 @@
   width: 50px;
   height: 50px;
   border-radius: 50%;
-  overflow: hidden;
   margin-right: 15px;
   cursor: pointer;
   border: 2px solid #ddd; /* Borda sutil para a imagem */
@@ -33,33 +32,32 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
+  border-radius: 50%; /* ADICIONADO para garantir que a imagem seja circular */
 }
 
 /* Estilos para o novo menu de avatar */
 .avatar-menu {
-  position: absolute;
-  top: 55px; /* Ajuste conforme necessário para posicionar abaixo da imagem */
-  left: 0;
-  background-color: white;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-  z-index: 1000; /* Para garantir que fique sobre outros elementos */
-  width: max-content; /* Para ajustar a largura ao conteúdo */
-  padding: 5px 0;
-}
+      position: absolute;
+      top: 55px; /* AJUSTADO - para posicionar abaixo da imagem de 50px + borda */
+      left: 0;
+      background-color: white;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+      z-index: 100; /* Para garantir que apareça sobre outros elementos */
+      padding: 5px 0;
+    }
 
 .avatar-menu button {
-  display: block;
-  width: 100%;
-  padding: 8px 15px;
-  text-align: left;
-  border: none;
-  background: none;
-  cursor: pointer;
-  font-size: 14px;
-  color: #333; /* Added text color for visibility */
-}
+      display: block;
+      width: 100%;
+      padding: 8px 15px;
+      text-align: left;
+      border: none;
+      background: none;
+      cursor: pointer;
+      font-size: 14px;
+    }
 
 .avatar-menu button:hover {
   background-color: #f0f0f0;

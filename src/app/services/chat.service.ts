@@ -1,10 +1,11 @@
 import { Injectable } from '@angular/core';
-import { Observable, throwError } from 'rxjs';
+import { Observable, throwError, Subject } from 'rxjs';
 import { catchError, map, tap } from 'rxjs/operators';
 import { HttpClient } from '@angular/common/http';
-import { ApiResponse, Chat, CreateChatRequest, Message, User, ChatParticipant } from '../models/chat/chat.interface';
+import { ApiResponse, Chat, CreateChatRequest, Message, User, ChatParticipant, NewMessageEvent } from '../models/chat/chat.interface'; // Added NewMessageEvent
 import { AuthService } from './auth.service';
 import { ApiService } from './api.service';
+import { webSocket, WebSocketSubject } from 'rxjs/webSocket';
 
 @Injectable({
   providedIn: 'root'
@@ -12,6 +13,9 @@ import { ApiService } from './api.service';
 export class ChatService {
   private apiUrl: string;
   private currentUserId: number;
+  private webSocketServiceUrlRoot: string; // For WebSocket connections
+  private chatSubjects = new Map<number, WebSocketSubject<Message>>(); // Manages active WebSocket subjects per chat
+  private newMessageSubject = new Subject<NewMessageEvent>(); // Subject for broadcasting new messages to ChatListComponent
 
   constructor(
     private http: HttpClient,
@@ -37,7 +41,12 @@ export class ChatService {
     }
 
     this.apiUrl = `${baseApiUrl}/api/chat`;
-    console.log('[CHAT SERVICE] usando URL da API:', this.apiUrl);
+    console.log('[CHAT SERVICE] usando URL da API HTTP:', this.apiUrl);
+
+    // Derive WebSocket base URL from baseApiUrl
+    // Adjusted to match backend expectation (no /ws segment in the root path for WebSocket)
+    this.webSocketServiceUrlRoot = baseApiUrl.replace(/^http/, 'ws');
+    console.log('[CHAT SERVICE] usando URL base para WebSocket:', this.webSocketServiceUrlRoot);
   }
 
   getChats(): Observable<Chat[]> {
@@ -162,7 +171,6 @@ export class ChatService {
 
   getCurrentUserId(): number {
     const userId = this.authService.getUserId();
-    console.log(`[CHAT SERVICE] Obtendo ID do usuário atual: ${userId}`);
 
     if (!userId) {
       console.error('[CHAT SERVICE] ID do usuário não encontrado! Utilizando 0 como fallback.');
@@ -175,7 +183,6 @@ export class ChatService {
     }
 
     const userIdNumber = parseInt(userId);
-    console.log(`[CHAT SERVICE] ID do usuário convertido para número: ${userIdNumber}`);
     return userIdNumber;
   }
 
@@ -186,29 +193,14 @@ export class ChatService {
     }
 
     const userId = this.getCurrentUserId();
-    console.log(`[CHAT SERVICE] getOtherParticipant - ID usuário atual: ${userId} (${typeof userId})`);
-    console.log(`[CHAT SERVICE] getOtherParticipant - Participantes no chat:`,
-      chat.participants.map(p => `${p.username} (ID: ${p.id}, tipo: ${typeof p.id})`));
-
     const currentUserIdNumber = Number(userId);
-    const participantIds = chat.participants.map(p => Number(p.id));
-    console.log(`[CHAT SERVICE] IDs dos participantes como números: [${participantIds.join(', ')}]`);
-
-    const isCurrentUserInChat = participantIds.includes(currentUserIdNumber);
-    console.log(`[CHAT SERVICE] Usuário atual (${currentUserIdNumber}) está no chat? ${isCurrentUserInChat}`);
 
     for (const participant of chat.participants) {
       const participantId = Number(participant.id);
-      console.log(`[CHAT SERVICE] Comparando ID ${participantId} (${typeof participantId}) com ${currentUserIdNumber} (${typeof currentUserIdNumber}): ${participantId !== currentUserIdNumber}`);
       if (participantId !== currentUserIdNumber) {
-        console.log(`[CHAT SERVICE] Outro participante encontrado: ${participant.username} (ID: ${participantId})`);
-
         if (participant.profileImage) {
-          const originalImage = participant.profileImage;
           participant.profileImage = this.formatImageUrl(participant.profileImage);
-          console.log(`[CHAT SERVICE] URL da imagem corrigida: ${originalImage} -> ${participant.profileImage}`);
         }
-
         return participant;
       }
     }
@@ -216,33 +208,24 @@ export class ChatService {
     if (chat.participants.length >= 2) {
       const firstParticipantId = Number(chat.participants[0].id);
       if (firstParticipantId === currentUserIdNumber) {
-        console.log(`[CHAT SERVICE] Usando segundo participante como fallback: ${chat.participants[1].username}`);
-
         if (chat.participants[1].profileImage) {
           chat.participants[1].profileImage = this.formatImageUrl(chat.participants[1].profileImage);
         }
-
         return chat.participants[1];
       } else {
-        console.log(`[CHAT SERVICE] Usando primeiro participante como fallback: ${chat.participants[0].username}`);
-
         if (chat.participants[0].profileImage) {
           chat.participants[0].profileImage = this.formatImageUrl(chat.participants[0].profileImage);
         }
-
         return chat.participants[0];
       }
     } else if (chat.participants.length === 1) {
-      console.log(`[CHAT SERVICE] Usando único participante como fallback: ${chat.participants[0].username}`);
-
       if (chat.participants[0].profileImage) {
         chat.participants[0].profileImage = this.formatImageUrl(chat.participants[0].profileImage);
       }
-
       return chat.participants[0];
     }
 
-    console.error(`[CHAT SERVICE] Chat ${chat.id} não tem participantes válidos`);
+    console.error(`[CHAT SERVICE] Chat ${chat.id} não tem participantes válidos ou não foi possível determinar o outro participante.`);
     return null;
   }
 
@@ -299,6 +282,90 @@ export class ChatService {
         return throwError(() => new Error('Falha ao remover o avatar do grupo.'));
       })
     );
+  }
+
+  listenForNewMessages(chatId: number): Observable<Message> {
+    if (this.chatSubjects.has(chatId)) {
+      console.log(`[CHAT SERVICE] Reusing existing WebSocket subject for chat ${chatId}`);
+      return this.chatSubjects.get(chatId)!.asObservable();
+    }
+
+    const wsUrl = `${this.webSocketServiceUrlRoot}/${chatId}`;
+    console.log(`[CHAT SERVICE] Attempting to connect to WebSocket: ${wsUrl}`);
+
+    const subject = webSocket<any>({
+      url: wsUrl,
+      openObserver: {
+        next: () => {
+          console.log(`[CHAT SERVICE] WebSocket OPENED successfully for chat ${chatId} at ${wsUrl}`);
+        }
+      },
+      closeObserver: {
+        next: (closeEvent) => {
+          // Type assertion for closeEvent
+          const event = closeEvent as CloseEvent;
+          console.log(`[CHAT SERVICE] WebSocket CLOSED for chat ${chatId}. Code: ${event.code}, Reason: ${event.reason}, Was Clean: ${event.wasClean}`);
+          this.chatSubjects.delete(chatId);
+        }
+      },
+      closingObserver: {
+        next: () => {
+          console.log(`[CHAT SERVICE] WebSocket CLOSING for chat ${chatId}`);
+        }
+      },
+      deserializer: (e: MessageEvent) => {
+        try {
+          const rawMessage = JSON.parse(e.data);
+          console.log(`[CHAT SERVICE] Raw WebSocket message received for chat ${chatId}:`, rawMessage);
+          // Transform raw message to Message interface
+          const transformedMessage: Message = {
+            id: rawMessage.id,
+            content: rawMessage.content,
+            senderId: rawMessage.senderId,
+            senderName: rawMessage.senderName, // Assuming backend sends this
+            senderProfileImage: rawMessage.senderProfileImage ? this.formatImageUrl(rawMessage.senderProfileImage) : this.formatImageUrl('/assets/images/user.png'),
+            timestamp: new Date(rawMessage.timestamp),
+            read: rawMessage.read || false
+          };
+          // Notify ChatListComponent AND ChatConversationComponent about the new message
+          console.log(`[CHAT SERVICE] Broadcasting transformed message via newMessageSubject for chat ${chatId}:`, transformedMessage);
+          this.newMessageSubject.next({ message: transformedMessage, chatId: chatId });
+          return transformedMessage; // This return is for the listenForNewMessages observable stream in ChatConversationComponent
+        } catch (error) {
+          console.error(`[CHAT SERVICE] Error parsing WebSocket message for chat ${chatId}:`, error, "Raw data:", e.data);
+          // Return a dummy message or handle error appropriately
+          // For now, returning an empty object to avoid breaking the stream, but this should be improved
+          return { id: -1, content: 'Error parsing message', senderId: -1, timestamp: new Date(), read: false };
+        }
+      }
+    });
+
+    this.chatSubjects.set(chatId, subject);
+    // Add error handling for the WebSocket subject itself
+    return subject.asObservable().pipe(
+      catchError(error => {
+        console.error(`[CHAT SERVICE] WebSocket error for chat ${chatId}:`, error);
+        this.chatSubjects.delete(chatId); // Remove subject on error
+        return throwError(() => new Error(`WebSocket error for chat ${chatId}`));
+      })
+    );
+  }
+
+  // Method for ChatListComponent to subscribe to new messages
+  getNewMessageListener(): Observable<NewMessageEvent> {
+    return this.newMessageSubject.asObservable();
+  }
+
+  closeChatConnection(chatId: number): void {
+    if (this.chatSubjects.has(chatId)) {
+      const subject = this.chatSubjects.get(chatId)!;
+      console.log(`[CHAT SERVICE] Closing WebSocket connection explicitly for chat ${chatId}`);
+      subject.complete();
+    }
+  }
+
+  private getDefaultProfileImageForSender(senderId: number): string {
+    return '/assets/images/user.png';
   }
 
   formatImageUrl(imagePath: string): string {

@@ -32,51 +32,52 @@ export class ChatComponent implements OnInit {
   constructor(private chatService: ChatService) {}
 
   ngOnInit(): void {
-    // Inicialmente não há chat selecionado
+    // Initially, no chat is selected
+    console.log('[CHAT COMPONENT] ngOnInit - No chat initially selected.');
   }
 
   onChatSelected(chat: Chat): void {
+    console.log('[CHAT COMPONENT] onChatSelected - Chat selected:', chat);
     this.selectedChat = chat;
   }
 
   onChatCreated(chat: Chat): void {
-    // Atualiza a seleção para o novo chat
+    // Action for the new chat
+    console.log('[CHAT COMPONENT] onChatCreated - New chat created:', chat);
     this.selectedChat = chat;
 
-    // Emite um evento para informar o componente de lista que deve atualizar
-    // Em uma aplicação maior, seria melhor usar um serviço de estado como NGRX
+    // To inform the list component that it should update
+    // For a larger application, it would be better to use a state management service like NgRx
     const event = new CustomEvent('chat:created', { detail: chat });
     window.dispatchEvent(event);
   }
 
-  sending = false; // Variável para controlar o estado de envio
-    onMessageSent(message: string): void {
-    if (!this.selectedChat) return;
+  sending = false; // to control the sending state
 
+  onMessageSent(message: string): void {
+    if (!this.selectedChat) {
+      console.warn('[CHAT COMPONENT] onMessageSent - No selected chat, cannot send message.');
+      return;
+    }
+
+    console.log(`[CHAT COMPONENT] onMessageSent - Attempting to send message: "${message}" to chat ID: ${this.selectedChat.id}`);
     this.sending = true;
 
-    // Acessa o componente de conversa para processar o envio da mensagem
-    const conversationComponent = document.querySelector('app-chat-conversation');
-    if (conversationComponent && typeof (conversationComponent as any).onMessageSent === 'function') {
-      (conversationComponent as any).onMessageSent(message);
-    } else {
-      // Caso o componente não esteja disponível, usar o serviço diretamente
-      this.chatService.sendMessage(this.selectedChat.id, message).subscribe({
-        next: (response) => {
-          console.log('[CHAT] Mensagem enviada com sucesso:', response);
-          this.sending = false;
-
-          // Emitir evento para atualizar a conversa
-          const event = new CustomEvent('chat:messageSent', {
-            detail: { chatId: this.selectedChat!.id, message: response }
-          });
-          window.dispatchEvent(event);
-        },
-        error: (error) => {
-          console.error('[CHAT] Erro ao enviar mensagem:', error);
-          this.sending = false;
-        }
-      });
-    }
+    // It's generally preferred to call the service directly from the component that owns the action,
+    // rather than trying to access child component methods via document.querySelector.
+    // The ChatConversationComponent should independently listen for WebSocket updates for new messages.
+    this.chatService.sendMessage(this.selectedChat.id, message).subscribe({
+      next: (response) => {
+        console.log('[CHAT COMPONENT] Message sent successfully via HTTP by ChatComponent:', response);
+        this.sending = false;
+        // No need to dispatch 'chat:messageSent' here if ChatConversationComponent
+        // is already listening to WebSocket updates via ChatService.
+        // The UI update for the sender should also come via WebSocket to ensure consistency.
+      },
+      error: (error) => {
+        console.error('[CHAT COMPONENT] Error sending message via ChatComponent:', error);
+        this.sending = false;
+      }
+    });
   }
 }

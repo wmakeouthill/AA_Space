@@ -48,3 +48,8 @@ export interface User {
     email?: string;
     profileImage?: string; // URL da imagem de perfil do usuário
 }
+
+export interface NewMessageEvent {
+    message: Message;
+    chatId: number;
+}

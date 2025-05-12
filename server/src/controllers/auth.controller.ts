@@ -4,7 +4,7 @@ import jwt from 'jsonwebtoken';
 import { AppDataSource } from '../config/database';
 import { User } from '../models/entities';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'seu_segredo_jwt_super_secreto';
+const JWT_SECRET = process.env.JWT_SECRET || 'bondedobumbiboladao';
 const TOKEN_EXPIRATION = '24h';
 
 interface AuthRequest extends Request {

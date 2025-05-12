@@ -2,15 +2,16 @@
 import { Component, Input, OnChanges, OnDestroy, OnInit, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Chat, Message } from '../../../models/chat/chat.interface';
+import { Chat, Message, ChatParticipant } from '../../../models/chat/chat.interface'; // Importar ChatParticipant
 import { ChatService } from '../../../services/chat.service';
 import { ChatHeaderComponent } from './chat-header/chat-header.component';
 import { ChatMessagesComponent } from './chat-messages/chat-messages.component';
+import { Subscription } from 'rxjs'; // Importar Subscription
 
 @Component({
   selector: 'app-chat-conversation',
   templateUrl: './chat-conversation.component.html',
-  styleUrls: ['./chat-conversation.component.css'],
+  styleUrls: ['./chat-conversation.component.css'], // Corrigido aqui
   standalone: true,
   imports: [CommonModule, FormsModule, ChatHeaderComponent, ChatMessagesComponent]
 })
@@ -24,11 +25,13 @@ export class ChatConversationComponent implements OnChanges, OnInit, OnDestroy {
   sending = false;
   defaultImage: string = '/assets/images/user.png';
 
+  private messageSubscription: Subscription | null = null; // Para gerenciar a inscrição do WebSocket
+
   // Handler para o evento de atualização de imagem de perfil
   private profileImageUpdatedHandler = () => {
     console.log('[CHAT CONVERSATION] Evento de atualização de imagem detectado, recarregando mensagens');
     if (this.selectedChat) {
-      this.loadMessages();
+      this.loadMessagesAndListen();
     }
   };
 
@@ -44,57 +47,77 @@ export class ChatConversationComponent implements OnChanges, OnInit, OnDestroy {
   ngOnDestroy(): void {
     // Remove o listener de eventos quando o componente é destruído
     window.removeEventListener('profile:imageUpdated', this.profileImageUpdatedHandler);
+    this.unsubscribeFromMessages(); // Cancelar inscrição do WebSocket
   }
-  ngOnChanges(changes: SimpleChanges): void {
-    if (changes['selectedChat'] && changes['selectedChat'].currentValue) {
-      console.log('[CHAT CONVERSATION] Chat selecionado mudou:', this.selectedChat);
 
+  private unsubscribeFromMessages(): void {
+    if (this.messageSubscription) {
+      console.log(`[CONVO] unsubscribeFromMessages - Unsubscribing from WebSocket for chat ID ${this.selectedChat?.id}. Current subscription:`, this.messageSubscription);
+      this.messageSubscription.unsubscribe();
+      this.messageSubscription = null;
       if (this.selectedChat) {
-        // Log dos participantes para debug
-        console.log(`[CHAT CONVERSATION] Participantes do chat (ID: ${this.selectedChat.id}):`, this.selectedChat.participants);
-        console.log(`[CHAT CONVERSATION] ID do usuário atual: ${this.currentUserId}`);
+        console.log(`[CONVO] unsubscribeFromMessages - Calling chatService.closeChatConnection for chat ID ${this.selectedChat.id}`);
+        this.chatService.closeChatConnection(this.selectedChat.id);
+      }
+      console.log('[CONVO] unsubscribeFromMessages - COMPLETED.');
+    } else {
+      console.log('[CONVO] unsubscribeFromMessages - No active messageSubscription to unsubscribe from.');
+    }
+  }
 
-        // Identificar o outro participante para debug
-        if (!this.selectedChat.isGroup) {
-          const otherParticipant = this.selectedChat.participants.find(p => Number(p.id) !== Number(this.currentUserId));
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['selectedChat']) {
+      const newChat = changes['selectedChat'].currentValue as Chat | null; // Added type assertion
+      const oldChat = changes['selectedChat'].previousValue as Chat | null; // Added type assertion
+
+      console.log('[CONVO] ngOnChanges - selectedChat changed. New:', newChat, 'Old:', oldChat);
+
+      if (newChat?.id !== oldChat?.id) {
+        console.log('[CONVO] ngOnChanges - Chat ID changed or became defined/undefined. Unsubscribing from previous messages.');
+        this.unsubscribeFromMessages();
+      }
+
+      if (newChat) {
+        console.log(`[CONVO] ngOnChanges - New chat selected (ID: ${newChat.id}). Participants:`, newChat.participants);
+        console.log(`[CONVO] ngOnChanges - Current user ID: ${this.currentUserId}`);
+        if (!newChat.isGroup) {
+          const otherParticipant = newChat.participants.find((p: ChatParticipant) => Number(p.id) !== Number(this.currentUserId));
           if (otherParticipant) {
             console.log(`[CHAT CONVERSATION] Outro participante identificado: ${otherParticipant.username} (ID: ${otherParticipant.id})`);
           } else {
             console.warn('[CHAT CONVERSATION] Não foi possível identificar o outro participante');
           }
         }
+        this.loadMessagesAndListen();
+      } else {
+        console.log('[CONVO] ngOnChanges - No chat selected. Clearing messages and unsubscribing.');
+        this.messages = [];
+        this.unsubscribeFromMessages();
       }
-
-      this.loadMessages();
     }
   }
 
   // Cache estático de timestamps para URLs de imagem
   private static imageTimestamps: Record<string, number> = {};
-    // Método para formatar URL da imagem
+  // Método para formatar URL da imagem
   formatImageUrl(imagePath: string): string {
     if (!imagePath) return this.defaultImage;
 
     if (imagePath.startsWith('http')) return imagePath;
     if (imagePath.startsWith('data:')) return imagePath;
 
-    // Determinar a origem da API (URL do backend)
-    let apiOrigin = 'http://localhost:3001'; // URL padrão para desenvolvimento local
+    let apiOrigin = 'http://localhost:3001';
 
-    // Para ambientes onde o frontend está em um domínio diferente do backend
     if (document.location.hostname.includes('github')) {
       const origin = document.location.origin;
       apiOrigin = origin.replace(/-4200\./, '-3001.');
     }
 
-    // Corrigir o caminho para acessar diretamente os arquivos em /uploads/profiles
     if (imagePath.includes('profiles/')) {
-      // Verificar se o caminho já contém /uploads
       if (!imagePath.includes('/uploads/')) {
         imagePath = '/uploads/' + (imagePath.startsWith('/') ? imagePath.substring(1) : imagePath);
       }
     } else if (imagePath.includes('/assets/')) {
-      // Para imagens em assets, criar um caminho mais direto
       imagePath = '/uploads/assets/' + imagePath.split('/assets/')[1];
     } else if (!imagePath.startsWith('/')) {
       imagePath = '/' + imagePath;
@@ -102,7 +125,6 @@ export class ChatConversationComponent implements OnChanges, OnInit, OnDestroy {
 
     console.log(`[CHAT CONVERSATION] Formatando URL de imagem: ${imagePath} -> ${apiOrigin}${imagePath}`);
 
-    // Usar timestamp consistente por caminho para evitar ExpressionChangedAfterItHasBeenCheckedError
     if (!ChatConversationComponent.imageTimestamps[imagePath]) {
       ChatConversationComponent.imageTimestamps[imagePath] = Date.now();
     }
@@ -122,7 +144,7 @@ export class ChatConversationComponent implements OnChanges, OnInit, OnDestroy {
     this.chatService.sendMessage(this.selectedChat.id, message)
       .subscribe({
         next: (sentMessage) => {
-          this.messages.push(sentMessage);
+          console.log('[CHAT CONVERSATION] Mensagem enviada via HTTP, aguardando WebSocket para atualização.');
           this.sending = false;
         },
         error: (err) => {
@@ -132,38 +154,76 @@ export class ChatConversationComponent implements OnChanges, OnInit, OnDestroy {
         }
       });
   }
-  // Carrega as mensagens do chat selecionado
-  private loadMessages(): void {
-    if (!this.selectedChat) return;
+
+  // Carrega as mensagens do chat selecionado e começa a escutar por novas
+  private loadMessagesAndListen(): void {
+    if (!this.selectedChat) {
+      console.log('[CONVO] loadMessagesAndListen - No selected chat, returning.');
+      return;
+    }
+    console.log(`[CONVO] loadMessagesAndListen - START for chat ID ${this.selectedChat.id}`);
 
     this.loading = true;
     this.error = null;
 
     console.log(`[CHAT CONVERSATION] Carregando mensagens para o chat ID ${this.selectedChat.id}`);
-    console.log(`[CHAT CONVERSATION] Participantes do chat:`, this.selectedChat.participants);
-
-    // Verificar a consistência dos IDs dos participantes
     if (this.selectedChat.participants && this.selectedChat.participants.length > 0) {
-      this.selectedChat.participants.forEach(p => {
+      this.selectedChat.participants.forEach((p: ChatParticipant) => {
         console.log(`[CHAT CONVERSATION] Participante: ID=${p.id} (${typeof p.id}), Nome=${p.username}`);
       });
     }
-
-    // Verificar se o ID do usuário atual é consistente
     console.log(`[CHAT CONVERSATION] ID do usuário atual: ${this.currentUserId} (${typeof this.currentUserId})`);
 
     this.chatService.getMessages(this.selectedChat.id)
       .subscribe({
         next: (messages) => {
-          console.log(`[CHAT CONVERSATION] ${messages.length} mensagens carregadas para o chat ID ${this.selectedChat?.id}`);
+          console.log(`[CONVO] loadMessagesAndListen - ${messages.length} messages loaded via HTTP for chat ID ${this.selectedChat?.id}`);
           this.messages = messages;
           this.loading = false;
+
+          console.log('[CONVO] loadMessagesAndListen - Calling listenForNewMessages() after HTTP messages loaded.');
+          this.listenForNewMessages();
         },
         error: (err) => {
-          console.error('Erro ao carregar mensagens:', err);
+          console.error('[CONVO] loadMessagesAndListen - Error loading HTTP messages:', err);
           this.error = 'Falha ao carregar mensagens. Tente novamente.';
           this.loading = false;
         }
       });
+  }
+
+  private listenForNewMessages(): void {
+    console.log('[CONVO] listenForNewMessages - START.');
+    if (!this.selectedChat) {
+      console.log('[CONVO] listenForNewMessages - No selected chat, returning.');
+      return;
+    }
+    if (this.messageSubscription) {
+      console.log(`[CONVO] listenForNewMessages - Already have an active messageSubscription for chat ${this.selectedChat.id}. Returning.`);
+      return;
+    }
+
+    console.log(`[CONVO] listenForNewMessages - Attempting to subscribe to WebSocket for chat ID ${this.selectedChat.id}. Current messageSubscription state:`, this.messageSubscription);
+    this.messageSubscription = this.chatService.listenForNewMessages(this.selectedChat.id)
+      .subscribe({
+        next: (newMessage) => {
+          console.log('[CONVO] listenForNewMessages - New message received via WebSocket:', newMessage);
+          const existingMessageIndex = this.messages.findIndex(m => m.id === newMessage.id);
+          if (existingMessageIndex === -1) {
+            this.messages = [...this.messages, newMessage];
+          } else {
+            console.log('[CONVO] listenForNewMessages - Duplicate message ID received via WebSocket, ignoring or updating.');
+          }
+        },
+        error: (err) => {
+          console.error('[CONVO] listenForNewMessages - Error subscribing to WebSocket:', err);
+          this.error = 'Erro na conexão em tempo real. As mensagens podem não atualizar automaticamente.';
+          this.unsubscribeFromMessages();
+        },
+        complete: () => {
+          console.log(`[CONVO] listenForNewMessages - WebSocket observable COMPLETED for chat ID ${this.selectedChat?.id}`);
+        }
+      });
+    console.log(`[CONVO] listenForNewMessages - Subscribed to WebSocket. messageSubscription:`, this.messageSubscription);
   }
 }
