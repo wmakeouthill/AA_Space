@@ -1,14 +1,12 @@
 /* filepath: /workspaces/AA_Space/src/app/components/chat/chat-conversation/chat-conversation.component.css */
 .conversation-container {
-  display: block;
+  display: flex; /* Alterado para flex */
   flex-direction: column;
-  height: 100%px;
-  max-height:488px; /* Corrigido: removido o 'px' errado */
+  height: 100%;
   width: 100%;
   /* max-height removido para permitir que ocupe todo o espaço disponível */
   position: relative;
-  overflow-y: auto;
-  overflow: hidden; /* Alterado: não deve ter scroll no container principal */
+  overflow: hidden; /* Para garantir que os filhos não causem scroll indesejado no container */
 }
 
 .conversation-header {
@@ -39,18 +37,16 @@
   text-overflow: ellipsis;
 }
 
-.conversation-messages {
+:host app-chat-messages, /* Para o componente em si, se necessário */
+.conversation-messages { /* Para o elemento <app-chat-messages> se ele tiver essa classe ou se for um seletor genérico */
   flex: 1;
-  overflow-y: auto; /* Usar auto para scroll apenas quando necessário */
-  padding: 15px;
-  background-color: #f0f2f5;
-  display: block;
-  flex-direction: column; /* Garantindo que as mensagens fiquem em coluna */
-  /* height: 0 removido para evitar problemas de layout */
-  min-height: 0; /* Importante para permitir que o flex-child possa encolher */
+  overflow-y: auto;
+  overflow-x: hidden; /* Já estava no chat-messages.component.ts, mas bom ter aqui também */
+  display: block; /* Ou flex, dependendo do layout interno de app-chat-messages */
+  min-height: 0; /* Crucial para flex-children */
+  background-color: #f0f2f5; /* Mantendo a cor de fundo */
 }
 
-/* Estilos da barra de rolagem para Firefox */
 .conversation-messages {
   scrollbar-width: thin;
   scrollbar-color: #888 #f1f1f1;

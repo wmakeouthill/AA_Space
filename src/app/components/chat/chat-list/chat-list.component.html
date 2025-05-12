@@ -6,11 +6,10 @@
     <div *ngFor="let chat of chats" class="chat-item" [class.active]="selectedChatId === chat.id" (click)="selectChat(chat)">
       <div class="chat-avatar">
         <img [src]="getParticipantProfileImage(chat)" alt="Avatar">
-      </div>
-      <div class="chat-info">
-        <div class="chat-name">{{ chat.name || getParticipantName(chat) }}</div>
+      </div>      <div class="chat-info">
+        <div class="chat-name">{{ chat.isGroup ? chat.name : getParticipantName(chat) }}</div>
         <div class="chat-last-message" *ngIf="chat.lastMessage">
-          {{ chat.lastMessage.content | slice:0:30 }}{{ chat.lastMessage.content.length > 30 ? '...' : '' }}
+          {{ getLastMessagePreview(chat) }}
         </div>
       </div>
       <div class="chat-meta">

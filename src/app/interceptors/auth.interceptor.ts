@@ -8,7 +8,6 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
 
   // Log detalhado para cada requisição
   console.log(`[AUTH INTERCEPTOR] Método: ${req.method}, URL: ${req.url}`);
-  console.log(`[AUTH INTERCEPTOR] Headers antes:`, req.headers.keys());
 
   // Lista de rotas públicas que não precisam de autenticação
   const publicRoutes = [
@@ -17,43 +16,53 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
     { path: '/api/posts', method: 'GET' }  // Permitir acesso público aos posts
   ];
 
-  // Verifica se é uma rota pública estática
+  // Lista de rotas protegidas que sempre precisam de token
+  const protectedPaths = [
+    '/api/auth/admins',
+    '/api/auth/users',
+    '/api/auth/make-admin',
+    '/api/profile', // Protegendo explicitamente os endpoints de profile
+    '/api/chat'
+  ];
+
+  // Verifica se é uma rota pública que não precisa de token
   const isPublicRoute = publicRoutes.some(pattern => {
     const pathMatches = req.url.endsWith(pattern.path) ||
-                       (pattern.path === '/api/posts' && req.url.includes('/api/posts/'));
+                      (pattern.path === '/api/posts' && req.url.includes('/api/posts/'));
     return pathMatches && req.method === pattern.method;
   });
 
-  // Se for rota de validação de token, usa o token atual (se existir)
-  const isValidateTokenRoute = req.url.endsWith('/api/auth/validate');
+  // Verifica se é uma rota protegida que sempre precisa de token
+  const isProtectedRoute = protectedPaths.some(path => req.url.includes(path));
 
-  // Se for rota pública, não precisamos adicionar o token
-  if (isPublicRoute) {
-    console.log('[AUTH INTERCEPTOR] Rota pública, sem token:', req.url);
-    return next(req);
-  }
+  // Rota de perfil é especialmente importante para identificar
+  const isProfileRoute = req.url.includes('/api/profile');
 
-  // Para todas as outras rotas, adiciona o token se existir
+  // Always add the token if we have one
   if (token) {
-    console.log('[AUTH INTERCEPTOR] Adicionando token à requisição:', req.url);
+    console.log(`[AUTH INTERCEPTOR] Adicionando token à requisição: ${req.url}`);
+    const tokenStart = token.substring(0, 15); // Just log the beginning for security
+    console.log(`[AUTH INTERCEPTOR] Token: ${tokenStart}...`);
 
-    // Clone a requisição e adicione o cabeçalho de autorização
+    // For profile requests, log more details to debug
+    if (isProfileRoute) {
+      console.log(`[AUTH INTERCEPTOR] PROFILE REQUEST TOKEN: ${token}`);
+      console.log('[AUTH INTERCEPTOR] Headers antes:', req.headers.keys());
+    }
+
     const authReq = req.clone({
       headers: req.headers.set('Authorization', `Bearer ${token}`)
     });
-
-    // Log dos headers após adição do token
-    console.log('[AUTH INTERCEPTOR] Headers após adição do token:', authReq.headers.keys());
-    console.log(`[AUTH INTERCEPTOR] Token: ${token.substring(0, 10)}...`);
-
     return next(authReq);
   }
 
-  // Caso especial - requisição para validação de token sem ter um token
-  if (isValidateTokenRoute && !token) {
-    console.log('[AUTH INTERCEPTOR] Tentativa de validar token sem ter um token');
+  // If it's a protected route and we don't have a token, log and continue anyway
+  // The server will respond with 401 if needed
+  if (isProtectedRoute) {
+    console.warn(`[AUTH INTERCEPTOR] ATENÇÃO: Rota protegida sem token: ${req.url}`);
   }
 
+  // Se chegou aqui é porque não tem token e não é rota pública
   console.log('[AUTH INTERCEPTOR] Requisição sem token:', req.url);
   return next(req);
 };

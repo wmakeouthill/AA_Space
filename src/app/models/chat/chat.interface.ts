@@ -2,6 +2,7 @@ export interface Chat {
     id: number;
     name?: string;
     isGroup: boolean;
+    avatarPath?: string | null; // Adicionado para o avatar do grupo
     participants: ChatParticipant[];
     lastMessage?: Message;
     unreadCount?: number;

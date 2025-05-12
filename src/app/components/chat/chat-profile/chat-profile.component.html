@@ -1,32 +1,34 @@
 <div class="profile-container">
-  <div class="profile" (click)="toggleProfileOptions()">
+  <div class="profile">
     <div class="profile-image-container">
-      <img [src]="profileImage || defaultImage" alt="Imagem de perfil" class="profile-image" (click)="toggleEnlargedImage($event)">
-      <div class="profile-image-overlay" *ngIf="showProfileOptions">
-        <label for="file-upload" class="upload-label" (click)="$event.stopPropagation()">
-          Alterar
-          <input type="file" id="file-upload" style="display:none" accept="image/*" (change)="onFileSelected($event)">
-        </label>
-        <button class="remove-button" *ngIf="profileImage" (click)="removeProfileImage(); $event.stopPropagation()">Remover</button>
-        <button class="view-button" *ngIf="profileImage" (click)="toggleEnlargedImage($event)">Ampliar</button>
+      <img #clickableProfileImage [src]="profileImage || defaultImage"
+           alt="Imagem de perfil"
+           class="profile-image"
+            (click)="toggleProfileMenu($event)">
+
+      <div #avatarMenu class="avatar-menu" *ngIf="showProfileMenu" (click)="$event.stopPropagation()">
+        <button (click)="selectProfileImageFile()">Alterar Foto</button>
+        <button *ngIf="hasCustomProfileImage()" (click)="removeProfileImage()">Remover Foto</button>
+        <button *ngIf="hasCustomProfileImage()" (click)="viewEnlargedImage()">Ampliar Foto</button>
       </div>
+
+      <input type="file" #profileImageInput style="display:none" accept="image/*" (change)="onFileSelected($event)">
     </div>
     <div class="profile-info">
       <div class="profile-username">{{ username }}</div>
       <div class="profile-status">Online</div>
     </div>
   </div>
-  
+
   <div class="upload-indicator" *ngIf="isUploading">
     <div class="spinner"></div>
     <span>Carregando...</span>
   </div>
-  
+
   <div class="error-message" *ngIf="error">
     {{ error }}
   </div>
-  
-  <!-- Visualização ampliada da imagem de perfil -->
+
   <div class="enlarged-image-overlay" *ngIf="showEnlargedImage" (click)="toggleEnlargedImage($event)">
     <div class="enlarged-image-container">
       <img [src]="profileImage || defaultImage" alt="Imagem de perfil" class="enlarged-image">

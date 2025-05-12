@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { createConversation, getAvailableUsers, getConversationMessages, getUserConversations, sendMessage } from '../controllers/chat.controller';
+import { createConversation, getAvailableUsers, getConversationMessages, getUserConversations, sendMessage, uploadGroupChatAvatar, removeGroupChatAvatar } from '../controllers/chat.controller';
 import { authMiddleware } from '../middleware/auth.middleware';
 
 const router = Router();
@@ -13,5 +13,8 @@ router.post('/', createConversation);
 router.get('/users', getAvailableUsers);
 router.get('/:id/messages', getConversationMessages);
 router.post('/:id/messages', sendMessage);
+
+router.post('/:id/avatar', uploadGroupChatAvatar); // Route to upload group avatar
+router.delete('/:id/avatar', removeGroupChatAvatar); // Route to remove group avatar
 
 export default router;

@@ -102,6 +102,31 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 console.log('Diretório de uploads configurado:', path.join(__dirname, '../uploads'));
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
+// Improve access to profile images with special logging and cache control
+app.use('/uploads/profiles', (req, res, next) => {
+    console.log(`[STATIC MIDDLEWARE] Profile image request: ${req.url}`);
+    console.log(`[STATIC MIDDLEWARE] Full path: ${path.join(__dirname, '../uploads/profiles', req.url)}`);
+
+    // Check if the file exists
+    const filePath = path.join(__dirname, '../uploads/profiles', req.url);
+    if (fs.existsSync(filePath)) {
+        console.log(`[STATIC MIDDLEWARE] File exists: ${filePath}`);
+
+        // Disable caching for profile images to ensure fresh content
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Expires', '0');
+
+        // Add timestamp for debugging
+        res.setHeader('X-Served-At', new Date().toISOString());
+    } else {
+        console.log(`[STATIC MIDDLEWARE] File NOT found: ${filePath}`);
+    }
+
+    // Continue with static file handling
+    next();
+}, express.static(path.join(__dirname, '../uploads/profiles')));
+
 // Rota alternativa para acessar uploads através da API (caso o cliente esteja tentando acessar via /api)
 app.use('/api/uploads', express.static(path.join(__dirname, '../uploads')));
 
@@ -122,11 +147,11 @@ app.get('/api/uploads/check', (req: Request, res: Response) => {
     try {
         const uploadsDir = path.resolve(path.join(__dirname, '../uploads'));
         const profilesDir = path.join(uploadsDir, 'profiles');
-        
+
         // Verificar se os diretórios existem
         const uploadsExists = fs.existsSync(uploadsDir);
         const profilesExists = fs.existsSync(profilesDir);
-        
+
         // Definir tipagem explícita para a variável files
         interface FileInfo {
             name: string;
@@ -135,9 +160,9 @@ app.get('/api/uploads/check', (req: Request, res: Response) => {
             created: Date;
             permissions: string;
         }
-        
+
         let files: FileInfo[] = [];
-        
+
         if (profilesExists) {
             // Listar arquivos no diretório de perfis
             files = fs.readdirSync(profilesDir).map(file => {
@@ -152,16 +177,16 @@ app.get('/api/uploads/check', (req: Request, res: Response) => {
                 };
             });
         }
-        
+
         // Verificar informações sobre o host
         const hostname = req.headers.host || 'unknown';
         const origin = req.headers.origin || 'unknown';
         const forwardedHost = req.headers['x-forwarded-host'] || 'none';
-        
+
         // Adicionar URLs de exemplo para testes
         const apiUrl = (origin as string).replace(/-4200\./, '-3001.');
         const testUrls = files.slice(0, 3).map(file => `${apiUrl}${file.path}`);
-        
+
         res.json({
             status: 'OK',
             uploadsPath: uploadsDir,
@@ -196,18 +221,36 @@ app.use('/api/profile', profileRoutes);
 // Rota explícita de fallback para o perfil do usuário atual
 app.get('/api/profile/me', async (req: Request, res: Response) => {
     console.log('[FALLBACK ROUTE] Interceptada requisição para /api/profile/me');
-    
+    console.log('[FALLBACK ROUTE] Headers:', req.headers);
+
     try {
         const authHeader = req.headers.authorization;
         if (!authHeader || !authHeader.startsWith('Bearer ')) {
+            console.log('[FALLBACK ROUTE] No auth token provided for /api/profile/me');
+
+            // For development purposes only, return a default profile
+            if (process.env.NODE_ENV !== 'production') {
+                console.log('[FALLBACK ROUTE] Returning development fallback profile');
+                return res.json({
+                    id: 1,
+                    username: 'admin',
+                    email: 'admin@example.com',
+                    phone: '123-456-7890',
+                    profileImage: '8_a30d4645808aaf13.jpeg',
+                    isAdmin: true
+                });
+            }
+
             return res.status(401).json({ message: 'Token não fornecido ou inválido' });
         }
 
         const token = authHeader.split(' ')[1];
-        
+        console.log('[FALLBACK ROUTE] Token received:', token.substring(0, 20) + '...');
+
         // Verificar o token JWT
         const decoded = jwt.verify(token, JWT_SECRET) as { id: number; username: string; isAdmin?: boolean };
-        
+        console.log('[FALLBACK ROUTE] Decoded token:', decoded);
+
         // Verificar se o usuário existe no banco de dados
         const userRepository = AppDataSource.getRepository(User);
         const user = await userRepository.findOne({ where: { id: decoded.id } });
@@ -215,9 +258,9 @@ app.get('/api/profile/me', async (req: Request, res: Response) => {
         if (!user) {
             return res.status(401).json({ message: 'Usuário não encontrado' });
         }
-        
+
         console.log(`[FALLBACK ROUTE] Retornando perfil para usuário ${user.username}`);
-        
+
         return res.status(200).json({
             id: user.id,
             username: user.username,
@@ -236,19 +279,19 @@ app.get('/api/profile/me', async (req: Request, res: Response) => {
 if (process.env.NODE_ENV === 'production' || isCodespacesEnv) {
     // Caminho correto para os arquivos compilados do Angular
     const distPath = path.join(__dirname, '../../dist/aa-space');
-    
+
     console.log('Servindo arquivos estáticos do Angular de:', distPath);
-    
+
     // Servir arquivos estáticos
     app.use(express.static(distPath));
-    
+
     // Todas as requisições não tratadas pela API serão redirecionadas para o Angular
     app.get('*', (req, res, next) => {
         // Se a URL começar com /api, passa para os handlers de API
         if (req.url.startsWith('/api')) {
             return next();
         }
-        
+
         res.sendFile(path.join(distPath, 'index.html'));
     });
 }

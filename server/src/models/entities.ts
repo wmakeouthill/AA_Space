@@ -164,6 +164,9 @@ export class ChatConversation {
     @Column({ name: 'is_group', default: false })
     isGroup: boolean;
 
+    @Column({ type: 'varchar', length: 255, nullable: true })
+    avatarPath?: string | null;
+
     @Column({ name: 'created_by', nullable: true })
     createdById: number;
 

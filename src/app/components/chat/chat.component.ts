@@ -48,38 +48,35 @@ export class ChatComponent implements OnInit {
     const event = new CustomEvent('chat:created', { detail: chat });
     window.dispatchEvent(event);
   }
-  
+
   sending = false; // Variável para controlar o estado de envio
-  
-  onMessageSent(message: string): void {
+    onMessageSent(message: string): void {
     if (!this.selectedChat) return;
-    
+
     this.sending = true;
-    
+
     // Acessa o componente de conversa para processar o envio da mensagem
-    // Em uma aplicação real, isso seria feito através de um serviço
     const conversationComponent = document.querySelector('app-chat-conversation');
     if (conversationComponent && typeof (conversationComponent as any).onMessageSent === 'function') {
       (conversationComponent as any).onMessageSent(message);
+    } else {
+      // Caso o componente não esteja disponível, usar o serviço diretamente
+      this.chatService.sendMessage(this.selectedChat.id, message).subscribe({
+        next: (response) => {
+          console.log('[CHAT] Mensagem enviada com sucesso:', response);
+          this.sending = false;
+
+          // Emitir evento para atualizar a conversa
+          const event = new CustomEvent('chat:messageSent', {
+            detail: { chatId: this.selectedChat!.id, message: response }
+          });
+          window.dispatchEvent(event);
+        },
+        error: (error) => {
+          console.error('[CHAT] Erro ao enviar mensagem:', error);
+          this.sending = false;
+        }
+      });
     }
-    
-    // Em um caso real, você usaria um serviço:
-    /*
-    this.chatService.sendMessage(this.selectedChat.id, message).subscribe({
-      next: (response) => {
-        // Manipular o sucesso
-        this.sending = false;
-      },
-      error: (error) => {
-        console.error('Erro ao enviar mensagem:', error);
-        this.sending = false;
-      }
-    });
-    */
-    
-    // Simulação
-    setTimeout(() => {
-      this.sending = false;
-    }, 500);
   }
 }

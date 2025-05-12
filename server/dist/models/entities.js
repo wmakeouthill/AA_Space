@@ -238,6 +238,10 @@ __decorate([
     __metadata("design:type", Boolean)
 ], ChatConversation.prototype, "isGroup", void 0);
 __decorate([
+    (0, typeorm_1.Column)({ type: 'varchar', length: 255, nullable: true }),
+    __metadata("design:type", Object)
+], ChatConversation.prototype, "avatarPath", void 0);
+__decorate([
     (0, typeorm_1.Column)({ name: 'created_by', nullable: true }),
     __metadata("design:type", Number)
 ], ChatConversation.prototype, "createdById", void 0);

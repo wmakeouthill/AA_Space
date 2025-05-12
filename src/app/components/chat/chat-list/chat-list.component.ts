@@ -6,6 +6,8 @@ import { ChatService } from '../../../services/chat.service';
 declare global {
   interface WindowEventMap {
     'chat:created': CustomEvent<Chat>;
+    'profile:imageUpdated': CustomEvent<void>; // Existing event
+    'chat:avatarUpdated': CustomEvent<{ chatId: number; avatarPath: string | null; fullImageUrl?: string }>; // New event
   }
 }
 
@@ -29,50 +31,81 @@ export class ChatListComponent implements OnInit, OnDestroy {
 
   // Listener para evento de chat criado
   private chatCreatedHandler: (event: CustomEvent<Chat>) => void;
+  private chatAvatarUpdatedHandler: (event: CustomEvent<{ chatId: number; avatarPath: string | null }>) => void;
 
   constructor(private chatService: ChatService) {
     this.currentUserId = this.chatService.getCurrentUserId();
+    console.log(`[CHAT LIST] Constructor - ID do usuário atual: ${this.currentUserId}`);
+
+    // Certifica-se de que temos um ID válido
+    if (!this.currentUserId || this.currentUserId === 0) {
+      console.warn('[CHAT LIST] ID de usuário inválido no constructor, tentando obter novamente');
+      setTimeout(() => {
+        this.currentUserId = this.chatService.getCurrentUserId();
+        console.log(`[CHAT LIST] ID do usuário atualizado: ${this.currentUserId}`);
+      }, 500);
+    }
 
     // Configura o listener para atualizar a lista quando um chat for criado
     this.chatCreatedHandler = (event: CustomEvent<Chat>) => {
-      // Adicionando o novo chat no topo da lista
       const newChat = event.detail;
+      // Check if chat already exists to prevent duplicates, then add or update
+      const existingChatIndex = this.chats.findIndex(c => c.id === newChat.id);
+      if (existingChatIndex > -1) {
+        this.chats[existingChatIndex] = newChat;
+      } else {
+        this.chats.unshift(newChat); // Add to the beginning
+      }
+      // Sort chats to ensure correct order (e.g., by last message time or update time)
+      this.sortChats(); 
+      // If the new chat is selected, emit it
+      if (this.selectedChatId === newChat.id || !this.selectedChatId) {
+        this.selectChat(newChat);
+      }
+    };
 
-      // Buscamos todos os chats novamente para ter certeza da ordem correta
-      this.loadChats();
-
-      // Também podemos atualizar nossa lista local para resposta mais rápida ao usuário
-      // Se o chat já existir na lista, removemos ele
-      this.chats = this.chats.filter(chat => chat.id !== newChat.id);
-      // Adicionamos o novo chat no início da lista
-      this.chats.unshift(newChat);
-      // Selecionamos o novo chat
-      this.selectedChatId = newChat.id;
-
-      // Emitimos o evento de seleção
-      this.chatSelected.emit(newChat);
+    this.chatAvatarUpdatedHandler = (event: CustomEvent<{ chatId: number; avatarPath: string | null }>) => {
+      console.log('[CHAT LIST] Evento chat:avatarUpdated recebido:', event.detail);
+      const { chatId, avatarPath } = event.detail;
+      const chatToUpdate = this.chats.find(c => c.id === chatId);
+      if (chatToUpdate) {
+        chatToUpdate.avatarPath = avatarPath;
+        console.log(`[CHAT LIST] Avatar do chat ${chatId} atualizado para: ${avatarPath}`);
+        // If the updated chat is the currently selected one, re-emit it to update header
+        if (this.selectedChatId === chatId) {
+          this.chatSelected.emit({...chatToUpdate}); // Emit a new object instance to trigger change detection
+        }
+      }
     };
   }
 
   ngOnInit(): void {
+    // Verificar ID do usuário novamente (caso tenha sido carregado assincronamente)
+    if (!this.currentUserId || this.currentUserId === 0) {
+      this.currentUserId = this.chatService.getCurrentUserId();
+      console.log(`[CHAT LIST] ngOnInit - ID do usuário atual atualizado: ${this.currentUserId}`);
+    }
+
     this.loadChats();
 
     // Adiciona o listener de evento global para chat criado
     window.addEventListener('chat:created', this.chatCreatedHandler);
-    
+    window.addEventListener('chat:avatarUpdated', this.chatAvatarUpdatedHandler as EventListener);
+
     // Adiciona o listener para atualização de imagem de perfil usando o handler definido
     window.addEventListener('profile:imageUpdated', this.profileImageUpdatedHandler);
   }
 
   // Handler para evento de atualização de imagem de perfil
-  private profileImageUpdatedHandler = () => {
-    console.log('[CHAT LIST] Evento de atualização de imagem detectado, recarregando chats');
+  private profileImageUpdatedHandler = (event: Event) => { // Ensure type is generic Event or CustomEvent<void>
+    console.log('[CHAT LIST] Evento de atualização de imagem de perfil detectado, recarregando chats');
     this.loadChats(); // Recarrega todos os chats para atualizar imagens
   };
 
   ngOnDestroy(): void {
     // Limpa os listeners de evento quando o componente for destruído
     window.removeEventListener('chat:created', this.chatCreatedHandler);
+    window.removeEventListener('chat:avatarUpdated', this.chatAvatarUpdatedHandler as EventListener);
     window.removeEventListener('profile:imageUpdated', this.profileImageUpdatedHandler);
   }
 
@@ -84,7 +117,15 @@ export class ChatListComponent implements OnInit, OnDestroy {
     this.chatService.getChats().subscribe({
       next: (chats) => {
         this.chats = chats;
+        this.sortChats(); // Sort after loading
         this.loading = false;
+        // If there's a selected chat, ensure its data is up-to-date
+        if (this.selectedChatId) {
+          const currentSelected = this.chats.find(c => c.id === this.selectedChatId);
+          if (currentSelected) {
+            this.chatSelected.emit({...currentSelected});
+          }
+        }
       },
       error: (err) => {
         console.error('Erro ao carregar chats:', err);
@@ -94,10 +135,18 @@ export class ChatListComponent implements OnInit, OnDestroy {
     });
   }
 
+  private sortChats(): void {
+    this.chats.sort((a, b) => {
+      const dateA = a.lastMessage ? new Date(a.lastMessage.timestamp) : new Date(a.updatedAt);
+      const dateB = b.lastMessage ? new Date(b.lastMessage.timestamp) : new Date(b.updatedAt);
+      return dateB.getTime() - dateA.getTime();
+    });
+  }
+
   selectChat(chat: Chat): void {
     this.selectedChatId = chat.id;
     this.chatSelected.emit(chat);
-  }
+  }  
 
   getParticipantName(chat: Chat): string {
     // Se for um grupo, usa o nome do grupo
@@ -105,9 +154,26 @@ export class ChatListComponent implements OnInit, OnDestroy {
       return chat.name || 'Grupo sem nome';
     }
 
-    // Se for chat direto, mostra o nome do outro participante
-    const otherParticipant = chat.participants.find(p => p.id !== this.currentUserId);
-    return otherParticipant?.username || 'Usuário';
+    // Usar o serviço centralizado diretamente para obter o outro participante
+    // Sem passar por nosso método local que pode fazer formatações extras
+    const otherParticipant = this.chatService.getOtherParticipant(chat);
+
+    if (otherParticipant) {
+      console.log(`[CHAT LIST] Nome do participante: ${otherParticipant.username} (ID: ${otherParticipant.id})`);
+      return otherParticipant.username || 'Usuário';
+    }
+
+    // Fallback para caso o serviço não encontre o participante
+    if (chat.participants && chat.participants.length > 0) {
+      const userId = Number(this.currentUserId);
+      const participant = chat.participants.find(p => Number(p.id) !== userId);
+      if (participant) {
+        console.log(`[CHAT LIST] Nome do participante (fallback): ${participant.username}`);
+        return participant.username || 'Usuário';
+      }
+    }
+
+    return 'Usuário';
   }
 
   // Formata a última mensagem para exibição na lista
@@ -150,57 +216,31 @@ export class ChatListComponent implements OnInit, OnDestroy {
 
   // Cache estático de timestamps para URLs de imagem
   private static imageTimestamps: Record<string, number> = {};
-
-  // Método para formatar URL da imagem para funcionar no GitHub Codespaces
+  // Método para formatar URL da imagem
   formatImageUrl(imagePath: string): string {
-    if (!imagePath) return this.defaultImage;
-    
-    // Se o caminho já começar com http(s), não modificar
-    if (imagePath.startsWith('http')) return imagePath;
-    
-    // Se o caminho for uma imagem base64, não modificar
-    if (imagePath.startsWith('data:')) return imagePath;
-    
-    // Se não começar com barra, adicionar
-    if (!imagePath.startsWith('/')) {
-      imagePath = '/' + imagePath;
-    }
-    
-    // Modificar o caminho para imagens de assets para usar a pasta do servidor
-    if (imagePath.includes('/assets/')) {
-      imagePath = imagePath.replace('/assets/', '/uploads/assets/');
-    }
-    
-    // Usar sempre a porta 3001 para todas as imagens (backend)
-    const origin = document.location.origin;
-    const apiOrigin = origin.replace(/-4200\./, '-3001.');
-    
-    // Usar timestamp consistente por caminho para evitar ExpressionChangedAfterItHasBeenCheckedError
-    if (imagePath.includes('/uploads/profiles/')) {
-      // Se não temos um timestamp para este caminho, criar um
-      if (!ChatListComponent.imageTimestamps[imagePath]) {
-        ChatListComponent.imageTimestamps[imagePath] = Date.now();
-      }
-      
-      return `${apiOrigin}${imagePath}?t=${ChatListComponent.imageTimestamps[imagePath]}`;
-    }
-    
-    return `${apiOrigin}${imagePath}`;
+    // Usamos o método centralizado do ChatService para garantir consistência
+    // em toda a aplicação e evitar problemas de URLs
+    return this.chatService.formatImageUrl(imagePath);
   }
-
+  // Removido o método getOtherParticipant redundante, agora estamos usando
+  // diretamente chatService.getOtherParticipant em getParticipantName e getParticipantProfileImage  
   // Método para obter a imagem de perfil do participante
   getParticipantProfileImage(chat: Chat): string {
     if (chat.isGroup) {
-      return this.formatImageUrl(this.defaultGroupImage);
+      // Use group avatar if available, otherwise default group image
+      return chat.avatarPath 
+        ? this.chatService.formatImageUrl(chat.avatarPath) 
+        : this.chatService.formatImageUrl(this.defaultGroupImage);
     }
 
-    // Para chat direto, mostra a imagem do outro participante
-    const otherParticipant = chat.participants.find(p => p.id !== this.currentUserId);
-    
+    // For direct chats, get the other participant's image
+    const otherParticipant = this.chatService.getOtherParticipant(chat);
     if (otherParticipant?.profileImage) {
-      return this.formatImageUrl(otherParticipant.profileImage);
+      // The chatService.getOtherParticipant now ensures the profileImage is a fully qualified URL or a path that formatImageUrl can handle.
+      return this.chatService.formatImageUrl(otherParticipant.profileImage);
     }
     
-    return this.formatImageUrl(this.defaultImage);
+    // Fallback for direct chats if no image found for the other participant
+    return this.chatService.formatImageUrl(this.defaultImage);
   }
 }
