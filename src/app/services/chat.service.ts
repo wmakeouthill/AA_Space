@@ -368,38 +368,55 @@ export class ChatService {
     return '/assets/images/user.png';
   }
 
+  private determineApiOrigin(): string {
+    const currentOrigin = window.location.origin;
+    if (currentOrigin.includes('v3mrhcvc-4200.brs.devtunnels.ms')) {
+      return 'https://v3mrhcvc-3001.brs.devtunnels.ms';
+    } else if (currentOrigin.includes('.github.dev') || currentOrigin.includes('.github.io') || currentOrigin.includes('.app.github.dev')) {
+      return currentOrigin.replace(/-\d+(\.app\.github\.dev|\.github\.dev|\.github\.io)/, '-3001$1');
+    }
+    return 'http://localhost:3001';
+  }
+
   formatImageUrl(imagePath: string): string {
+    const apiOrigin = this.determineApiOrigin();
+
     if (!imagePath) {
-      return 'http://localhost:3001/uploads/assets/images/user.png';
+      return `${apiOrigin}/uploads/assets/images/user.png`;
     }
 
     if (imagePath.startsWith('http') || imagePath.startsWith('data:')) {
-      if (imagePath.includes('localhost:4200')) {
-        return imagePath.replace('localhost:4200', 'localhost:3001');
+      let updatedPath = imagePath;
+      if (updatedPath.includes('localhost:4200')) {
+        updatedPath = updatedPath.replace('localhost:4200', 'localhost:3001');
       }
-      return imagePath;
+      if (updatedPath.includes('v3mrhcvc-4200.brs.devtunnels.ms')) {
+        updatedPath = updatedPath.replace('v3mrhcvc-4200.brs.devtunnels.ms', 'v3mrhcvc-3001.brs.devtunnels.ms');
+      }
+      // Remove barras duplas, exceto em http:// ou https://
+      return updatedPath.replace(/([^:])\/\//g, '$1/');
     }
 
-    const apiOrigin = 'http://localhost:3001';
-    let finalPath = imagePath;
+    // Para caminhos relativos, constrói a URL completa usando o apiOrigin
+    const pathStartsWithSlash = imagePath.startsWith('/');
+    let fullPath = apiOrigin;
 
-    if (imagePath.includes('profiles/') || imagePath.includes('group-avatars/') || imagePath.includes('assets/')) {
+    if (pathStartsWithSlash) {
+      // Se já começa com /uploads/, não adiciona /uploads/ novamente
       if (imagePath.startsWith('/uploads/')) {
-        finalPath = imagePath;
+        fullPath += imagePath;
       } else {
-        let segment = '';
-        if (imagePath.includes('profiles/')) segment = imagePath.substring(imagePath.indexOf('profiles/'));
-        else if (imagePath.includes('group-avatars/')) segment = imagePath.substring(imagePath.indexOf('group-avatars/'));
-        else if (imagePath.includes('assets/')) segment = imagePath.substring(imagePath.indexOf('assets/'));
-
-        finalPath = `/uploads/${segment}`.replace(/\/+/g, '/');
+        // Se começa com / mas não /uploads/, adiciona /uploads/
+        fullPath += '/uploads' + imagePath;
       }
-    } else if (!finalPath.startsWith('/')) {
-      finalPath = '/uploads/' + finalPath;
+    } else {
+      // Se não começa com /, adiciona /uploads/ e o caminho
+      fullPath += '/uploads/' + imagePath;
     }
 
-    finalPath = finalPath.replace(/\/+/g, '/');
-    const cleanFinalPath = finalPath.startsWith('/') ? finalPath : '/' + finalPath;
-    return `${apiOrigin}${cleanFinalPath}`;
+    // Remove quaisquer barras duplas que possam ter sido formadas, especialmente após o host
+    // Ex: https://host//path -> https://host/path
+    // Ex: https://host/uploads//profiles -> https://host/uploads/profiles
+    return fullPath.replace(/([^:])\/\//g, '$1/').replace(/\/uploads\/uploads\//g, '/uploads/');
   }
 }

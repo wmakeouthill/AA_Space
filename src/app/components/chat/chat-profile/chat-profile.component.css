@@ -176,3 +176,121 @@
 .close-enlarged-button:hover {
   background-color: rgba(0, 0, 0, 0.7);
 }
+
+/* Tablet */
+@media (max-width: 768px) {
+  .profile-container {
+    padding: 12px;
+  }
+
+  .profile-image-container {
+    width: 45px;
+    height: 45px;
+    margin-right: 12px;
+  }
+
+  .avatar-menu {
+    top: 50px; /* Adjust based on new image size */
+    font-size: 13px;
+  }
+
+  .avatar-menu button {
+    padding: 7px 12px;
+    font-size: 13px;
+  }
+
+  .profile-username {
+    font-size: 0.95rem;
+  }
+
+  .profile-status {
+    font-size: 11px;
+  }
+
+  .enlarged-image {
+    max-height: 75vh;
+  }
+
+  .close-enlarged-button {
+    top: 8px;
+    right: 8px;
+    width: 28px;
+    height: 28px;
+    font-size: 18px;
+  }
+}
+
+/* Mobile */
+@media (max-width: 576px) {
+  .profile-container {
+    padding: 10px;
+    /* If this component is part of the stacked sidebar, ensure it doesn't take too much space */
+    /* May need to adjust height or how it's displayed if it's within chat-sidebar */
+  }
+
+  .profile {
+    padding: 3px;
+  }
+
+  .profile-image-container {
+    width: 40px;
+    height: 40px;
+    margin-right: 10px;
+    border-width: 1px;
+  }
+
+  .avatar-menu {
+    top: 45px; /* Adjust for smaller image */
+    left: -5px; /* Adjust if menu is too far to the right */
+    padding: 4px 0;
+  }
+
+  .avatar-menu button {
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+
+  /* .profile-info { */
+    /* Potentially hide status or make username shorter if space is very limited */
+  /* } */
+
+  .profile-username {
+    font-size: 0.9rem;
+  }
+
+  .profile-status {
+    font-size: 10px;
+    /* display: none; */ /* Option to hide status on very small screens */
+  }
+
+  .upload-indicator {
+    font-size: 12px;
+    margin-top: 8px;
+  }
+
+  .spinner {
+    width: 14px;
+    height: 14px;
+  }
+
+  /* .enlarged-image-overlay { */
+    /* Ensure it covers the screen fully */
+  /* } */
+
+  .enlarged-image-container {
+    max-width: 95%;
+    max-height: 85%;
+  }
+
+  .enlarged-image {
+    max-height: 70vh;
+  }
+
+  .close-enlarged-button {
+    top: 5px;
+    right: 5px;
+    width: 25px;
+    height: 25px;
+    font-size: 16px;
+  }
+}

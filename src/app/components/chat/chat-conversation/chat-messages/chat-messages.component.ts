@@ -16,7 +16,7 @@ import { Message } from '../../../../models/chat/chat.interface';
            class="message"
            [ngClass]="{'message-sent': message.senderId === currentUserId, 'message-received': message.senderId !== currentUserId}">
 
-        <!-- Avatar para mensagens ENVIADAS (mensagens do usuário atual, agora à esquerda) -->
+        <!-- Avatar para mensagens ENVIADAS (mensagens do usuário atual, agora à direita) -->
         <div class="message-avatar sender-avatar" *ngIf="message.senderId === currentUserId">
           <img [src]="getCurrentUserProfileImage()" alt="Seu avatar" class="avatar-image">
         </div>
@@ -31,7 +31,7 @@ import { Message } from '../../../../models/chat/chat.interface';
           </div>
         </div>
 
-        <!-- Avatar para mensagens RECEBIDAS (mensagens de outros usuários, agora à direita) -->
+        <!-- Avatar para mensagens RECEBIDAS (mensagens de outros usuários, agora à esquerda) -->
         <div class="message-avatar" *ngIf="message.senderId !== currentUserId">
           <img [src]="getProfileImage(message.senderId)" alt="Avatar" class="avatar-image">
         </div>
@@ -68,20 +68,20 @@ import { Message } from '../../../../models/chat/chat.interface';
       margin-bottom: 0;
     }
 
-    /* Styles for SENT messages (current user - now LEFT aligned) */
+    /* Styles for SENT messages (current user - now RIGHT aligned) */
     .message-sent {
+      align-self: flex-end; /* Align to the right */
+      flex-direction: row-reverse; /* Bubble first, then avatar */
+      margin-right: 10px;
+      margin-left: auto;
+    }
+
+    /* Styles for RECEIVED messages (other users - now LEFT aligned) */
+    .message-received {
       align-self: flex-start; /* Align to the left */
       flex-direction: row; /* Avatar first, then bubble */
       margin-left: 10px;
       margin-right: auto;
-    }
-
-    /* Styles for RECEIVED messages (other users - now RIGHT aligned) */
-    .message-received {
-      align-self: flex-end; /* Align to the right */
-      flex-direction: row; /* Bubble first, then avatar (due to HTML order) */
-      margin-right: 10px;
-      margin-left: auto;
     }
 
     .message-avatar {
@@ -112,21 +112,22 @@ import { Message } from '../../../../models/chat/chat.interface';
       box-sizing: border-box; /* Garante que padding/border não aumentem o tamanho */
     }
 
-    /* Bubble style for SENT messages (current user) - background color remains the same */
+    /* Bubble style for SENT messages (current user) */
     .message-sent .message-bubble {
-      background-color: #dcf8c6; /* Verde claro para mensagens enviadas */
-      border-bottom-left-radius: 4px; /* Adjusted for left alignment */
-      border-bottom-right-radius: 18px; /* Keep other corners rounded */
-      color: #000;
-    }
-
-    /* Bubble style for RECEIVED messages (other users) - background color remains the same */
-    .message-received .message-bubble {
-      background-color: white;
+      background-color: #dcf8c6; /* Verde claro para mensagens enviadas (original) */
       border-bottom-right-radius: 4px; /* Adjusted for right alignment */
       border-bottom-left-radius: 18px; /* Keep other corners rounded */
       color: #000;
-      box-shadow: 0 1px 0.5px rgba(0,0,0,0.13);
+      box-shadow: 0 1px 0.5px rgba(0,0,0,0.13); /* Sombra adicionada para consistência */
+    }
+
+    /* Bubble style for RECEIVED messages (other users) */
+    .message-received .message-bubble {
+      background-color: white; /* Branco para mensagens recebidas (original) */
+      border-bottom-left-radius: 4px; /* Adjusted for left alignment */
+      border-bottom-right-radius: 18px; /* Keep other corners rounded */
+      color: #000;
+      box-shadow: 0 1px 0.5px rgba(0,0,0,0.13); /* Sombra adicionada para corresponder ao estilo original de 'received' */
     }
 
     .message-sender {
@@ -163,12 +164,34 @@ export class ChatMessagesComponent implements AfterViewInit, OnChanges {
   @Input() currentUserId: number = 0;
   @Input() isGroup: boolean = false;
   @Input() participants: any[] = [];
-  @Input() defaultImage: string = '/assets/images/user.png';
+  @Input() defaultImage: string = '/assets/images/user.png'; // Relative path for default image
 
   // Timestamp fixo para o ciclo de renderização atual
   private readonly renderTimestamp: number = new Date().getTime();
+  private apiOrigin: string;
 
   @ViewChild('scrollContainer') scrollContainer!: ElementRef;
+
+  constructor() {
+    this.apiOrigin = this.determineApiOrigin();
+    // Ensure defaultImage is a full path if it's not already
+    if (this.defaultImage.startsWith('/assets/')) {
+      this.defaultImage = `${this.apiOrigin}${this.defaultImage}`;
+    }
+  }
+
+  private determineApiOrigin(): string {
+    const currentFrontendOrigin = window.location.origin;
+    if (currentFrontendOrigin.includes('v3mrhcvc-4200.brs.devtunnels.ms')) {
+      return 'https://v3mrhcvc-3001.brs.devtunnels.ms';
+    } else if (currentFrontendOrigin.includes('.github.dev') || currentFrontendOrigin.includes('.github.io') || currentFrontendOrigin.includes('.app.github.dev')) {
+      // Regex para substituir a porta do frontend pela porta do backend (3001)
+      // Exemplo: https://meu-codespace-12345.app.github.dev -> https://meu-codespace-3001.app.github.dev
+      return currentFrontendOrigin.replace(/-\d+(\.app\.github\.dev|\.github\.dev|\.github\.io)/, '-3001$1');
+    }
+    // Para localhost e outros casos
+    return 'http://localhost:3001';
+  }
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['messages']) {
@@ -240,31 +263,46 @@ export class ChatMessagesComponent implements AfterViewInit, OnChanges {
   }
 
   // Método para formatar URL da imagem
-  formatImageUrl(imagePath: string): string {
-    if (!imagePath) return this.defaultImage;
+  formatImageUrl(imagePath?: string): string { // Added optional '?' to imagePath
+    if (!imagePath) {
+      console.log(`[CHAT MESSAGES] Image path is undefined or empty, using default: ${this.defaultImage}`);
+      return this.defaultImage;
+    }
 
-    if (imagePath.startsWith('http')) return imagePath;
-    if (imagePath.startsWith('data:')) return imagePath;
+    if (imagePath.startsWith('http') || imagePath.startsWith('data:')) {
+      console.log(`[CHAT MESSAGES] Image path is already absolute: ${imagePath}`);
+      return imagePath;
+    }
 
-    // Sempre usar a URL do servidor de backend diretamente
-    let apiOrigin = 'http://localhost:3001'; // URL fixa para desenvolvimento local
+    let fullPath = this.apiOrigin;
 
-    // Corrigir o caminho para acessar diretamente os arquivos em /uploads/profiles
-    if (imagePath.includes('profiles/')) {
-      // Verificar se o caminho já contém /uploads
-      if (!imagePath.includes('/uploads/')) {
-        imagePath = '/uploads/' + (imagePath.startsWith('/') ? imagePath.substring(1) : imagePath);
+    // Normalizar o imagePath para garantir que não haja barras duplas ou ausentes
+    if (imagePath.startsWith('/uploads/')) {
+      fullPath += imagePath;
+    } else if (imagePath.startsWith('uploads/')) {
+      fullPath += '/' + imagePath;
+    } else if (imagePath.startsWith('/')) {
+      // Se começa com / mas não /uploads/, assume que é algo como /profiles/ ou /assets/
+      // e precisa do prefixo /uploads
+      if (imagePath.startsWith('/assets/')) {
+         // As imagens de assets são servidas diretamente pela aplicação Angular ou copiadas para /uploads/assets no backend
+         // Se for /assets/images/user.png, deve virar /uploads/assets/images/user.png no backend
+         fullPath += '/uploads' + imagePath;
+      } else {
+        fullPath += '/uploads' + imagePath;
       }
-    } else if (imagePath.includes('/assets/')) {
-      // Para imagens em assets, sempre usar a pasta de uploads/assets
-      if (!imagePath.includes('/uploads/')) {
-        imagePath = '/uploads/assets/' + imagePath.split('/assets/')[1];
-      }
-    } else if (!imagePath.startsWith('/')) {
-      imagePath = '/' + imagePath;    }
-    console.log(`[CHAT MESSAGES] Formatando URL de imagem: ${imagePath} -> ${apiOrigin}${imagePath}`);
+    } else {
+      // Caminho relativo como "profiles/image.jpg" ou "image.jpg" (assumindo que vai para profiles)
+      fullPath += '/uploads/profiles/' + imagePath;
+    }
 
-    // Adicionar timestamp para evitar cache, mas usar o timestamp fixo da renderização
-    return `${apiOrigin}${imagePath}?t=${this.renderTimestamp}`;
+    // Remover barras duplas, exceto em http:// ou https://
+    fullPath = fullPath.replace(/([^:])\/\//g, '$1/');
+    // Tratar caso específico de /uploads/uploads/
+    fullPath = fullPath.replace(/\/uploads\/uploads\//g, '/uploads/');
+
+    const finalUrl = `${fullPath}?t=${this.renderTimestamp}`;
+    console.log(`[CHAT MESSAGES] Formatando URL de imagem: Original: "${imagePath}", API Origin: "${this.apiOrigin}", Final: "${finalUrl}"`);
+    return finalUrl;
   }
 }

@@ -293,3 +293,193 @@
   background-color: #ccc;
   cursor: not-allowed;
 }
+
+/* Tablet */
+@media (max-width: 768px) {
+  .chat-new-container {
+    padding: 12px;
+    height: 55px; /* Adjust height */
+  }
+
+  .new-chat-button {
+    padding: 8px 12px;
+    height: 38px; /* Adjust button height */
+    font-size: 0.95rem;
+  }
+
+  .modal-content {
+    width: 450px;
+    max-width: 90%;
+    min-height: 380px;
+  }
+
+  .modal-header {
+    padding: 12px 18px;
+  }
+
+  .modal-header h2 {
+    font-size: 1.1rem;
+  }
+
+  .modal-body {
+    padding: 18px;
+  }
+
+  .chat-type-selector button {
+    padding: 9px;
+    font-size: 0.9rem;
+  }
+
+  .form-group input,
+  .search-input {
+    padding: 7px 9px;
+    font-size: 13px;
+  }
+
+  .user-list {
+    max-height: 250px; /* Adjust user list height */
+    min-height: 180px;
+  }
+
+  .user-item {
+    padding: 9px 10px;
+    min-height: 45px;
+  }
+
+  .user-avatar {
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    margin-right: 10px;
+  }
+
+  .user-name {
+    font-size: 0.95rem;
+  }
+
+  .user-email {
+    font-size: 11px;
+  }
+
+  .modal-footer {
+    padding: 12px 18px;
+  }
+
+  .cancel-button, .create-button {
+    padding: 7px 14px;
+    font-size: 0.9rem;
+  }
+}
+
+/* Mobile */
+@media (max-width: 576px) {
+  .chat-new-container {
+    padding: 10px;
+    height: 50px; /* Adjust height for mobile */
+  }
+
+  .new-chat-button {
+    padding: 8px 10px;
+    height: 36px; /* Adjust button height */
+    font-size: 0.9rem;
+  }
+
+  .modal-content {
+    width: 100%;
+    max-width: 95%;
+    min-height: auto; /* Allow content to define height more freely */
+    max-height: 85vh; /* Ensure it doesn't exceed viewport too much */
+    margin: 10px; /* Add some margin around the modal */
+  }
+
+  .modal-header {
+    padding: 10px 15px;
+  }
+
+  .modal-header h2 {
+    font-size: 1rem;
+  }
+
+  .close-button {
+    font-size: 1.3rem;
+  }
+
+  .modal-body {
+    padding: 15px;
+  }
+
+  .chat-type-selector button {
+    padding: 8px;
+    font-size: 0.85rem;
+    /* if stacked: */
+    /* border-bottom: 1px solid #e0e0e0; */
+  }
+  /* .chat-type-selector button:last-child { border-bottom: none; } */
+
+  .form-group label {
+    font-size: 0.9rem;
+  }
+
+  .form-group input,
+  .search-input {
+    padding: 8px 10px; /* Keep padding reasonable for touch */
+    font-size: 13px;
+  }
+
+  .selected-count {
+    font-size: 11px;
+    padding: 2px 6px;
+  }
+
+  .user-list {
+    max-height: 200px; /* Adjust user list height for mobile */
+    min-height: 150px;
+  }
+
+  .user-item {
+    padding: 8px 10px;
+    min-height: 42px;
+  }
+
+  .user-avatar {
+    width: 30px;
+    height: 30px;
+    min-width: 30px;
+    margin-right: 8px;
+  }
+
+  .user-name {
+    font-size: 0.9rem;
+  }
+
+  .user-email {
+    font-size: 11px;
+  }
+
+  .user-selected-indicator {
+    width: 20px;
+    height: 20px;
+    font-size: 10px;
+  }
+
+  .modal-footer {
+    padding: 10px 15px;
+    /* Stack buttons for better mobile UX */
+    flex-direction: column-reverse;
+  }
+
+  .cancel-button, .create-button {
+    width: 100%;
+    padding: 10px;
+    font-size: 0.9rem;
+    margin-bottom: 10px; /* Add space between stacked buttons */
+  }
+
+  .cancel-button {
+    margin-right: 0; /* Remove margin-right when stacked */
+  }
+
+  .create-button:last-child {
+    margin-bottom: 0; /* No margin for the last button */
+  }
+}

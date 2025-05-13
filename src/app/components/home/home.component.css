@@ -239,3 +239,102 @@
   text-align: center;
   font-size: 0.8rem;
 }
+
+/* Responsive Adjustments for Home Component */
+
+/* For tablets and smaller devices */
+@media (max-width: 768px) {
+  .home-container {
+    min-width: 0; /* Remove or significantly reduce min-width */
+    margin-top: 20px; /* Reduce top margin */
+    padding: 1rem; /* Adjust padding for smaller screens */
+  }
+
+  .welcome-banner h1 {
+    font-size: 1.5rem; /* Smaller font for banner title */
+  }
+
+  .welcome-banner p {
+    font-size: 0.9rem; /* Smaller font for banner paragraph */
+  }
+
+  .share-button {
+    padding: 0.8rem 1.5rem; /* Smaller padding for share button */
+    font-size: 0.95rem;
+  }
+
+  .post-card {
+    padding: 0.8rem; /* Smaller padding for post cards */
+  }
+
+  .post-title a {
+    font-size: 1rem; /* Smaller font for post titles */
+  }
+
+  .post-info {
+    font-size: 0.65rem; /* Smaller font for post info */
+  }
+
+  .post-preview {
+    font-size: 0.8rem; /* Smaller font for post preview */
+  }
+
+  .like-button {
+    padding: 0.25rem 0.6rem; /* Smaller like button */
+    font-size: 0.8rem;
+  }
+
+  .comments-link {
+    font-size: 0.75rem; /* Smaller comments link */
+  }
+}
+
+/* For mobile phones */
+@media (max-width: 576px) {
+  .home-container {
+    padding: 0.5rem; /* Further reduce padding for very small screens */
+    margin-top: 15px;
+  }
+
+  .welcome-banner {
+    padding: 1rem; /* Adjust banner padding */
+    margin-bottom: 0.5rem;
+    margin-top: 1rem; /* Adjust top margin */
+  }
+
+  .welcome-banner h1 {
+    font-size: 1.3rem;
+  }
+
+  .welcome-banner p {
+    font-size: 0.8rem;
+    margin-bottom: 0.8rem;
+  }
+
+  .share-button {
+    width: 100%; /* Make share button full width */
+    box-sizing: border-box; /* Include padding in width calculation */
+    padding: 0.9rem 1rem;
+    font-size: 0.9rem;
+  }
+
+  .posts-container {
+    gap: 0.8rem; /* Reduce gap between posts */
+    margin-top: 0.8rem;
+  }
+
+  /* Removed empty ruleset that was causing an error */
+
+  .post-footer {
+    flex-direction: column; /* Stack like button and comments link */
+    align-items: flex-start; /* Align items to the start */
+    gap: 0.5rem; /* Reduce gap when stacked */
+  }
+
+  .delete-button-small {
+    font-size: 0.8rem;
+  }
+  .delete-icon-small {
+    font-size: 0.8rem;
+  }
+}

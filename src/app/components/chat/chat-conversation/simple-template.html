@@ -5,9 +5,9 @@
     <h3>{{chatName}}</h3>
     <div *ngIf="isGroupChat">{{participantsCount}} participantes</div>
   </div>
-  
+
   <!-- Área de mensagens com rolagem - Com inline styles para forçar scroll -->
-  <div class="chat-messages forced-scroll" id="chat-messages-container" #messageContainer 
+  <div class="chat-messages forced-scroll" id="chat-messages-container" #messageContainer
        appMessagesScroll [messages]="messages" appForceScroll
        style="overflow-y: scroll !important; height: 400px !important; max-height: 400px !important; display: block !important;">
     <div *ngIf="messages.length === 0" class="no-messages">
@@ -18,7 +18,7 @@
       <div *ngFor="let i of [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]" class="test-item" style="height: 60px; background-color: #f9f9f9; margin: 10px 0; padding: 10px; border-radius: 8px;">
         Item de teste {{i}} para verificar scroll
       </div>
-      
+
       <ng-container *ngFor="let message of messages">
         <div [ngClass]="{'message-sent': isSentByMe(message), 'message-received': !isSentByMe(message)}">
           <!-- Conteúdo da mensagem -->
@@ -35,11 +35,11 @@
       <div class="message-end-spacer"></div>
     </div>
   </div>
-  
+
   <!-- Input fixo na parte inferior -->
   <div class="chat-input">
     <form (ngSubmit)="sendMessage()">
-      <input type="text" [(ngModel)]="newMessage" name="message" placeholder="Digite sua mensagem...">
+      <input #messageInput type="text" [(ngModel)]="newMessage" name="message" placeholder="Digite sua mensagem...">
       <button type="submit" [disabled]="!canSendMessage()">Enviar</button>
     </form>
   </div>

@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { ChatListComponent } from './chat-list/chat-list.component';
@@ -28,6 +28,9 @@ export class ChatComponent implements OnInit {
   selectedChat: Chat | null = null;
   isLoading = false;
   error: string | null = null;
+  sending = false; // to control the sending state
+
+  @ViewChild(ChatInputComponent) private chatInputComponent!: ChatInputComponent;
 
   constructor(private chatService: ChatService) {}
 
@@ -52,8 +55,6 @@ export class ChatComponent implements OnInit {
     window.dispatchEvent(event);
   }
 
-  sending = false; // to control the sending state
-
   onMessageSent(message: string): void {
     if (!this.selectedChat) {
       console.warn('[CHAT COMPONENT] onMessageSent - No selected chat, cannot send message.');
@@ -63,20 +64,19 @@ export class ChatComponent implements OnInit {
     console.log(`[CHAT COMPONENT] onMessageSent - Attempting to send message: "${message}" to chat ID: ${this.selectedChat.id}`);
     this.sending = true;
 
-    // It's generally preferred to call the service directly from the component that owns the action,
-    // rather than trying to access child component methods via document.querySelector.
-    // The ChatConversationComponent should independently listen for WebSocket updates for new messages.
     this.chatService.sendMessage(this.selectedChat.id, message).subscribe({
       next: (response) => {
         console.log('[CHAT COMPONENT] Message sent successfully via HTTP by ChatComponent:', response);
         this.sending = false;
-        // No need to dispatch 'chat:messageSent' here if ChatConversationComponent
-        // is already listening to WebSocket updates via ChatService.
-        // The UI update for the sender should also come via WebSocket to ensure consistency.
+        // Call focus on the child input component directly after send operation is complete and input is re-enabled
+        // The child's focusInputElement method has its own internal setTimeout(0)
+        this.chatInputComponent?.focusInputElement();
       },
       error: (error) => {
         console.error('[CHAT COMPONENT] Error sending message via ChatComponent:', error);
         this.sending = false;
+        // Also attempt to focus on error, to allow user to correct and resend
+        this.chatInputComponent?.focusInputElement();
       }
     });
   }

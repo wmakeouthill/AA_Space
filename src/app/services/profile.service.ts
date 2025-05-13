@@ -17,11 +17,10 @@ export interface UserProfile {
 @Injectable({
   providedIn: 'root'
 })
-export class ProfileService {  private apiUrl: string;
+export class ProfileService {
+  private apiUrl: string;
   private defaultImage = '/assets/images/user.png';
-  private readonly API_ORIGIN = window.location.hostname === 'localhost'
-      ? 'http://localhost:3001'
-      : window.location.origin.replace(/-4200\./, '-3001.');
+  private readonly API_ORIGIN = this.determineApiOrigin();
 
   constructor(
     private http: HttpClient,
@@ -29,101 +28,107 @@ export class ProfileService {  private apiUrl: string;
     private authService: AuthService
   ) {
     const baseApiUrl = (this.apiService as any).API_URL;
-    this.apiUrl = `${baseApiUrl}/profile`;
-    // console.log('ProfileService usando URL da API:', this.apiUrl);
-  }  formatImageUrl(imagePath: string | undefined): string {
-    // Handle base64 images
+    this.apiUrl = baseApiUrl;
+    console.log('ProfileService API_ORIGIN:', this.API_ORIGIN);
+    console.log('ProfileService apiUrl:', this.apiUrl);
+  }
+
+  private determineApiOrigin(): string {
+    const currentOrigin = window.location.origin;
+    if (currentOrigin.includes('v3mrhcvc-4200.brs.devtunnels.ms')) {
+      return 'https://v3mrhcvc-3001.brs.devtunnels.ms';
+    } else if (currentOrigin.includes('.github.dev') || currentOrigin.includes('.github.io') || currentOrigin.includes('.app.github.dev')) {
+      return currentOrigin.replace(/-\d+(\.app\.github\.dev|\.github\.dev|\.github\.io)/, '-3001$1');
+    }
+    return 'http://localhost:3001';
+  }
+
+  getFullImageUrl(imagePath?: string): string {
+    if (!imagePath) {
+      return this.API_ORIGIN + this.defaultImage;
+    }
+    if (imagePath.startsWith('http') || imagePath.startsWith('data:')) {
+      let correctedPath = imagePath;
+      if (correctedPath.includes('localhost:4200')) {
+        correctedPath = correctedPath.replace('localhost:4200', 'localhost:3001');
+      }
+      if (correctedPath.includes('v3mrhcvc-4200.brs.devtunnels.ms')) {
+        correctedPath = correctedPath.replace('v3mrhcvc-4200.brs.devtunnels.ms', 'v3mrhcvc-3001.brs.devtunnels.ms');
+      }
+      return correctedPath.replace(/([^:])\/\//g, '$1/');
+    }
+    const pathStartsWithSlash = imagePath.startsWith('/');
+    let fullPath = this.API_ORIGIN;
+    if (pathStartsWithSlash) {
+      fullPath += imagePath;
+    } else {
+      fullPath += '/' + imagePath;
+    }
+    return fullPath.replace(/([^:])\/\//g, '$1/');
+  }
+
+  formatImageUrl(imagePath: string | undefined): string {
     if (imagePath?.startsWith('data:')) {
       return imagePath;
     }
-
-    // Handle default image
     if (!imagePath || imagePath === this.defaultImage || imagePath === '') {
-      return `${this.API_ORIGIN}${this.defaultImage}`;
+      return this.getFullImageUrl(this.defaultImage);
     }
-
-    // Handle full URLs
     if (imagePath.startsWith('http')) {
       return imagePath.split('?')[0];
-    }    // Handle filename-only images (8_a30d4645808aaf13.jpeg) - pattern is userId_randomhash.extension
-    // These are just filenames without path, stored in uploads/profiles
+    }
     if (imagePath.includes('_') && !imagePath.includes('/')) {
-      // Add a timestamp to prevent caching
       const timestamp = Date.now();
       const path = `/uploads/profiles/${imagePath}`;
-      const url = `${this.API_ORIGIN}${path}?t=${timestamp}`;
-      // console.log(`[PROFILE SERVICE] Image filename detected, formatted URL with timestamp: ${url}`);
+      const url = this.getFullImageUrl(`${path}?t=${timestamp}`);
       return url;
     }
-
-    // Handle full paths that include 'profiles' directory
     if (imagePath.includes('profiles/')) {
-      // Make sure it starts with /uploads
       const path = imagePath.startsWith('/') ? imagePath : `/uploads/${imagePath}`;
-      // Add a timestamp to prevent caching
       const timestamp = Date.now();
-      const url = `${this.API_ORIGIN}${path}?t=${timestamp}`;
-      // console.log(`[PROFILE SERVICE] Profiles path detected, formatted URL with timestamp: ${url}`);
+      const url = this.getFullImageUrl(`${path}?t=${timestamp}`);
       return url;
     }
-
-    // Default case - ensure correct path prefix
     const path = imagePath.startsWith('/') ? imagePath : `/uploads/${imagePath}`;
-    // console.log(`[PROFILE SERVICE] Default case, formatted URL: ${this.API_ORIGIN}${path}`);
-    return `${this.API_ORIGIN}${path}`;
+    return this.getFullImageUrl(path);
   }
+
   isDefaultImage(imagePath: string | undefined): boolean {
     return !imagePath || imagePath === this.defaultImage || imagePath === '';
-  }  // Obter perfil do usuário atual
+  }
+
   getCurrentUserProfile(): Observable<UserProfile> {
     const token = this.authService.getToken();
-    // Authorization header should not be set if token is null or empty
     const headers: { [header: string]: string | string[]; } = {
       'Content-Type': 'application/json',
     };
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     } else {
-      // If there's no token, we can expect a 401, so no need to even make the call
-      // or handle it in a way that makes sense for your app (e.g., redirect to login)
-      // console.warn('[PROFILE SERVICE] No token found. User is likely not authenticated. Using fallback.');
-      // Option 1: Return an observable that errors, to be caught by the component
-      // return throwError(() => new Error('Not authenticated'));
-      // Option 2: Return fallback, but be aware this hides the auth issue
-      return this.getFallbackUserProfile(); // Current behavior
+      console.warn('[ProfileService] getCurrentUserProfile: No token found, returning fallback profile.');
+      return this.getFallbackUserProfile();
     }
 
-    // console.log('[PROFILE SERVICE] Getting current user profile with token:', token ? token.substring(0, 15) + '...' : 'none');
-
-    return this.http.get<UserProfile>(`${this.apiUrl}/me`, { headers }).pipe(
+    return this.http.get<UserProfile>(`${this.apiUrl.replace('/api', '/api/profile')}/me`, { headers }).pipe(
       map(profile => {
-        // console.log('[PROFILE SERVICE] Profile received from server:', profile);
-
-        // Format the profile image URL if exists
         if (profile?.profileImage) {
           profile.profileImage = this.formatImageUrl(profile.profileImage);
-          // console.log('[PROFILE SERVICE] Formatted profile image URL:', profile.profileImage);
+        } else {
+          profile.profileImage = this.formatImageUrl(this.defaultImage);
         }
-
         return profile;
       }),
       catchError(error => {
-        // console.error('[PROFILE SERVICE] Error fetching profile, status: ' + (error.status !== undefined ? error.status : 'unknown'), error);
+        console.error('[ProfileService] getCurrentUserProfile: Error fetching profile', error);
         if (error.status === 401) {
-          // console.warn('[PROFILE SERVICE] Unauthorized (401) fetching profile. Token might be invalid or expired. Using fallback.');
-          // Optionally, trigger a logout or a specific auth error event
-          // this.authService.logout(); // Example: force logout
-          // window.dispatchEvent(new CustomEvent('auth:expired'));
+          console.warn('[ProfileService] getCurrentUserProfile: Unauthorized, returning fallback.');
         }
-        // Fallback to mock data, but be mindful this can hide auth issues.
         return this.getFallbackUserProfile();
       })
     );
   }
 
-  // Método auxiliar para obter perfil de fallback (mock)
   private getFallbackUserProfile(): Observable<UserProfile> {
-    // console.log('[PROFILE SERVICE] Usando perfil de fallback');
     const username = this.authService.getUsername() || 'Usuário';
     const id = parseInt(this.authService.getUserId() || '1');
 
@@ -135,22 +140,16 @@ export class ProfileService {  private apiUrl: string;
     });
   }
 
-  // Obter perfil de um usuário por ID
   getUserProfile(userId: number): Observable<UserProfile> {
     const headers = { 'Content-Type': 'application/json' };
     return this.http.get<UserProfile>(`${this.apiUrl}/${userId}`, { headers, withCredentials: true }).pipe(
       map(profile => ({
         ...profile,
-        // Garantir que a URL da imagem está formatada corretamente
         profileImage: this.formatImageUrl(profile.profileImage)
       })),
       catchError(error => {
-        // console.error('Erro ao buscar perfil de usuário:', error);
-
         if (error.status === 401) {
-          // Em desenvolvimento, tentar continuar com dados mockados
           if (this.apiService && (this.apiService as any).isDevMode) {
-            // console.log('[PROFILE SERVICE] Usando dados mockados para ID:', userId);
             return of({
               id: userId,
               username: `Usuário ${userId}`,
@@ -158,104 +157,89 @@ export class ProfileService {  private apiUrl: string;
               isAdmin: userId === 1
             });
           }
-
-          // Em produção, disparar evento de autenticação expirada
           const authError = new CustomEvent('auth:error', { detail: { message: 'Sessão expirada' } });
           window.dispatchEvent(authError);
           return throwError(() => new Error('Sua sessão expirou. Por favor, faça login novamente.'));
         }
-
         return throwError(() => new Error('Falha ao buscar perfil de usuário.'));
       })
     );
   }
 
-  // Upload de imagem de perfil com compressão
   uploadProfileImage(imageFile: File): Observable<{ profileImage: string }> {
     const headers = { 'Content-Type': 'application/json' };
-    // console.log('[PROFILE SERVICE] Iniciando upload de imagem...');
     return this.compressImage(imageFile).pipe(
-      map(compressedImage => ({ profileImage: compressedImage })),
-      mergeMap(imageData => this.http.post<any>(
-        `${this.apiUrl}/image`,
-        imageData,
-        { headers, withCredentials: true }
-      )),
-      map(response => ({
-        ...response,
-        profileImage: this.formatImageUrl(response.profileImage)
-      })),
+      mergeMap(base64Image => {
+        return this.http.post<any>(
+          `${this.apiUrl.replace('/api', '/api/profile')}/image`,
+          { profileImage: base64Image },
+          { headers, withCredentials: true }
+        );
+      }),
+      map(response => {
+        console.log('[ProfileService] uploadProfileImage response:', response);
+        return {
+          ...response,
+          profileImage: this.formatImageUrl(response.profileImage || response.filePath)
+        };
+      }),
       catchError(error => {
-        // console.error('Erro ao upload de imagem de perfil:', error);
-
         if (error.status === 401) {
-          // Disparar evento de autenticação expirada para que o usuário faça login novamente
           const authError = new CustomEvent('auth:error', { detail: { message: 'Sessão expirada' } });
           window.dispatchEvent(authError);
           return throwError(() => new Error('Sua sessão expirou. Por favor, faça login novamente.'));
         }
-
         return throwError(() => new Error('Falha ao fazer upload da imagem de perfil.'));
       })
     );
   }
 
-  // Upload de imagem de perfil diretamente como base64
   uploadProfileImageBase64(base64Image: string): Observable<{ profileImage: string }> {
     const headers = { 'Content-Type': 'application/json' };
-    // console.log('[PROFILE SERVICE] Iniciando upload de imagem base64, URL:', `${this.apiUrl}/image`);
-
     return this.http.post<any>(
-      `${this.apiUrl}/image`,
+      `${this.apiUrl.replace('/api', '/api/profile')}/image`,
       { profileImage: base64Image },
       { headers, withCredentials: true }
     ).pipe(
-      map(response => ({
-        ...response,
-        profileImage: this.formatImageUrl(response.profileImage)
-      })),
+      map(response => {
+        console.log('[ProfileService] uploadProfileImageBase64 response:', response);
+        return {
+          ...response,
+          profileImage: this.formatImageUrl(response.profileImage || response.filePath)
+        };
+      }),
       catchError(error => {
-        // console.error('Erro ao upload de imagem de perfil base64:', error);
-
         if (error.status === 401) {
-          // Disparar evento de autenticação expirada para que o usuário faça login novamente
           const authError = new CustomEvent('auth:error', { detail: { message: 'Sessão expirada' } });
           window.dispatchEvent(authError);
           return throwError(() => new Error('Sua sessão expirou. Por favor, faça login novamente.'));
         }
-
         return throwError(() => new Error('Falha ao fazer upload da imagem de perfil.'));
       })
     );
   }
 
-  // Remover imagem de perfil
   removeProfileImage(): Observable<any> {
     const headers = { 'Content-Type': 'application/json' };
-    return this.http.delete(`${this.apiUrl}/image`, {
+    return this.http.delete(`${this.apiUrl.replace('/api', '/api/profile')}/image`, {
       headers,
       withCredentials: true
     }).pipe(
       map(response => ({
         ...response,
-        profileImage: this.formatImageUrl(undefined) // Retorna a URL da imagem padrão
+        profileImage: this.formatImageUrl(undefined)
       })),
       catchError(error => {
-        // console.error('Erro ao remover imagem de perfil:', error);
-
         if (error.status === 401) {
-          // Disparar evento de autenticação expirada para que o usuário faça login novamente
           const authError = new CustomEvent('auth:error', { detail: { message: 'Sessão expirada' } });
           window.dispatchEvent(authError);
           return throwError(() => new Error('Sua sessão expirou. Por favor, faça login novamente.'));
         }
-
         return throwError(() => new Error('Falha ao remover imagem de perfil.'));
       })
     );
   }
 
-  // Método para comprimir imagem
   private compressImage(file: File): Observable<string> {
     return new Observable<string>(observer => {
       const reader = new FileReader();
@@ -268,14 +252,12 @@ export class ProfileService {  private apiUrl: string;
         img.onload = () => {
           const canvas = document.createElement('canvas');
 
-          // Definir dimensões máximas desejadas
           const MAX_WIDTH = 800;
           const MAX_HEIGHT = 800;
 
           let width = img.width;
           let height = img.height;
 
-          // Redimensionar mantendo proporção
           if (width > height) {
             if (width > MAX_WIDTH) {
               height *= MAX_WIDTH / width;
@@ -295,7 +277,6 @@ export class ProfileService {  private apiUrl: string;
           if (ctx) {
             ctx.drawImage(img, 0, 0, width, height);
 
-            // Comprimir para JPEG com qualidade 0.7
             const quality = 0.7;
             const base64Image = canvas.toDataURL('image/jpeg', quality);
 
@@ -315,5 +296,16 @@ export class ProfileService {  private apiUrl: string;
         observer.error(new Error('Erro ao ler arquivo de imagem'));
       };
     });
+  }
+
+  private base64ToBlob(base64: string, type = 'application/octet-stream') {
+    const base64WithoutPrefix = base64.startsWith('data:') ? base64.split(',')[1] : base64;
+    const byteCharacters = atob(base64WithoutPrefix);
+    const byteNumbers = new Array(byteCharacters.length);
+    for (let i = 0; i < byteCharacters.length; i++) {
+      byteNumbers[i] = byteCharacters.charCodeAt(i);
+    }
+    const byteArray = new Uint8Array(byteNumbers);
+    return new Blob([byteArray], { type });
   }
 }

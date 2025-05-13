@@ -165,3 +165,118 @@ h1 {
   background-color: #ccc;
   cursor: not-allowed;
 }
+
+/* Responsive Adjustments for Welcome Dialog Component */
+
+@media (max-width: 768px) {
+  .welcome-dialog {
+    padding: 1.5rem;
+    max-width: 450px; /* Slightly adjust max-width if needed */
+    width: 85%;
+  }
+
+  h1 {
+    font-size: 1.8rem;
+  }
+
+  .subtitle {
+    font-size: 0.9rem;
+    margin: 0.8rem 0 1.5rem;
+  }
+
+  .option-button {
+    padding: 0.8rem;
+    gap: 0.8rem;
+  }
+
+  .icon {
+    font-size: 1.8rem;
+    min-width: 40px;
+    height: 40px;
+  }
+
+  .option-content h3 {
+    font-size: 1rem;
+  }
+
+  .option-content p {
+    font-size: 0.85rem;
+  }
+
+  .nickname-form h2 {
+    font-size: 1.5rem;
+  }
+
+  .nickname-input {
+    padding: 0.7rem;
+    font-size: 0.95rem;
+  }
+
+  .back-button,
+  .submit-button {
+    padding: 0.7rem 1.2rem;
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 576px) {
+  .welcome-dialog {
+    width: 75%;
+    padding: 1rem;
+    border-radius: 8px; /* Optional: reduce border-radius for smaller screens */
+    max-height: 90vh; /* Prevent dialog from being too tall */
+    overflow-y: auto; /* Add scroll if content overflows */
+  }
+
+  h1 {
+    font-size: 1.5rem;
+  }
+
+  .subtitle {
+    font-size: 0.8rem;
+    margin: 0.5rem 0 1rem;
+  }
+
+  .options-container {
+    gap: 0.8rem;
+  }
+
+  .option-button {
+    padding: 0.6rem;
+    flex-direction: column; /* Stack icon and text on very small screens */
+    align-items: center; /* Center items when stacked */
+    text-align: center;
+  }
+
+  .option-content {
+    text-align: center;
+  }
+
+  .icon {
+    font-size: 1.5rem;
+    margin-bottom: 0.3rem; /* Space between icon and text when stacked */
+  }
+
+  .nickname-form h2 {
+    font-size: 1.3rem;
+  }
+
+  .nickname-input {
+    font-size: 0.9rem;
+  }
+
+  .form-actions {
+    flex-direction: column; /* Stack action buttons */
+    gap: 0.8rem;
+  }
+
+  .back-button,
+  .submit-button {
+    width: 100%; /* Make buttons full width */
+    padding: 0.8rem;
+  }
+
+  .error-message {
+    font-size: 0.8rem;
+  }
+}

@@ -236,3 +236,135 @@
 }
 
 /* Classe has-scroll não é mais necessária pois o layout flexbox já cuida da rolagem */
+
+/* Tablet */
+@media (max-width: 768px) {
+  .conversation-header {
+    padding: 8px 12px;
+    flex: 0 0 50px; /* Slightly reduce header height */
+  }
+
+  .conversation-info h3 {
+    font-size: 1rem;
+  }
+
+  .participants {
+    font-size: 0.75rem;
+  }
+
+  .message {
+    max-width: 80%;
+  }
+
+  .message-avatar {
+    width: 28px;
+    height: 28px;
+  }
+
+  .message-bubble {
+    padding: 8px 10px;
+  }
+
+  .message-input-container {
+    flex: 0 0 60px; /* Reduce input area height */
+    padding: 8px 12px;
+  }
+
+  .message-input-wrapper {
+    height: 44px; /* Adjust wrapper height */
+    padding: 5px 12px;
+  }
+
+  .message-input {
+    max-height: 34px;
+    min-height: 34px;
+    font-size: 13px;
+  }
+
+  .send-button {
+    padding: 6px 12px;
+    height: 34px;
+    min-width: 70px;
+    font-size: 0.9rem;
+  }
+}
+
+/* Mobile */
+@media (max-width: 576px) {
+  .conversation-header {
+    padding: 8px 10px;
+    flex: 0 0 45px; /* Further reduce header height */
+  }
+
+  .conversation-info h3 {
+    font-size: 0.9rem;
+  }
+
+  .participants {
+    font-size: 0.7rem;
+  }
+
+  .message {
+    max-width: 90%; /* Allow messages to take more width */
+    min-width: 80px;
+    margin-bottom: 12px;
+  }
+
+  .message-avatar {
+    width: 24px;
+    height: 24px;
+    margin: 0 6px;
+  }
+
+  .message-bubble {
+    padding: 7px 9px;
+    border-radius: 15px;
+  }
+
+  .message-sent .message-bubble {
+    border-bottom-right-radius: 3px;
+  }
+
+  .message-received .message-bubble {
+    border-bottom-left-radius: 3px;
+  }
+
+  .message-sender {
+    font-size: 0.75rem;
+  }
+
+  .message-content {
+    font-size: 0.85rem; /* Adjust content font size */
+  }
+
+  .message-time {
+    font-size: 0.65rem;
+  }
+
+  .message-input-container {
+    flex: 0 0 55px; /* Adjust input area height */
+    padding: 6px 10px;
+  }
+
+  .message-input-wrapper {
+    height: 40px; /* Adjust wrapper height */
+    padding: 4px 10px;
+  }
+
+  .message-input {
+    max-height: 30px;
+    min-height: 30px;
+    font-size: 13px;
+  }
+
+  .send-button {
+    padding: 5px 10px;
+    height: 30px;
+    min-width: 60px;
+    font-size: 0.85rem;
+  }
+
+  .send-button i { /* If using icons in button */
+    font-size: 1rem;
+  }
+}

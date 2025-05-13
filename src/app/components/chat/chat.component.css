@@ -53,3 +53,60 @@ app-chat-input {
   z-index: 10;
   position: relative;
 }
+
+/* Tablet */
+@media (max-width: 768px) {
+  .chat-container {
+    height: calc(90vh - 60px); /* Adjust height for tablets */
+    max-height: calc(90vh - 60px);
+    margin-top: 60px; /* Adjust for potentially smaller header */
+  }
+
+  .chat-sidebar {
+    width: 30%;
+    min-width: 200px; /* Reduce min-width */
+    max-width: 280px; /* Reduce max-width */
+  }
+
+  .chat-main {
+    min-width: 0; /* Allow main chat to shrink more */
+  }
+}
+
+/* Mobile */
+@media (max-width: 576px) {
+  .chat-container {
+    flex-direction: column;
+    height: calc(100vh - 50px); /* Full height minus potential smaller header */
+    max-height: calc(100vh - 50px);
+    margin-top: 50px;
+  }
+
+  .chat-sidebar {
+    width: 100%;
+    max-width: 100%;
+    min-width: 100%;
+    height: 200px; /* Fixed height for user list, or could be auto */
+    max-height: 30vh; /* Max height for sidebar on mobile */
+    border-right: none;
+    border-bottom: 1px solid #e0e0e0; /* Separator when stacked */
+    overflow-y: auto; /* Allow scrolling if content exceeds height */
+  }
+
+  .chat-main {
+    width: 100%;
+    flex: 1; /* Allow chat-main to take available vertical space */
+    min-height: 0; /* Important for flex children that are also flex containers */
+  }
+
+  app-chat-conversation {
+    /* Ensure it acts as a proper flex container for its internal content on mobile */
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  app-chat-input {
+    min-height: 60px; /* Slightly reduce input height */
+  }
+}

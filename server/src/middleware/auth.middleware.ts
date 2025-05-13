@@ -20,19 +20,20 @@ export const authMiddleware = async (req: AuthRequest, res: Response, next: Next
         console.log(`[AUTH MIDDLEWARE V3] Token Bearer detectado.`);
         try {
             const decoded = jwt.verify(token, JWT_SECRET) as { id: number; username: string; isAdmin?: boolean };
-            console.log(`[AUTH MIDDLEWARE V3] Token decodificado: UserID ${decoded.id}, Username ${decoded.username}`);
+            console.log(`[AUTH MIDDLEWARE V3] Token decodificado: UserID ${decoded.id}, Username ${decoded.username}, isAdmin (from token): ${decoded.isAdmin}`); // Log isAdmin from token
 
             const userRepository = AppDataSource.getRepository(User);
             // Garante que estamos buscando pelo ID correto e que o usuário existe
             const userFromDb = await userRepository.findOne({ where: { id: decoded.id } });
 
             if (userFromDb) {
+                console.log(`[AUTH MIDDLEWARE V3] User from DB: ID ${userFromDb.id}, Username ${userFromDb.username}, isAdmin (from DB): ${userFromDb.isAdmin}`); // Log isAdmin from DB
                 req.user = {
                     id: userFromDb.id,
                     username: userFromDb.username,
                     isAdmin: userFromDb.isAdmin ?? false // Garante que isAdmin tenha um valor booleano
                 };
-                console.log(`[AUTH MIDDLEWARE V3] Usuário autenticado via token: ${req.user.username} (ID: ${req.user.id})`);
+                console.log(`[AUTH MIDDLEWARE V3] Usuário autenticado via token: ${req.user.username} (ID: ${req.user.id}), Final isAdmin: ${req.user.isAdmin}`);
             } else {
                 console.warn(`[AUTH MIDDLEWARE V3] Token válido, mas usuário ID ${decoded.id} não encontrado no banco de dados.`);
                 // req.user permanece undefined, acesso não autenticado

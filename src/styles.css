@@ -45,3 +45,59 @@
 .like-button.liked:hover {
   background-color: #ffe0e0;
 }
+
+/* Responsive Global Styles */
+
+/* Common breakpoints */
+/* Small devices (landscape phones, 576px and up) */
+@media (min-width: 576px) {
+  /* Add styles for small devices if needed */
+}
+
+/* Medium devices (tablets, 768px and up) */
+@media (min-width: 768px) {
+  /* Add styles for medium devices if needed */
+}
+
+/* Large devices (desktops, 992px and up) */
+@media (min-width: 992px) {
+  /* Add styles for large devices if needed */
+}
+
+/* Extra large devices (large desktops, 1200px and up) */
+@media (min-width: 1200px) {
+  /* Add styles for extra large devices if needed */
+}
+
+/* Styles for smaller screens (mobile-first approach can be beneficial) */
+/* Example: Adjust body font size for very small screens */
+@media (max-width: 575.98px) {
+  body {
+    font-size: 14px; /* Slightly smaller base font for small mobiles */
+  }
+
+  .container, .container-fluid {
+    padding-left: 10px;
+    padding-right: 10px; /* Reduce padding on small screens */
+  }
+}
+
+/* General responsive image handling */
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Helper class to hide elements on mobile */
+.mobile-hidden {
+  @media (max-width: 767.98px) {
+    display: none !important;
+  }
+}
+
+/* Helper class to hide elements on desktop */
+.desktop-hidden {
+  @media (min-width: 768px) {
+    display: none !important;
+  }
+}

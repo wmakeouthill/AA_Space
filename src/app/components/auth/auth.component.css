@@ -109,3 +109,92 @@ input:focus {
 .toggle-button:hover {
   text-decoration: underline;
 }
+
+/* Responsive Adjustments for Auth Component */
+
+@media (max-width: 768px) {
+  .auth-container {
+    margin-top: 40px;
+    min-width: 0; /* Allow container to shrink */
+  }
+
+  .auth-card {
+    padding: 2rem;
+    min-height: auto; /* Allow card height to adjust */
+  }
+
+  h1 {
+    font-size: 1.8rem;
+  }
+
+  .auth-subtitle {
+    font-size: 0.9rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .auth-form {
+    gap: 1.2rem;
+  }
+
+  input {
+    padding: 2.5%; /* Adjust padding slightly for touch */
+    font-size: 0.95rem;
+  }
+
+  .submit-button {
+    padding: 0.8rem;
+    font-size: 0.95rem;
+  }
+}
+
+@media (max-width: 576px) {
+  .auth-container {
+    margin-top: 100px;
+    padding: 1%; /* Reduce padding for very small screens */
+  }
+
+  .auth-card {
+    padding: 1.5rem;
+    box-shadow: none; /* Optional: remove shadow on very small screens for a flatter look */
+    border-radius: 0; /* Optional: full width card */
+  }
+
+  h1 {
+    font-size: 1.6rem;
+  }
+
+  .auth-subtitle {
+    font-size: 0.85rem;
+    margin-bottom: 1rem;
+  }
+
+  .auth-form {
+    gap: 1rem;
+  }
+
+  label {
+    font-size: 0.9rem;
+  }
+
+  input {
+    font-size: 0.9rem;
+  }
+
+  .submit-button {
+    padding: 0.9rem;
+    font-size: 0.9rem;
+  }
+
+  .error-message {
+    font-size: 0.8rem;
+  }
+
+  .auth-footer {
+    font-size: 0.9rem;
+    margin-top: 1.5rem;
+  }
+
+  .toggle-button {
+    font-size: 0.9rem;
+  }
+}

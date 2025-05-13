@@ -3,11 +3,17 @@
     <div class="logo">
       <a routerLink="/">AA Space</a>
     </div>
-    <nav class="nav-links">
-      <a routerLink="/" class="nav-link">Início</a>
-      <a routerLink="/create" class="nav-link">Compartilhar História</a>
-      <a *ngIf="isLoggedIn" routerLink="/chat" class="nav-link">Chat</a>
-      <a *ngIf="isAdmin" routerLink="/admin" class="nav-link admin-link">Administração</a>
+
+    <!-- Hamburger Icon -->
+    <button class="menu-toggle" (click)="toggleMenu()">
+      <span>&#9776;</span> <!-- Unicode for hamburger icon -->
+    </button>
+
+    <nav class="nav-links" [class.active]="isMenuOpen">
+      <a routerLink="/" class="nav-link" (click)="isMenuOpen = false">Início</a>
+      <a routerLink="/create" class="nav-link" (click)="isMenuOpen = false">Compartilhar História</a>
+      <a *ngIf="isLoggedIn" routerLink="/chat" class="nav-link" (click)="isMenuOpen = false">Chat</a>
+      <a *ngIf="isAdmin" routerLink="/admin" class="nav-link admin-link" (click)="isMenuOpen = false">Administração</a>
     </nav>
     <div class="auth-buttons">
       <ng-container *ngIf="!isLoggedIn">

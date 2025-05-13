@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { Component, EventEmitter, Input, Output, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
@@ -8,25 +8,27 @@ import { FormsModule } from '@angular/forms';
   imports: [CommonModule, FormsModule],
   template: `
     <div class="input-container">
-      <form (ngSubmit)="onSendMessage()" class="chat-input-form">
-        <div class="input-wrapper">
-          <textarea
-            class="message-input"
-            [(ngModel)]="newMessage"
-            name="newMessage"
-            placeholder="Digite uma mensagem..."
-            rows="1"
-            (keydown.enter)="$event.preventDefault(); onSendMessage();"
-            [disabled]="disabled"
-          ></textarea>
-          <button
-            type="submit"
-            class="send-button"
-            [disabled]="!newMessage.trim() || disabled">
-            Enviar
-          </button>
-        </div>
-      </form>
+      <div class="input-wrapper">
+        <textarea
+          #messageInput
+          class="message-input"
+          [(ngModel)]="newMessage"
+          name="newMessage"
+          placeholder="Digite uma mensagem..."
+          rows="1"
+          (keydown.enter)="handleEnterKey($event)"
+          [disabled]="disabled"
+          tabindex="0">
+        </textarea>
+        <button
+          type="button"
+          class="send-button"
+          (click)="onSendMessage()"
+          [disabled]="!newMessage.trim() || disabled"
+          tabindex="-1">
+          Enviar
+        </button>
+      </div>
     </div>
   `,
   styles: [`
@@ -39,12 +41,6 @@ import { FormsModule } from '@angular/forms';
       z-index: 10;
       width: 100%;
       min-height: 70px; /* Ensure container has a minimum height */
-    }
-
-    .chat-input-form {
-      margin: 0; /* Remove default form margins */
-      width: 100%;
-      display: flex; /* Make form a flex container for input-wrapper */
     }
 
     .input-wrapper {
@@ -111,15 +107,67 @@ import { FormsModule } from '@angular/forms';
 export class ChatInputComponent {
   @Input() disabled: boolean = false;
   @Output() sendMessage = new EventEmitter<string>();
+  @ViewChild('messageInput') messageInputElementRef!: ElementRef<HTMLTextAreaElement>;
 
   newMessage: string = '';
 
+  handleEnterKey(event: any): void { // Mantido como 'any' para compatibilidade com a ferramenta
+    if (!event.shiftKey) {
+      event.preventDefault();
+      this.onSendMessage();
+    }
+  }
+
   onSendMessage(): void {
-    if (!this.newMessage.trim() || this.disabled) {
+    const messageText = this.newMessage.trim();
+
+    if (this.disabled) {
       return;
     }
 
-    this.sendMessage.emit(this.newMessage);
+    if (!messageText) {
+      // Se a mensagem estiver vazia, focar localmente.
+      this.focusInputElement();
+      return;
+    }
+
+    // Se a mensagem for válida, emitir e limpar.
+    // O componente pai cuidará de refocar.
+    this.sendMessage.emit(messageText);
     this.newMessage = '';
+    // NÃO chamar focusInputElement() aqui para envio real de mensagem.
+  }
+
+  public focusInputElement(): void {
+    // Usar setTimeout para garantir que a tentativa de foco ocorra após atualizações pendentes de renderização,
+    // especialmente depois que o componente pai puder ter reabilitado este input.
+    setTimeout(() => {
+      const textareaEl = this.messageInputElementRef?.nativeElement;
+      if (textareaEl) {
+        if (textareaEl.disabled) {
+          console.warn('[ChatInputComponent] Textarea está desabilitado quando focusInputElement foi chamado. Abortando foco.');
+          return;
+        }
+        console.log('[ChatInputComponent] Tentando focar o elemento textarea:', textareaEl);
+        textareaEl.focus();
+
+        const activeEl = document.activeElement;
+        if (activeEl === textareaEl) {
+          console.log('[ChatInputComponent] Textarea focado com sucesso.');
+        } else {
+          let activeElementDescription = 'null';
+          if (activeEl) {
+            activeElementDescription = `${activeEl.tagName}`;
+            if (activeEl.id) activeElementDescription += `#${activeEl.id}`;
+            if (activeEl.className && typeof activeEl.className === 'string') {
+                 activeElementDescription += `.${activeEl.className.split(' ').filter(c => c).join('.')}`;
+            }
+          }
+          console.warn(`[ChatInputComponent] Falha ao focar textarea. Elemento ativo é: ${activeElementDescription}. Objeto do elemento ativo:`, activeEl);
+        }
+      } else {
+        console.warn('[ChatInputComponent] Referência do elemento textarea não encontrada para focar.');
+      }
+    }, 0); // Delay mínimo
   }
 }

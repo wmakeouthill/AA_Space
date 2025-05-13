@@ -261,3 +261,128 @@ textarea:focus {
   background-color: #f8f9fa;
   border-radius: 4px;
 }
+
+/* Responsive Adjustments for Post Component */
+
+/* For tablets and smaller devices */
+@media (max-width: 768px) {
+  .post-container {
+    min-width: 0; /* Allow container to shrink */
+    margin-top: 20px;
+    padding: 1rem;
+  }
+
+  .post-content {
+    padding: 1.5rem;
+  }
+
+  .post-header h1 {
+    font-size: 1.5rem; /* Smaller post title */
+  }
+
+  .post-meta {
+    font-size: 0.8rem; /* Smaller meta text */
+    flex-wrap: wrap; /* Allow meta items to wrap if needed */
+  }
+
+  .comment-form textarea {
+    padding: 0.8rem;
+    min-height: 80px;
+  }
+
+  .form-controls {
+    flex-direction: column; /* Stack form controls */
+    align-items: flex-start;
+    gap: 0.8rem;
+  }
+
+  .form-controls button {
+    width: 100%; /* Make button full width in stacked layout */
+    padding: 0.7rem 1rem;
+  }
+
+  .comment {
+    padding: 1rem 0;
+  }
+
+  .comment-header {
+    flex-direction: column; /* Stack comment header items */
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .comment-header .like-button.small {
+    margin-top: 0.5rem; /* Add some space when stacked */
+  }
+}
+
+/* For mobile phones */
+@media (max-width: 576px) {
+  .post-container {
+    padding: 0.5rem;
+    margin-top: 25px;
+  }
+
+  .post-content {
+    padding: 1rem;
+  }
+
+  .post-header h1 {
+    font-size: 1.3rem;
+  }
+
+  .post-meta {
+    font-size: 0.75rem;
+  }
+
+  .post-meta .delete-button-small {
+    font-size: 0.8rem; /* Adjust delete button size in meta */
+  }
+  .post-meta .delete-icon-small {
+    font-size: 0.8rem;
+  }
+
+  .post-body {
+    font-size: 0.9rem; /* Adjust body font for readability */
+    margin-bottom: 1.5rem;
+  }
+
+  .post-actions {
+    padding: 0.8rem 0;
+    margin: 0.8rem 0;
+  }
+
+  .like-button {
+    padding: 0.3rem 0.8rem;
+    font-size: 0.9rem;
+  }
+
+  .comments-section h2 {
+    font-size: 1.2rem;
+    margin-bottom: 1rem;
+  }
+
+  .comment-form textarea {
+    font-size: 0.9rem;
+  }
+
+  .form-controls button {
+    font-size: 0.9rem;
+  }
+
+  .comment-author {
+    font-size: 0.9rem;
+  }
+  .comment-date {
+    font-size: 0.75rem;
+  }
+  .comment-content {
+    font-size: 0.9rem;
+  }
+  .comment-header .delete-button-small {
+    font-size: 0.8rem;
+  }
+  .comment-header .delete-icon-small {
+    font-size: 0.8rem;
+  }
+}

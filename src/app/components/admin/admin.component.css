@@ -378,7 +378,166 @@ input:focus {
 
   .users-sidebar {
     width: 100%;
-    max-height: 500px;
-    margin-top: 2rem;
+    max-height: 500px; /* Adjusted from 400px to 500px */
+    margin-top: 2rem; /* Added to ensure spacing when stacked */
+    position: static; /* Remove sticky positioning on mobile */
+    order: -1; /* Move sidebar to the top on mobile */
+  }
+
+  .admin-container {
+    padding: 1.5rem;
+  }
+
+  h1 {
+    font-size: 1.8rem;
+    margin-bottom: 1.5rem;
+  }
+
+  h2 {
+    font-size: 1.4rem;
+    margin-bottom: 0.8rem;
+  }
+
+  h3 {
+    font-size: 1.1rem;
+  }
+
+  .admin-section {
+    padding: 1rem;
+  }
+
+  .form-group label {
+    font-size: 0.9rem;
+  }
+
+  input,
+  .search-input {
+    padding: 0.7rem;
+    font-size: 0.9rem;
+  }
+
+  .submit-button {
+    padding: 0.7rem 1.2rem;
+    font-size: 0.9rem;
+  }
+
+  .user-item {
+    padding: 1rem;
+  }
+
+  .user-name {
+    font-size: 0.95rem;
+  }
+
+  .contact-info {
+    font-size: 0.85rem;
+  }
+}
+
+/* Mobile-specific adjustments (complementing 768px breakpoint) */
+@media (max-width: 576px) {
+  .admin-page-container {
+    margin: 1.5rem auto;
+    padding: 0 0.5rem;
+    gap: 15px;
+  }
+
+  .users-sidebar {
+    max-height: 400px; /* Further reduce max-height for small mobiles */
+    margin-top: 1rem;
+  }
+
+  .sidebar-header {
+    padding: 1rem 1rem 0.8rem;
+  }
+
+  .sidebar-header h2 {
+    font-size: 1.1rem;
+    margin-bottom: 0.8rem;
+  }
+
+  .search-input {
+    padding: 0.6rem 0.8rem;
+    font-size: 0.85rem;
+  }
+
+  .users-list-container {
+    padding: 0.5rem;
+  }
+
+  .user-item {
+    padding: 0.8rem;
+  }
+
+  .user-name {
+    font-size: 0.9rem;
+  }
+
+  .user-badges {
+    gap: 0.3rem;
+  }
+
+  .user-badge {
+    font-size: 0.65rem;
+    padding: 2px 5px;
+  }
+
+  .contact-detail {
+    gap: 0.4rem;
+    padding: 0.2rem 0;
+  }
+
+  .contact-icon {
+    font-size: 0.8rem;
+  }
+
+  .contact-value,
+  .no-contact-info {
+    font-size: 0.8rem;
+  }
+
+  .admin-container {
+    padding: 1rem;
+  }
+
+  h1 {
+    font-size: 1.5rem;
+  }
+
+  h2 {
+    font-size: 1.2rem;
+  }
+
+  h3 {
+    font-size: 1rem;
+  }
+
+  .admin-section {
+    padding: 0.8rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .form-group {
+    margin-bottom: 1rem;
+  }
+
+  .submit-button {
+    width: 100%; /* Make buttons full-width for better mobile UX */
+    padding: 0.8rem;
+  }
+
+  .admin-item {
+    padding: 0.7rem 0.8rem;
+    flex-direction: column; /* Stack admin name and badges/buttons */
+    align-items: flex-start;
+  }
+
+  .admin-username {
+    margin-bottom: 0.3rem;
+  }
+
+  .admin-badge {
+    margin-left: 0;
+    margin-top: 0.3rem;
   }
 }

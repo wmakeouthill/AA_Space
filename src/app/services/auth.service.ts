@@ -28,20 +28,20 @@ export class AuthService {
 
   private ensureToken(): string | null {
     const token = localStorage.getItem(this.TOKEN_KEY);
-    if (!token) {
-      // Se não há token no localStorage, verificar se é o ambiente de desenvolvimento
-      const isDev = true; // Em produção, isso viria do environment.ts
-      if (isDev) {
-        // Usar um token de desenvolvimento para testes que é válido por 24h
-        const devToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiaXNBZG1pbiI6dHJ1ZSwidXNlcm5hbWUiOiJhZG1pbiJ9.IAvPms6QrZR8lNnXo9d7J-traL-k2YgcLZFgQQe2HVc";
-        localStorage.setItem(this.TOKEN_KEY, devToken);
-        // Também definir outras informações necessárias
-        localStorage.setItem(this.USERNAME_KEY, 'admin');
-        localStorage.setItem(this.USER_ID_KEY, '1');
-        localStorage.setItem(this.IS_ADMIN_KEY, 'true');
-        return devToken;
-      }
-    }
+    // if (!token) {
+    //   // Se não há token no localStorage, verificar se é o ambiente de desenvolvimento
+    //   const isDev = true; // Em produção, isso viria do environment.ts
+    //   if (isDev) {
+    //     // Usar um token de desenvolvimento para testes que é válido por 24h
+    //     const devToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiaXNBZG1pbiI6dHJ1ZSwidXNlcm5hbWUiOiJhZG1pbiJ9.IAvPms6QrZR8lNnXo9d7J-traL-k2YgcLZFgQQe2HVc";
+    //     localStorage.setItem(this.TOKEN_KEY, devToken);
+    //     // Também definir outras informações necessárias
+    //     localStorage.setItem(this.USERNAME_KEY, 'admin');
+    //     localStorage.setItem(this.USER_ID_KEY, '1');
+    //     localStorage.setItem(this.IS_ADMIN_KEY, 'true');
+    //     return devToken;
+    //   }
+    // }
     return token;
   }
 
@@ -265,39 +265,39 @@ export class AuthService {
 
   // Método para forçar o armazenamento de admin para o usuário 'admin'
   forceAdminForUserAdmin() {
-    const username = this.getUsername();
-    if (username === 'admin') {
-      // console.log('Forçando status de administrador para usuário admin');
-      localStorage.setItem(this.IS_ADMIN_KEY, 'true');
+    // const username = this.getUsername();
+    // if (username === 'admin') {
+    //   // console.log('Forçando status de administrador para usuário admin');
+    //   localStorage.setItem(this.IS_ADMIN_KEY, 'true');
 
-      // Tentar atualizar o token também
-      const token = this.getToken();
-      if (token) {
-        try {
-          const tokenParts = token.split('.');
-          if (tokenParts.length === 3) {
-            // Decodificar o payload atual
-            const payload = JSON.parse(atob(tokenParts[1]));
+    //   // Tentar atualizar o token também
+    //   const token = this.getToken();
+    //   if (token) {
+    //     try {
+    //       const tokenParts = token.split('.');
+    //       if (tokenParts.length === 3) {
+    //         // Decodificar o payload atual
+    //         const payload = JSON.parse(atob(tokenParts[1]));
 
-            // Adicionar ou atualizar a propriedade isAdmin
-            payload.isAdmin = true;
+    //         // Adicionar ou atualizar a propriedade isAdmin
+    //         payload.isAdmin = true;
 
-            // Criar um novo token com o payload modificado
-            const updatedPayload = btoa(JSON.stringify(payload)).replace(/=/g, '')
-                                   .replace(/\+/g, '-')
-                                   .replace(/\//g, '_');
+    //         // Criar um novo token com o payload modificado
+    //         const updatedPayload = btoa(JSON.stringify(payload)).replace(/=/g, '')
+    //                                .replace(/\+/g, '-')
+    //                                .replace(/\//g, '_');
 
-            // Criar token atualizado (apenas para uso local, não é uma assinatura válida)
-            const updatedToken = `${tokenParts[0]}.${updatedPayload}.${tokenParts[2]}`;
+    //         // Criar token atualizado (apenas para uso local, não é uma assinatura válida)
+    //         const updatedToken = `${tokenParts[0]}.${updatedPayload}.${tokenParts[2]}`;
 
-            // Armazenar o token atualizado
-            localStorage.setItem(this.TOKEN_KEY, updatedToken);
-            // console.log('Token atualizado com informação de admin');
-          }
-        } catch (e) {
-          // console.error('Erro ao processar token:', e);
-        }
-      }
-    }
+    //         // Armazenar o token atualizado
+    //         localStorage.setItem(this.TOKEN_KEY, updatedToken);
+    //         // console.log('Token atualizado com informação de admin');
+    //       }
+    //     } catch (e) {
+    //       // console.error('Erro ao processar token:', e);
+    //     }
+    //   }
+    // }
   }
 }

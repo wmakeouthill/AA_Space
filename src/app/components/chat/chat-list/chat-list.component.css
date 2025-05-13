@@ -131,3 +131,101 @@
   color: #999;
   font-style: italic;
 }
+
+/* Tablet */
+@media (max-width: 768px) {
+  .chat-list-header {
+    padding: 8px 12px;
+    height: 45px; /* Adjust header height */
+  }
+
+  .chat-list {
+    max-height: calc(100% - 45px);
+  }
+
+  .chat-item {
+    padding: 10px 12px;
+    height: 68px; /* Adjust item height */
+  }
+
+  .chat-avatar {
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    margin-right: 10px;
+  }
+
+  .chat-name {
+    font-size: 0.95rem;
+  }
+
+  .chat-last-message {
+    font-size: 0.8rem;
+  }
+
+  .chat-meta {
+    min-width: 50px;
+    width: 50px;
+  }
+
+  .chat-time {
+    font-size: 0.7rem;
+  }
+}
+
+/* Mobile */
+@media (max-width: 576px) {
+  .chat-list-container {
+    /* When sidebar is stacked, ensure it can scroll if many users */
+    overflow-y: auto;
+  }
+
+  .chat-list-header {
+    padding: 8px 10px;
+    height: 40px; /* Further reduce header height */
+    /* Consider hiding or simplifying the header content on mobile if needed */
+  }
+
+  .chat-list {
+    /* Allow chat list to take full height in its container when stacked */
+    max-height: none;
+  }
+
+  .chat-item {
+    padding: 8px 10px;
+    height: 60px; /* Adjust item height for mobile */
+  }
+
+  .chat-avatar {
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    margin-right: 8px;
+  }
+
+  .chat-name {
+    font-size: 0.9rem;
+  }
+
+  .chat-last-message {
+    font-size: 0.75rem;
+  }
+
+  .chat-meta {
+    min-width: 40px;
+    width: 40px;
+    align-items: center; /* Center badge if time is hidden */
+  }
+
+  .chat-time {
+    font-size: 0.65rem;
+    /* Optionally hide time to save space, show only unread badge */
+    /* display: none; */
+  }
+
+  .chat-unread .badge {
+    width: 7px;
+    height: 7px;
+    /* margin-top: 4px; */ /* Adjust if time is hidden */
+  }
+}

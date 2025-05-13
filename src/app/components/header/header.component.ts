@@ -17,6 +17,7 @@ export class HeaderComponent implements OnInit, OnDestroy {
   isAdmin = false;
   username: string | null = null;
   guestNickname: string | null = null;
+  isMenuOpen = false; // Property to toggle menu
   private authSubscription: Subscription | null = null;
   private guestNicknameSubscription: Subscription | null = null;
 
@@ -32,16 +33,16 @@ export class HeaderComponent implements OnInit, OnDestroy {
       isAuthenticated => {
         this.isLoggedIn = isAuthenticated;
         this.username = this.authService.getUsername();
-        
+
         // Força a definição manual de admin caso o usuário seja 'admin'
         if (this.username === 'admin') {
           localStorage.setItem('is_admin', 'true');
           console.log('Definindo manualmente o usuário admin como administrador');
         }
-        
+
         this.isAdmin = this.authService.isAdmin();
         console.log('Status de administrador:', this.isAdmin);
-        
+
         // Se estiver autenticado, o nickname de convidado não deve ser exibido
         if (isAuthenticated) {
           this.guestNickname = null;
@@ -68,6 +69,10 @@ export class HeaderComponent implements OnInit, OnDestroy {
     if (this.guestNicknameSubscription) {
       this.guestNicknameSubscription.unsubscribe();
     }
+  }
+
+  toggleMenu() { // Method to toggle menu
+    this.isMenuOpen = !this.isMenuOpen;
   }
 
   login() {

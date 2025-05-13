@@ -108,6 +108,9 @@ export function broadcastMessageToChat(chatId: string, message: any) {
 const allowedOrigins = [
     'http://localhost:4200',
     'https://localhost:4200',
+    'https://v3mrhcvc-4200.brs.devtunnels.ms', // Trailing slash removed
+    'http://localhost:3001',
+    'https://v3mrhcvc-3001.brs.devtunnels.ms', // Trailing slash removed
     /^https:\/\/.*\.app\.github\.dev$/,  // Permite qualquer subdomínio do GitHub Codespaces
     /^https:\/\/.*\.github\.dev$/,       // Formato alternativo de domínio Codespaces
     /^https:\/\/.*\.github\.io$/         // Suporte para GitHub Pages
@@ -116,21 +119,32 @@ const allowedOrigins = [
 // Configuração CORS detalhada
 const corsOptions = {
     origin: function (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) {
+        console.log(`[CORS] Server: Received origin for check: ${origin}`);
         if (!origin) {
+            console.log('[CORS] Server: No origin received, allowing by default (e.g., curl, server-to-server).');
             return callback(null, true);
         }
 
         const isAllowed = allowedOrigins.some(allowedOrigin => {
+            let match = false;
             if (allowedOrigin instanceof RegExp) {
-                return allowedOrigin.test(origin);
+                match = allowedOrigin.test(origin);
+            } else {
+                match = (allowedOrigin === origin);
             }
-            return allowedOrigin === origin;
+            // Para depuração mais detalhada, descomente a linha abaixo:
+            // console.log(`[CORS] Server: Comparing origin "${origin}" against allowed entry "${allowedOrigin.toString()}": ${match}`);
+            return match;
         });
 
         if (isAllowed) {
+            console.log(`[CORS] Server: Origin allowed: ${origin}`);
             callback(null, true);
         } else {
-            callback(new Error('CORS não permitido'));
+            console.error(`[CORS] Server: Origin denied: ${origin}.`);
+            // Log da lista de origens permitidas para facilitar a depuração
+            console.error(`[CORS] Server: Current allowed origins list:`, allowedOrigins.map(o => typeof o === 'string' ? o : o.toString()));
+            callback(new Error(`CORS not allowed for origin: ${origin}`));
         }
     },
     credentials: true,

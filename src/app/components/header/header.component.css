@@ -30,6 +30,7 @@
   gap: 2rem;
   flex-wrap: nowrap;
   white-space: nowrap;
+  order: 2; /* Default order for nav links */
 }
 
 .nav-link {
@@ -48,6 +49,7 @@
   display: flex;
   align-items: center;
   gap: 1rem;
+  order: 3; /* Default order for auth buttons */
 }
 
 .auth-button {
@@ -105,4 +107,88 @@
   margin-left: 8px;
   font-weight: 600;
   text-transform: uppercase;
+}
+
+/* Styles for Mobile Menu (Hamburger) */
+.menu-toggle {
+  display: none; /* Hidden by default, shown on mobile */
+  background: none;
+  border: none;
+  color: #1a5f7a;
+  font-size: 1.8rem; /* Adjust size as needed */
+  cursor: pointer;
+  order: 1; /* Ensure it can be positioned correctly with flex */
+}
+
+@media (max-width: 768px) {
+  .header-content {
+    /* Allow items to wrap if needed, though space-between should handle it */
+  }
+
+  .nav-links {
+    display: none; /* Hide nav links by default on mobile */
+    flex-direction: column;
+    position: absolute;
+    top: 100%; /* Position below the header */
+    left: 0;
+    right: 0;
+    background-color: #ffffff;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    padding: 1rem 0;
+    gap: 1rem;
+    z-index: 999; /* Ensure it's above other content but below header */
+    order: 4; /* Ensure it appears below other items when open */
+  }
+
+  .nav-links.active {
+    display: flex; /* Show when active */
+  }
+
+  .nav-link {
+    padding: 0.5rem 2%; /* Adjust padding for mobile */
+    text-align: center;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .auth-buttons {
+    /* Keep auth buttons visible, but ensure they don't cause overflow */
+    /* Consider reducing their size or moving them into the menu for very small screens */
+    order: 3; /* Keep auth buttons after logo and toggle */
+  }
+
+  .menu-toggle {
+    display: block; /* Show hamburger icon */
+  }
+
+  .username, .guest-info {
+    max-width: 100px; /* Prevent username from taking too much space */
+    font-size: 0.85rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .logo a {
+    font-size: 1.5rem; /* Smaller logo on very small screens */
+  }
+
+  .auth-button {
+    padding: 0.5rem 0.8rem; /* Further reduce padding */
+    font-size: 0.85rem;
+  }
+
+  .auth-buttons {
+    gap: 0.5rem; /* Reduce gap between auth buttons */
+  }
+
+  .username, .guest-info {
+    font-size: 0.75rem;
+    padding: 0.2rem 0.4rem;
+    max-width: 80px;
+  }
+
+  /* Optional: Hide username/guest info if space is very tight, or move to menu */
+  /* .username, .guest-info {
+    display: none;
+  } */
 }

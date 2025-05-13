@@ -17,20 +17,24 @@ export class ApiService {
 
   // Método para detectar o ambiente e fornecer a URL correta
   private getApiUrl(): string {
-    const currentUrl = window.location.origin;
-    console.log('Origem atual detectada:', currentUrl);
-    
-    // Se estamos no GitHub Codespaces (contém .app.github.dev ou similar)
-    if (currentUrl.includes('.github.dev') || currentUrl.includes('.github.io')) {
+    const currentOrigin = window.location.origin;
+    console.log('Origem atual detectada:', currentOrigin);
+
+    if (currentOrigin.includes('v3mrhcvc-4200.brs.devtunnels.ms')) {
+      console.log('Ambiente DevTunnel (Frontend) detectado, usando API URL do DevTunnel (Backend).');
+      return 'https://v3mrhcvc-3001.brs.devtunnels.ms/api';
+    } else if (currentOrigin.includes('.github.dev') || currentOrigin.includes('.github.io') || currentOrigin.includes('.app.github.dev')) {
       // No ambiente Codespaces, precisamos usar a porta 3001 explicitamente
-      // Substituímos a porta atual (provavelmente 4200) por 3001
-      const apiUrl = currentUrl.replace(/-\d+\.app\.github\.dev$/, '-3001.app.github.dev/api');
-      console.log('Ambiente Codespaces detectado, usando API URL:', apiUrl);
-      return apiUrl;
-    } 
-    
+      // Substituímos a porta atual (provavelmente 4200 ou outra) por 3001
+      const codespacesApiUrl = currentOrigin.replace(/-\d+(\.app\.github\.dev|\.github\.dev|\.github\.io)/, '-3001$1') + '/api';
+      // Garante que não haja duplicidade de /api
+      const finalCodespacesApiUrl = codespacesApiUrl.replace(/\/api\/api$/, '/api');
+      console.log('Ambiente Codespaces detectado, usando API URL:', finalCodespacesApiUrl);
+      return finalCodespacesApiUrl;
+    }
+
     // Caso contrário, usamos o localhost padrão
-    console.log('Ambiente local detectado, usando localhost:3001');
+    console.log('Ambiente local detectado, usando localhost:3001/api');
     return 'http://localhost:3001/api';
   }
 

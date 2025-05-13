@@ -106,8 +106,8 @@ export class ChatConversationComponent implements OnChanges, OnInit, OnDestroy {
     if (imagePath.startsWith('http')) return imagePath;
     if (imagePath.startsWith('data:')) return imagePath;
 
-    let apiOrigin = 'http://localhost:3001';
-
+    //let apiOrigin = 'http://localhost:3001';
+    let apiOrigin = 'https://v3mrhcvc-3001.brs.devtunnels.ms/'; // URL fixa para desenvolvimento local
     if (document.location.hostname.includes('github')) {
       const origin = document.location.origin;
       apiOrigin = origin.replace(/-4200\./, '-3001.');
