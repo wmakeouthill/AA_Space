@@ -228,17 +228,37 @@ export class ChatMessagesComponent implements OnInit, OnChanges, AfterViewChecke
   set messages(value: Message[]) {
     console.log(`[CHAT MESSAGES] Setter: messages received. Length: ${value ? value.length : 'null/undefined'}`);
     if (value) {
-      value.forEach((m, idx) => {
-        if (!m) {
-          console.error(`[CHAT MESSAGES] Setter: Incoming message at index ${idx} is null/undefined.`);
-          return;
-        }
-        if (m.id === undefined || m.id === null) {
-          console.error(`[CHAT MESSAGES] Setter: Incoming message at index ${idx} has UNDEFINED/NULL ID. Message: ${JSON.stringify(m)}`);
+      const currentMessageStatuses = new Map<number, 'sent' | 'delivered' | 'read'>();
+      this._messages.forEach(msg => {
+        const msgIdNum = typeof msg.id === 'string' ? parseInt(msg.id, 10) : msg.id;
+        if (msgIdNum !== undefined && !isNaN(msgIdNum) && msg.status) { // Ensure msg.status is not undefined
+          currentMessageStatuses.set(msgIdNum, msg.status);
+        } else {
+          console.warn(`[CHAT MESSAGES] Setter: Existing message in _messages has invalid ID, no status, or unparsable ID: ${JSON.stringify(msg)}`);
         }
       });
-      this._messages = [...value];
-      console.log(`[CHAT MESSAGES] Setter: _messages populated. Current length: ${this._messages.length}`);
+
+      const processedNewMessages = value.map(newMessage => {
+        const newMessageIdNum = typeof newMessage.id === 'string' ? parseInt(newMessage.id, 10) : newMessage.id;
+
+        if (newMessageIdNum !== undefined && !isNaN(newMessageIdNum)) {
+          const existingStatus = currentMessageStatuses.get(newMessageIdNum);
+          if (existingStatus && newMessage.status) { // Ensure newMessage.status is not undefined
+            const statusHierarchy = { sent: 1, delivered: 2, read: 3 };
+            if (statusHierarchy[existingStatus] > statusHierarchy[newMessage.status]) {
+              console.log(`[CHAT MESSAGES] Setter: Preserving status '${existingStatus}' for message ID ${newMessageIdNum} over incoming status '${newMessage.status}'.`);
+              return { ...newMessage, status: existingStatus };
+            }
+          }
+        } else {
+            console.warn(`[CHAT MESSAGES] Setter: Incoming new message has invalid or unparsable ID: ${JSON.stringify(newMessage)}`);
+        }
+        return newMessage;
+      });
+
+      this._messages = [...processedNewMessages];
+      console.log(`[CHAT MESSAGES] Setter: _messages populated after status preservation. Current length: ${this._messages.length}`);
+
       if (this.isViewInitialized) {
         this.scrollToBottom();
         this.cdr.detectChanges();
@@ -251,6 +271,7 @@ export class ChatMessagesComponent implements OnInit, OnChanges, AfterViewChecke
       }
     }
   }
+
   get messages(): Message[] {
     return this._messages;
   }
@@ -332,39 +353,35 @@ export class ChatMessagesComponent implements OnInit, OnChanges, AfterViewChecke
         if (update.chatId.toString() === this.chatId) {
           console.log(`[CHAT MESSAGES] WS Update: Processing status update for current conversation ${this.chatId}. ${update.messageIds.length} message ID(s) in payload with status '${update.status}'.`);
 
-          const updatedMessageIdsAsNumbers = update.messageIds.map(idStr => parseInt(idStr, 10)).filter(idNum => !isNaN(idNum));
+          // Assuming message.id is a number. If it's a string, adjust parsing/comparison.
+          const idsToUpdate = new Set(update.messageIds.map(idStr => parseInt(idStr, 10)).filter(idNum => !isNaN(idNum)));
 
-          // Log if some IDs couldn't be parsed, but still proceed with valid ones.
-          if (updatedMessageIdsAsNumbers.length !== update.messageIds.length) {
-            console.warn('[CHAT MESSAGES] WS Update: Some message IDs in the payload were invalid or could not be parsed to numbers. Processed IDs:', updatedMessageIdsAsNumbers, 'Original IDs:', update.messageIds);
-          }
-
-          // If all IDs were invalid after parsing, there's nothing to do.
-          if (updatedMessageIdsAsNumbers.length === 0 && update.messageIds.length > 0) {
-            console.warn('[CHAT MESSAGES] WS Update: No valid message IDs to process after parsing.');
+          if (idsToUpdate.size === 0 && update.messageIds.length > 0) {
+            console.warn('[CHAT MESSAGES] WS Update: No valid numeric message IDs found in the update after parsing.');
             return;
           }
 
-          let actualMessagesChanged = false;
-          const newMessagesList = this._messages.map(msg => {
-            // Ensure msg and msg.id are valid before trying to access them
-            if (msg && typeof msg.id === 'number' && updatedMessageIdsAsNumbers.includes(msg.id)) {
+          let messagesWereUpdated = false;
+          const newMessages = this._messages.map(msg => {
+            // Ensure msg.id is treated as a number for comparison with idsToUpdate (which contains numbers)
+            const msgIdAsNumber = typeof msg.id === 'string' ? parseInt(msg.id, 10) : msg.id;
+
+            if (msgIdAsNumber !== undefined && !isNaN(msgIdAsNumber) && idsToUpdate.has(msgIdAsNumber)) {
               if (msg.status !== update.status) {
-                actualMessagesChanged = true;
-                // Create a new message object with the updated status
+                messagesWereUpdated = true;
+                console.log(`[CHAT MESSAGES] WS Update: Updating status of message ID ${msg.id} to '${update.status}'`);
                 return { ...msg, status: update.status };
               }
             }
-            return msg; // Return the original message object if no change or no match
+            return msg;
           });
 
-          if (actualMessagesChanged) {
-            console.log(`[CHAT MESSAGES] WS Update: Message statuses updated for IDs [${updatedMessageIdsAsNumbers.join(', ')}] to '${update.status}'. Triggering view update.`);
-            // Assigning to this.messages will use the @Input setter,
-            // which creates a new backing array for _messages and calls cdr.detectChanges().
-            this.messages = newMessagesList;
+          if (messagesWereUpdated) {
+            console.log('[CHAT MESSAGES] WS Update: Messages were updated. Assigning new array and triggering change detection.');
+            this._messages = newMessages; // Assign the new array
+            this.cdr.detectChanges(); // Trigger change detection
           } else {
-            console.log('[CHAT MESSAGES] WS Update: Received status update, but no message statuses actually changed or no matching messages found for IDs:', updatedMessageIdsAsNumbers);
+            console.log('[CHAT MESSAGES] WS Update: No messages required a status change.');
           }
         }
       }, (error: any) => {
