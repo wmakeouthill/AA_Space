@@ -6,7 +6,7 @@ Um fórum seguro e acolhedor para compartilhar experiências e encontrar apoio. 
 
 - Node.js (v18 ou superior)
 - npm (v9 ou superior)
-- Angular CLI (v19.2.10)
+- Angular CLI (v19.2.10 ou superior)
 - SQLite3
 
 ## Estrutura do Projeto
@@ -45,16 +45,19 @@ npm install
 - @angular/platform-browser-dynamic: ^19.2.0
 - @angular/router: ^19.2.0
 - rxjs: ~7.8.0
+- tslib: ^2.3.0
 - zone.js: ~0.15.0
 
 #### Backend (Node.js):
-- express: ^5.1.0
+- express: ^4.18.3
 - typeorm: ^0.3.22
 - sqlite3: ^5.1.7
 - bcrypt: ^5.1.1
 - jsonwebtoken: ^9.0.0
 - cors: ^2.8.5
 - dotenv: ^16.5.0
+- ws: ^8.18.2
+- reflect-metadata: ^0.2.2
 
 ## Configuração
 
@@ -65,7 +68,7 @@ DB_HOST=localhost
 DB_USER=root
 DB_PASSWORD=root
 DB_NAME=aa_space
-JWT_SECRET=seu_segredo_jwt_super_secreto
+JWT_SECRET=seu_segredo_jwt_example
 PORT=3001
 ```
 
@@ -138,31 +141,30 @@ O sistema permite:
 - Criação de posts anônimos ou identificados
 - Sistema de comentários
 - Sistema de curtidas em posts e comentários
-- Sistema de chat (novo!)
+- **Sistema de Chat Completo (Novo!)**:
   - Conversas privadas entre usuários
-  - Grupos de chat com múltiplos participantes
-  - Status de leitura de mensagens
-  - Administradores de grupos de chat
+  - Grupos de chat com múltiplos participantes (com avatares personalizáveis para grupos)
+  - Envio e recebimento de mensagens em tempo real
+  - Status de leitura de mensagens (enviada, entregue, lida)
+  - Gerenciamento de participantes em grupos (adicionar, remover, promover/rebaixar admin de grupo)
+- **Gerenciamento de Perfil Aprimorado (Novo!)**:
+  - Upload e exibição de imagem de perfil para usuários
 - Modo convidado com nickname
 - Interface responsiva e amigável
 - Painel de administração para gerenciar usuários
-- Armazenamento de informações de contato (email, telefone)
+- Armazenamento de informações de contato (email, telefone) para usuários
 
 ## Estrutura do Banco de Dados
 
-O projeto utiliza SQLite3 com TypeORM e possui as seguintes entidades:
+O projeto utiliza SQLite3 com TypeORM e possui as seguintes entidades principais:
 
-- User (Usuários)
-  - Inclui flags `isAdmin` para administradores
-  - Inclui flag `isMainAdmin` para identificar o administrador principal
-  - Armazena informações de contato (email, telefone)
-- Post (Postagens)
-- Comment (Comentários)
-- PostLike (Curtidas em posts)
-- CommentLike (Curtidas em comentários)
-- ChatConversation (Conversas de chat)
-- ChatParticipant (Participantes de chat)
-- ChatMessage (Mensagens de chat)
+- `User`: Armazena dados dos usuários, incluindo credenciais, informações de perfil (como imagem), contato (email, telefone) e flags de administração (`isAdmin`, `isMainAdmin`).
+- `Post`: Representa as postagens no fórum.
+- `Comment`: Comentários associados às postagens.
+- `PostLike` e `CommentLike`: Tabelas para registrar curtidas em posts e comentários.
+- `ChatConversation`: Define uma conversa, que pode ser privada (entre dois usuários) ou em grupo. Inclui informações como nome do grupo e avatar do grupo.
+- `ChatParticipant`: Mapeia os usuários que participam de cada `ChatConversation`, incluindo seus papéis (ex: administrador do grupo).
+- `ChatMessage`: Armazena as mensagens trocadas em cada conversa, incluindo o remetente, conteúdo e status de leitura.
 
 ## Desenvolvimento
 
@@ -189,14 +191,19 @@ npm run build
 - `npm run build`: Compila o projeto para produção
 - `npm run watch`: Compila o projeto em modo de observação
 - `npm test`: Executa os testes do frontend
+- `npm run start:codespaces`: Compila o frontend e inicia o servidor backend (para ambientes Codespaces)
+- `npm run build:codespaces`: Compila o frontend para produção com base href configurado para Codespaces
+- `npm run setup:codespaces`: Executa build:codespaces e start:codespaces (configuração completa para Codespaces)
 
 ### Backend:
-- `npm start`: Inicia o servidor a partir da versão compilada
-- `npm run dev`: Inicia o servidor em modo de desenvolvimento com hot reload
-- `npm run build`: Compila o código TypeScript
-- `npm run migration:run`: Executa as migrações pendentes
-- `npm run migration:revert`: Reverte a última migração aplicada
-- `npm run schema:refresh`: Recria o esquema do banco de dados do zero
+- `npm start`: Inicia o servidor a partir da versão compilada (`dist/index.js`)
+- `npm run dev`: Inicia o servidor em modo de desenvolvimento com `ts-node` e `nodemon` para hot reload
+- `npm run build`: Compila o código TypeScript para JavaScript
+- `npm run watch`: Compila o código TypeScript em modo de observação
+- `npm run typeorm`: Executa comandos CLI do TypeORM (requer `ts-node`)
+- `npm run migration:run`: Executa as migrações pendentes usando `src/config/database.ts` como fonte de dados
+- `npm run migration:revert`: Reverte a última migração aplicada usando `src/config/database.ts`
+- `npm run schema:refresh`: Remove todas as tabelas do banco de dados e executa todas as migrações novamente (CUIDADO: apaga todos os dados)
 
 ## Solução de Problemas
 
@@ -262,8 +269,9 @@ npm run schema:refresh
 
 ## Atualizações Recentes (Maio 2025)
 
-- Adição do sistema de chat completo com conversas privadas e em grupo
-- Suporte para armazenamento de informações de contato (email, telefone)
-- Melhorias na interface do usuário e experiência de navegação
-- Otimizações de desempenho no backend
-- Atualização para Angular 19
+- **Implementação do Sistema de Chat**: Adicionado um sistema de chat robusto com suporte a conversas privadas e em grupo, status de mensagens, gerenciamento de participantes e avatares de grupo.
+- **Upload de Imagem de Perfil**: Usuários agora podem personalizar seus perfis com uma imagem.
+- **Armazenamento de Informações de Contato**: Adicionada a capacidade de armazenar e gerenciar informações de contato (email e telefone) dos usuários.
+- **Melhorias na Interface e Experiência do Usuário**: Realizadas diversas melhorias visuais e de usabilidade.
+- **Otimizações de Backend**: Otimizações de desempenho e refatorações no código do servidor.
+- **Atualizações de Dependências**: Projeto atualizado para Angular 19 e TypeScript ~5.7.2, entre outras dependências.
