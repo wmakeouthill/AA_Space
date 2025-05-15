@@ -7,6 +7,7 @@ import { ChatService } from '../../../services/chat.service';
 import { ProfileService, UserProfile } from '../../../services/profile.service'; // Import ProfileService and UserProfile
 import { ChatHeaderComponent } from './chat-header/chat-header.component';
 import { ChatMessagesComponent } from './chat-messages/chat-messages.component';
+import { ChatInputComponent } from './chat-input/chat-input.component'; // Importar ChatInputComponent
 import { Subscription } from 'rxjs';
 
 @Component({
@@ -14,7 +15,13 @@ import { Subscription } from 'rxjs';
   templateUrl: './chat-conversation.component.html',
   styleUrls: ['./chat-conversation.component.css'],
   standalone: true,
-  imports: [CommonModule, FormsModule, ChatHeaderComponent, ChatMessagesComponent]
+  imports: [
+    CommonModule,
+    FormsModule,
+    ChatHeaderComponent,
+    ChatMessagesComponent,
+    ChatInputComponent // Adicionar ChatInputComponent aos imports
+  ]
 })
 export class ChatConversationComponent implements OnChanges, OnInit, OnDestroy {
   @Input() selectedChat: Chat | null = null;
@@ -176,6 +183,11 @@ export class ChatConversationComponent implements OnChanges, OnInit, OnDestroy {
     this.sending = true;
     this.error = null;
 
+    // Marcar como lido ao enviar uma mensagem também, se o chat estiver selecionado
+    if (this.selectedChat) {
+      this.chatService.markChatAsRead(this.selectedChat.id);
+    }
+
     this.chatService.sendMessage(this.selectedChat.id, message)
       .subscribe({
         next: (sentMessage) => {
@@ -188,6 +200,17 @@ export class ChatConversationComponent implements OnChanges, OnInit, OnDestroy {
           this.sending = false;
         }
       });
+  }
+
+  // Novo método para lidar com o foco no input
+  handleInputFocused(): void {
+    if (this.selectedChat) {
+      console.log(`[CONVO] Input focused for chat ID ${this.selectedChat.id}. Marking chat as read.`);
+      this.chatService.markChatAsRead(this.selectedChat.id);
+      // Adicionalmente, podemos querer notificar o ChatListComponent para atualizar a UI de não lidas,
+      // mas o ChatService.markChatAsRead já deve atualizar o totalUnreadCount,
+      // e o ChatListComponent já escuta isso e também atualiza a lista localmente.
+    }
   }
 
   private loadMessagesAndListen(): void {
@@ -240,13 +263,37 @@ export class ChatConversationComponent implements OnChanges, OnInit, OnDestroy {
     console.log(`[CONVO] listenForNewMessages - Attempting to subscribe to WebSocket for chat ID ${this.selectedChat.id}. Current messageSubscription state:`, this.messageSubscription);
     this.messageSubscription = this.chatService.listenForNewMessages(this.selectedChat.id)
       .subscribe({
-        next: (newMessage) => {
-          console.warn('[CONVO] listenForNewMessages - New message received via WebSocket:', newMessage); // Changed to warn
-          const existingMessageIndex = this.messages.findIndex(m => m.id === newMessage.id);
-          if (existingMessageIndex === -1) {
-            this.messages = [...this.messages, newMessage];
+        next: (dataFromSocket: any) => { // Renomeado para clareza
+          console.warn('[CONVO] listenForNewMessages - Data received via WebSocket:', dataFromSocket);
+
+          // Verifica se é uma atualização de status
+          if (dataFromSocket && dataFromSocket.type === 'messageStatusUpdate') {
+            console.log('[CONVO] listenForNewMessages - Received a messageStatusUpdate event. This will be handled by ChatMessagesComponent.');
+            // Não faz nada aqui, pois ChatMessagesComponent já escuta messageStatusUpdateSubject
           } else {
-            console.log('[CONVO] listenForNewMessages - Duplicate message ID received via WebSocket, ignoring or updating.');
+            // Assume que é um objeto Message
+            const newMessage = dataFromSocket as Message;
+
+            if (newMessage && newMessage.id !== undefined) {
+              // Formata a URL da imagem do remetente para mensagens WebSocket
+              if (newMessage.senderProfileImage) {
+                newMessage.senderProfileImage = this.formatImageUrl(newMessage.senderProfileImage);
+              } else {
+                newMessage.senderProfileImage = this.defaultImage; // Fallback para imagem padrão
+              }
+
+              const existingMessageIndex = this.messages.findIndex(m => m.id === newMessage.id);
+              if (existingMessageIndex === -1) {
+                this.messages = [...this.messages, newMessage];
+              } else {
+                // Se a mensagem já existe, você pode querer atualizá-la em vez de ignorar
+                // Por exemplo: this.messages[existingMessageIndex] = newMessage;
+                // E então: this.messages = [...this.messages]; para forçar a detecção de mudanças.
+                console.log('[CONVO] listenForNewMessages - Duplicate message ID received via WebSocket. Current logic might ignore or you might want to update:', newMessage);
+              }
+            } else {
+              console.warn('[CONVO] listenForNewMessages - Received data via WebSocket that is not a status update and lacks a message ID, or is not a valid message. Ignoring:', dataFromSocket);
+            }
           }
         },
         error: (err) => {

@@ -17,6 +17,7 @@ import { FormsModule } from '@angular/forms';
           placeholder="Digite uma mensagem..."
           rows="1"
           (keydown.enter)="handleEnterKey($event)"
+          (focus)="onInputFocus()"
           [disabled]="disabled"
           tabindex="0">
         </textarea>
@@ -107,9 +108,11 @@ import { FormsModule } from '@angular/forms';
 export class ChatInputComponent {
   @Input() disabled: boolean = false;
   @Output() sendMessage = new EventEmitter<string>();
+  @Output() inputFocused = new EventEmitter<void>();
   @ViewChild('messageInput') messageInputElementRef!: ElementRef<HTMLTextAreaElement>;
 
   newMessage: string = '';
+  private hasFocused: boolean = false;
 
   handleEnterKey(event: any): void { // Mantido como 'any' para compatibilidade com a ferramenta
     if (!event.shiftKey) {
@@ -135,6 +138,7 @@ export class ChatInputComponent {
     // O componente pai cuidará de refocar.
     this.sendMessage.emit(messageText);
     this.newMessage = '';
+    this.hasFocused = false;
     // NÃO chamar focusInputElement() aqui para envio real de mensagem.
   }
 
@@ -169,5 +173,13 @@ export class ChatInputComponent {
         console.warn('[ChatInputComponent] Referência do elemento textarea não encontrada para focar.');
       }
     }, 0); // Delay mínimo
+  }
+
+  onInputFocus(): void {
+    if (!this.hasFocused) {
+      console.log('[ChatInputComponent] Input focado, emitindo inputFocused.');
+      this.inputFocused.emit();
+      this.hasFocused = true;
+    }
   }
 }

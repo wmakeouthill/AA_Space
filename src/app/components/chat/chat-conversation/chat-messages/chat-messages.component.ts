@@ -31,9 +31,9 @@ import { Subscription } from 'rxjs';
             <div class="message-time">
               {{ message.timestamp | date:'shortTime' }}
               <span class="message-status" *ngIf="message.senderId === currentUserId">
-                <span *ngIf="message.status === 'sent'">✔</span>
-                <span *ngIf="message.status === 'delivered'">✔✔</span>
-                <span *ngIf="message.status === 'read'" class="status-read">✔✔</span>
+                <span *ngIf="message.status === 'sent'">✓</span>
+                <span *ngIf="message.status === 'delivered'">✓✓</span>
+                <span *ngIf="message.status === 'read'" class="status-read">✓✓</span>
               </span>
             </div>
           </div>
@@ -186,12 +186,16 @@ import { Subscription } from 'rxjs';
 
     .message-status {
       margin-left: 3px; /* Espaço entre o tempo e o status */
-      font-size: 0.6rem; /* Ajuste o tamanho conforme necessário */
-      color: grey !important; /* Default tick color to grey */
+      font-size: 0.72rem; /* Ajuste o tamanho conforme necessário */
+      color: grey; /* Default tick color to grey */
+      font-style: italic;
+      font-weight: 1000;
+      font-family: 'Segoe UI', sans-serif;
+
     }
 
     .message-status .status-read {
-      color: #134b61 !important; /* Cor azul para status "lido" (NOVA COR) */
+      color:rgb(17, 170, 231); /* Cor azul para status "lido" (NOVA COR) */
     }
 
     .no-messages {

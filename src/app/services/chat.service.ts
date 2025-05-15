@@ -16,6 +16,7 @@ export class ChatService {
   private chatSubjects = new Map<number, WebSocketSubject<Message | any>>();
   private newMessageSubject = new Subject<NewMessageEvent>();
   private messageStatusUpdateSubject = new Subject<{ chatId: number; status: 'sent' | 'delivered' | 'read'; messageIds: string[] }>();
+  private chatMarkedAsReadSubject = new Subject<number>(); // New Subject
 
   private totalUnreadCount = new BehaviorSubject<number>(0);
   public totalUnreadCount$ = this.totalUnreadCount.asObservable();
@@ -186,14 +187,24 @@ export class ChatService {
     return this.newMessageSubject.asObservable();
   }
 
+  // New public method to listen for chat marked as read events
+  getChatMarkedAsReadListener(): Observable<number> {
+    return this.chatMarkedAsReadSubject.asObservable();
+  }
+
   markChatAsRead(chatId: number): void {
     const chatIndex = this.chatsCache.findIndex(c => c.id === chatId);
     if (chatIndex > -1) {
       if (this.chatsCache[chatIndex].unreadCount && this.chatsCache[chatIndex].unreadCount > 0) {
+        const oldUnreadCount = this.chatsCache[chatIndex].unreadCount; // Store old value
         this.chatsCache[chatIndex].unreadCount = 0;
         const newTotal = this.chatsCache.reduce((acc, c) => acc + (c.unreadCount || 0), 0);
         this.totalUnreadCount.next(newTotal);
         console.log(`[CHAT SERVICE] Chat ${chatId} marked as read. New total unread: ${newTotal}`);
+
+        if (oldUnreadCount > 0) { // Emit only if unread count actually changed from >0 to 0
+            this.chatMarkedAsReadSubject.next(chatId);
+        }
 
         const userId = this.getCurrentUserId();
         if (userId === 0) {
@@ -389,5 +400,9 @@ export class ChatService {
     this.totalUnreadCount.next(0);
     this.newMessageSubject.complete();
     this.newMessageSubject = new Subject<NewMessageEvent>();
+    this.messageStatusUpdateSubject.complete(); // Ensure this is also handled
+    this.messageStatusUpdateSubject = new Subject<{ chatId: number; status: 'sent' | 'delivered' | 'read'; messageIds: string[] }>(); // Re-initialize
+    this.chatMarkedAsReadSubject.complete(); // Complete the new subject
+    this.chatMarkedAsReadSubject = new Subject<number>(); // Re-initialize the new subject
   }
 }

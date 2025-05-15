@@ -16,7 +16,12 @@
     [chatId]="selectedChat.id.toString()">
   </app-chat-messages>
 
-  <!-- Removido app-chat-input daqui para ser colocado no componente pai -->
+  <!-- Input de mensagem -->
+  <app-chat-input
+    (sendMessage)="onMessageSent($event)"
+    (inputFocused)="handleInputFocused()"
+    [disabled]="sending || loading">
+  </app-chat-input>
 </div>
 
 <ng-template #noChat>

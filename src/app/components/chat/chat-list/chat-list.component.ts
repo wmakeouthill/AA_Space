@@ -34,6 +34,7 @@ export class ChatListComponent implements OnInit, OnDestroy {
   private chatCreatedHandler: (event: CustomEvent<Chat>) => void;
   private chatAvatarUpdatedHandler: (event: CustomEvent<{ chatId: number; avatarPath: string | null }>) => void;
   private newMessagesSubscription!: Subscription; // Initialized with !
+  private chatMarkedAsReadSubscription!: Subscription; // For the new listener
 
   constructor(private chatService: ChatService) {
     this.currentUserId = this.chatService.getPublicCurrentUserId(); // Use public method
@@ -74,6 +75,21 @@ export class ChatListComponent implements OnInit, OnDestroy {
         }
       }
     };
+
+    // Subscribe to chat marked as read events
+    this.chatMarkedAsReadSubscription = this.chatService.getChatMarkedAsReadListener().subscribe(chatId => {
+      const chatToUpdate = this.chats.find(c => c.id === chatId);
+      if (chatToUpdate && chatToUpdate.unreadCount !== 0) {
+        // Create a new reference for the array of chats, updating the modified chat
+        const updatedChats = [...this.chats];
+        const chatIndex = updatedChats.findIndex(c => c.id === chatId);
+        if (chatIndex > -1) {
+            updatedChats[chatIndex] = { ...updatedChats[chatIndex], unreadCount: 0 };
+            this.chats = updatedChats; // Reassign this.chats to trigger change detection
+            this.sortChats(); // Re-sort if order depends on unread status or last activity
+        }
+      }
+    });
   }
 
   ngOnInit(): void {
@@ -100,13 +116,6 @@ export class ChatListComponent implements OnInit, OnDestroy {
 
         if (chatToUpdate) {
           chatToUpdate.lastMessage = message;
-          // Se a mensagem não for do usuário atual e o chat não estiver selecionado,
-          // ou se o chat estiver selecionado mas o componente de conversa não estiver visível (ex: outra aba do navegador)
-          // incrementamos o contador localmente para reflexo imediato.
-          // A lógica principal de contagem e totalização fica no ChatService.
-          if (message.senderId !== this.currentUserId && this.selectedChatId !== chatId) {
-            chatToUpdate.unreadCount = (chatToUpdate.unreadCount || 0) + 1;
-          }
           this.sortChats();
         }
       },
@@ -141,6 +150,9 @@ export class ChatListComponent implements OnInit, OnDestroy {
     // Unsubscribe from new messages
     if (this.newMessagesSubscription) {
       this.newMessagesSubscription.unsubscribe();
+    }
+    if (this.chatMarkedAsReadSubscription) { // Unsubscribe from the new listener
+      this.chatMarkedAsReadSubscription.unsubscribe();
     }
   }
 
@@ -179,16 +191,7 @@ export class ChatListComponent implements OnInit, OnDestroy {
 
   selectChat(chat: Chat): void {
     this.selectedChatId = chat.id;
-    this.chatService.markChatAsRead(chat.id); // <--- CHAMAR markChatAsRead
-
-    // Atualiza a visualização local imediatamente para refletir a leitura
-    const chatIndex = this.chats.findIndex(c => c.id === chat.id);
-    if (chatIndex > -1 && this.chats[chatIndex].unreadCount && this.chats[chatIndex].unreadCount > 0) {
-      // Cria uma nova referência para o array de chats, atualizando o chat modificado
-      const updatedChats = [...this.chats];
-      updatedChats[chatIndex] = { ...this.chats[chatIndex], unreadCount: 0 };
-      this.chats = updatedChats; // Reatribui this.chats para acionar a detecção de mudanças
-    }
+    this.chatService.markChatAsRead(chat.id); // This will trigger the chatMarkedAsReadSubscription
 
     // Emitir o chat selecionado (pode ser o original ou o atualizado se estava na lista)
     const chatToEmit = this.chats.find(c => c.id === chat.id) || chat;
