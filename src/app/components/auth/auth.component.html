@@ -42,6 +42,13 @@
         </div>
       </div>
 
+      <ng-container *ngIf="isLogin">
+        <div class="form-group remember-me-group">
+          <input type="checkbox" id="rememberMe" formControlName="rememberMe">
+          <label for="rememberMe" class="remember-me-label">Lembrar sessão</label>
+        </div>
+      </ng-container>
+
       <!-- Campos opcionais somente na tela de registro -->
       <ng-container *ngIf="!isLogin">
         <div class="form-group">

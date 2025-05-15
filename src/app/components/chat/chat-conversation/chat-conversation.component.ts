@@ -2,16 +2,17 @@
 import { Component, Input, OnChanges, OnDestroy, OnInit, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Chat, Message, ChatParticipant } from '../../../models/chat/chat.interface'; // Importar ChatParticipant
+import { Chat, Message, ChatParticipant } from '../../../models/chat/chat.interface';
 import { ChatService } from '../../../services/chat.service';
+import { ProfileService, UserProfile } from '../../../services/profile.service'; // Import ProfileService and UserProfile
 import { ChatHeaderComponent } from './chat-header/chat-header.component';
 import { ChatMessagesComponent } from './chat-messages/chat-messages.component';
-import { Subscription } from 'rxjs'; // Importar Subscription
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-chat-conversation',
   templateUrl: './chat-conversation.component.html',
-  styleUrls: ['./chat-conversation.component.css'], // Corrigido aqui
+  styleUrls: ['./chat-conversation.component.css'],
   standalone: true,
   imports: [CommonModule, FormsModule, ChatHeaderComponent, ChatMessagesComponent]
 })
@@ -19,15 +20,16 @@ export class ChatConversationComponent implements OnChanges, OnInit, OnDestroy {
   @Input() selectedChat: Chat | null = null;
 
   messages: Message[] = [];
-  currentUserId: number;
+  currentUserId!: number; // Will be set by ProfileService
+  currentUserProfileImageUrl: string | null = null; // For current user's avatar
   loading = false;
   error: string | null = null;
   sending = false;
   defaultImage: string = '/assets/images/user.png';
 
-  private messageSubscription: Subscription | null = null; // Para gerenciar a inscrição do WebSocket
+  private messageSubscription: Subscription | null = null;
+  private userProfileSubscription!: Subscription; // Changed from authSubscription
 
-  // Handler para o evento de atualização de imagem de perfil
   private profileImageUpdatedHandler = () => {
     console.log('[CHAT CONVERSATION] Evento de atualização de imagem detectado, recarregando mensagens');
     if (this.selectedChat) {
@@ -35,19 +37,49 @@ export class ChatConversationComponent implements OnChanges, OnInit, OnDestroy {
     }
   };
 
-  constructor(private chatService: ChatService) {
-    this.currentUserId = this.chatService.getCurrentUserId();
+  constructor(
+    private chatService: ChatService,
+    private profileService: ProfileService // Inject ProfileService
+  ) {
+    console.log('[CONVO] Constructor: Initializing component.');
   }
 
   ngOnInit(): void {
-    // Adiciona o listener para atualização de imagem de perfil
+    console.log('[CONVO] ngOnInit: Initializing component.');
     window.addEventListener('profile:imageUpdated', this.profileImageUpdatedHandler);
+
+    this.userProfileSubscription = this.profileService.getCurrentUserProfile().subscribe((userProfile: UserProfile) => {
+      const previousUserId = this.currentUserId; // Store previous userId
+      if (userProfile && userProfile.id !== undefined) {
+        this.currentUserId = userProfile.id;
+        this.currentUserProfileImageUrl = userProfile.profileImage || this.defaultImage;
+        console.warn(`[CONVO] ngOnInit: Current user profile updated from ProfileService. ID: ${this.currentUserId}, Avatar: ${this.currentUserProfileImageUrl}`); // Changed to warn
+
+        // Log the state of selectedChat right before the condition
+        console.warn(`[CONVO] ngOnInit: Checking condition to load messages. selectedChat:`, this.selectedChat);
+
+        // If currentUserId is now valid and was previously invalid, and a chat is selected, load messages.
+        if (this.selectedChat && (previousUserId === undefined || previousUserId === null || previousUserId === -1) && (this.currentUserId !== undefined && this.currentUserId !== null && this.currentUserId !== -1)) {
+          console.warn(`[CONVO] ngOnInit: currentUserId is now valid (${this.currentUserId}) and a chat (ID: ${this.selectedChat.id}) is selected. Triggering message load.`); // Changed to warn
+          this.loadMessagesAndListen();
+        }
+      } else {
+        console.warn('[CONVO] ngOnInit: No user profile or user ID from ProfileService. UserProfile:', userProfile);
+        this.currentUserId = -1;
+        this.currentUserProfileImageUrl = this.defaultImage;
+      }
+    });
   }
 
   ngOnDestroy(): void {
-    // Remove o listener de eventos quando o componente é destruído
+    console.log('[CONVO] ngOnDestroy: Cleaning up component.');
     window.removeEventListener('profile:imageUpdated', this.profileImageUpdatedHandler);
-    this.unsubscribeFromMessages(); // Cancelar inscrição do WebSocket
+    this.unsubscribeFromMessages();
+
+    if (this.userProfileSubscription) {
+      this.userProfileSubscription.unsubscribe();
+      console.log('[CONVO] ngOnDestroy: Unsubscribed from ProfileService.');
+    }
   }
 
   private unsubscribeFromMessages(): void {
@@ -67,10 +99,15 @@ export class ChatConversationComponent implements OnChanges, OnInit, OnDestroy {
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['selectedChat']) {
-      const newChat = changes['selectedChat'].currentValue as Chat | null; // Added type assertion
-      const oldChat = changes['selectedChat'].previousValue as Chat | null; // Added type assertion
+      const newChat = changes['selectedChat'].currentValue as Chat | null;
+      const oldChat = changes['selectedChat'].previousValue as Chat | null;
 
       console.log('[CONVO] ngOnChanges - selectedChat changed. New:', newChat, 'Old:', oldChat);
+
+      // This log remains useful to know the state of currentUserId when selectedChat changes
+      if (this.currentUserId === undefined || this.currentUserId === null || this.currentUserId === -1) {
+        console.warn('[CONVO] ngOnChanges: currentUserId not yet available or invalid. Value:', this.currentUserId, 'Waiting for ProfileService. Selected chat:', newChat);
+      }
 
       if (newChat?.id !== oldChat?.id) {
         console.log('[CONVO] ngOnChanges - Chat ID changed or became defined/undefined. Unsubscribing from previous messages.');
@@ -79,16 +116,14 @@ export class ChatConversationComponent implements OnChanges, OnInit, OnDestroy {
 
       if (newChat) {
         console.log(`[CONVO] ngOnChanges - New chat selected (ID: ${newChat.id}). Participants:`, newChat.participants);
-        console.log(`[CONVO] ngOnChanges - Current user ID: ${this.currentUserId}`);
-        if (!newChat.isGroup) {
-          const otherParticipant = newChat.participants.find((p: ChatParticipant) => Number(p.id) !== Number(this.currentUserId));
-          if (otherParticipant) {
-            console.log(`[CHAT CONVERSATION] Outro participante identificado: ${otherParticipant.username} (ID: ${otherParticipant.id})`);
-          } else {
-            console.warn('[CHAT CONVERSATION] Não foi possível identificar o outro participante');
-          }
+        // Only load messages if currentUserId is valid
+        if (this.currentUserId !== undefined && this.currentUserId !== null && this.currentUserId !== -1) {
+          console.warn(`[CONVO] ngOnChanges - Current user ID is valid: ${this.currentUserId}. Loading messages.`); // Changed to warn
+          this.loadMessagesAndListen();
+        } else {
+          console.warn(`[CONVO] ngOnChanges - Current user ID is NOT YET VALID (${this.currentUserId}). Waiting for ProfileService to update it before loading messages for chat ${newChat.id}.`);
+          // Messages will be loaded by the logic in ngOnInit when currentUserId becomes available.
         }
-        this.loadMessagesAndListen();
       } else {
         console.log('[CONVO] ngOnChanges - No chat selected. Clearing messages and unsubscribing.');
         this.messages = [];
@@ -97,42 +132,42 @@ export class ChatConversationComponent implements OnChanges, OnInit, OnDestroy {
     }
   }
 
-  // Cache estático de timestamps para URLs de imagem
   private static imageTimestamps: Record<string, number> = {};
-  // Método para formatar URL da imagem
   formatImageUrl(imagePath: string): string {
     if (!imagePath) return this.defaultImage;
 
-    if (imagePath.startsWith('http')) return imagePath;
-    if (imagePath.startsWith('data:')) return imagePath;
-
-    //let apiOrigin = 'http://localhost:3001';
-    let apiOrigin = 'https://v3mrhcvc-3001.brs.devtunnels.ms/'; // URL fixa para desenvolvimento local
-    if (document.location.hostname.includes('github')) {
-      const origin = document.location.origin;
-      apiOrigin = origin.replace(/-4200\./, '-3001.');
+    if (imagePath.startsWith('http') || imagePath.startsWith('data:')) {
+      return imagePath;
     }
 
-    if (imagePath.includes('profiles/')) {
-      if (!imagePath.includes('/uploads/')) {
-        imagePath = '/uploads/' + (imagePath.startsWith('/') ? imagePath.substring(1) : imagePath);
+    let apiOrigin = 'https://v3mrhcvc-3001.brs.devtunnels.ms/';
+    if (typeof window !== 'undefined') {
+      if (window.location.hostname.includes('github')) {
+        const origin = window.location.origin;
+        apiOrigin = origin.replace(/-4200\./, '-3001.');
+      } else if (window.location.hostname === 'localhost') {
+        apiOrigin = 'http://localhost:3001';
       }
-    } else if (imagePath.includes('/assets/')) {
-      imagePath = '/uploads/assets/' + imagePath.split('/assets/')[1];
+    }
+
+    let normalizedPath = imagePath;
+    if (imagePath.includes('profiles/') && !imagePath.includes('/uploads/')) {
+      normalizedPath = '/uploads' + (imagePath.startsWith('/') ? '' : '/') + imagePath;
+    } else if (imagePath.includes('/assets/') && !imagePath.startsWith('/uploads/assets/')) {
+      normalizedPath = '/uploads/assets/' + imagePath.split('/assets/').pop();
     } else if (!imagePath.startsWith('/')) {
-      imagePath = '/' + imagePath;
+      normalizedPath = '/' + imagePath;
     }
 
-    console.log(`[CHAT CONVERSATION] Formatando URL de imagem: ${imagePath} -> ${apiOrigin}${imagePath}`);
+    const finalPath = (apiOrigin.endsWith('/') && normalizedPath.startsWith('/'))
+      ? apiOrigin + normalizedPath.substring(1)
+      : apiOrigin + normalizedPath;
 
-    if (!ChatConversationComponent.imageTimestamps[imagePath]) {
-      ChatConversationComponent.imageTimestamps[imagePath] = Date.now();
-    }
+    console.log(`[CHAT CONVERSATION] Formatting URL. Input: "${imagePath}", Origin: "${apiOrigin}", Normalized: "${normalizedPath}", Output: "${finalPath}"`);
 
-    return `${apiOrigin}${imagePath}?t=${ChatConversationComponent.imageTimestamps[imagePath]}`;
+    return finalPath;
   }
 
-  // Método para enviar mensagem através do componente filho
   onMessageSent(message: string): void {
     if (!message.trim() || !this.selectedChat) {
       return;
@@ -155,13 +190,12 @@ export class ChatConversationComponent implements OnChanges, OnInit, OnDestroy {
       });
   }
 
-  // Carrega as mensagens do chat selecionado e começa a escutar por novas
   private loadMessagesAndListen(): void {
     if (!this.selectedChat) {
       console.log('[CONVO] loadMessagesAndListen - No selected chat, returning.');
       return;
     }
-    console.log(`[CONVO] loadMessagesAndListen - START for chat ID ${this.selectedChat.id}`);
+    console.warn(`[CONVO] loadMessagesAndListen - START for chat ID ${this.selectedChat.id}`); // Changed to warn
 
     this.loading = true;
     this.error = null;
@@ -177,7 +211,7 @@ export class ChatConversationComponent implements OnChanges, OnInit, OnDestroy {
     this.chatService.getMessages(this.selectedChat.id)
       .subscribe({
         next: (messages) => {
-          console.log(`[CONVO] loadMessagesAndListen - ${messages.length} messages loaded via HTTP for chat ID ${this.selectedChat?.id}`);
+          console.warn(`[CONVO] loadMessagesAndListen - ${messages.length} messages loaded via HTTP for chat ID ${this.selectedChat?.id}`); // Changed to warn
           this.messages = messages;
           this.loading = false;
 
@@ -193,7 +227,7 @@ export class ChatConversationComponent implements OnChanges, OnInit, OnDestroy {
   }
 
   private listenForNewMessages(): void {
-    console.log('[CONVO] listenForNewMessages - START.');
+    console.warn('[CONVO] listenForNewMessages - START.'); // Changed to warn
     if (!this.selectedChat) {
       console.log('[CONVO] listenForNewMessages - No selected chat, returning.');
       return;
@@ -207,7 +241,7 @@ export class ChatConversationComponent implements OnChanges, OnInit, OnDestroy {
     this.messageSubscription = this.chatService.listenForNewMessages(this.selectedChat.id)
       .subscribe({
         next: (newMessage) => {
-          console.log('[CONVO] listenForNewMessages - New message received via WebSocket:', newMessage);
+          console.warn('[CONVO] listenForNewMessages - New message received via WebSocket:', newMessage); // Changed to warn
           const existingMessageIndex = this.messages.findIndex(m => m.id === newMessage.id);
           if (existingMessageIndex === -1) {
             this.messages = [...this.messages, newMessage];

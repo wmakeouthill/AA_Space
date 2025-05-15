@@ -333,6 +333,10 @@ __decorate([
     __metadata("design:type", Boolean)
 ], ChatMessage.prototype, "isRead", void 0);
 __decorate([
+    (0, typeorm_1.Column)({ type: 'varchar', length: 10, nullable: true, default: 'sent' }),
+    __metadata("design:type", String)
+], ChatMessage.prototype, "status", void 0);
+__decorate([
     (0, typeorm_1.ManyToOne)(() => ChatConversation, conversation => conversation.messages),
     (0, typeorm_1.JoinColumn)({ name: 'conversation_id' }),
     __metadata("design:type", ChatConversation)

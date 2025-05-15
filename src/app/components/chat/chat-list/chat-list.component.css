@@ -2,7 +2,7 @@
   display: flex;
   flex-direction: column;
   height: 100%;
-  overflow: hidden; /* Evitar vazamento de conteúdo */
+  overflow: hidden; /* Restaurado para garantir que o container não expanda com o conteúdo */
 }
 
 .chat-list-header {
@@ -18,29 +18,38 @@
 
 .chat-list {
   flex: 1;
-  overflow-y: auto;
   padding: 0;
-  scrollbar-width: thin; /* Para Firefox */
   max-height: calc(100% - 50px); /* Altura máxima considerando o cabeçalho */
+  min-height: 0;
+  overflow-y: auto; /* Permite rolagem vertical */
+  overflow-x: hidden; /* Impede rolagem horizontal */
+  /* Ajuda com o overflow em flex containers */
+  scrollbar-width: thin; /* Firefox: Deixa a barra de rolagem fina */
+  scrollbar-color: #1a5f7a transparent; /* Firefox: Cor do polegar e da trilha */
 }
 
-/* Estilizando a barra de rolagem para navegadores baseados em WebKit (Chrome, Safari) */
+/* Customização da barra de rolagem para Webkit (Chrome, Edge, Safari) */
 .chat-list::-webkit-scrollbar {
-  width: 6px;
+  width: 5px; /* Largura da barra de rolagem */
 }
 
 .chat-list::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.05);
-  border-radius: 10px;
+  background: transparent; /* Fundo da trilha transparente */
 }
 
 .chat-list::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.2);
-  border-radius: 10px;
+  background-color: #1a5f7a; /* Cor do polegar da barra de rolagem */
+  border-radius: 10px; /* Bordas arredondadas para o polegar */
+  border: 1px solid transparent; /* Borda transparente para evitar sobreposição se necessário */
 }
 
 .chat-list::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 0, 0, 0.3);
+  background-color: #134b61; /* Cor do polegar ao passar o mouse */
+}
+
+/* Remove as setas da barra de rolagem no Webkit */
+.chat-list::-webkit-scrollbar-button {
+  display: none;
 }
 
 .chat-item {
@@ -101,10 +110,9 @@
 }
 
 .chat-meta {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  justify-content: center; /* Centraliza o conteúdo verticalmente */
+  display: flex; /* Ensure items are in a row */
+  flex-direction: column; /* Stack time and badges vertically */
+  align-items: flex-end; /* Align badges to the right */
   min-width: 60px;
   width: 60px; /* Largura fixa para metadados */
 }
@@ -119,8 +127,24 @@
   display: inline-block;
   width: 8px;
   height: 8px;
-  background-color: #1890ff;
+  background-color: #007bff; /* Or your preferred color for the dot */
   border-radius: 50%;
+}
+
+.chat-unread-count {
+  margin-top: 4px; /* Space between time and badge */
+}
+
+.chat-unread-count .badge {
+  background-color: red;
+  color: white;
+  padding: 2px 6px;
+  border-radius: 10px;
+  font-size: 0.7rem;
+  font-weight: bold;
+  min-width: 18px; /* Ensure a minimum width for single-digit numbers */
+  text-align: center; /* Center the number in the badge */
+  display: inline-block; /* Allows for padding and centering */
 }
 
 .no-chats {

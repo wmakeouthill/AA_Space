@@ -1,5 +1,5 @@
 <div class="chat-new-container">
-  <button class="new-chat-button" (click)="openNewChatModal()">+ Nova Conversa</button>
+  <button type="button" class="new-chat-button" (click)="openNewChatModal()">+ Nova Conversa</button>
 </div>
 
 <div class="modal" *ngIf="showModal">
@@ -29,7 +29,7 @@
 
       <div class="form-group">
         <label>{{ isGroup ? 'Adicionar Participantes:' : 'Selecionar Usuário:' }}</label>
-        
+
         <!-- Campo de pesquisa -->
         <div class="search-container">
           <input
@@ -42,16 +42,16 @@
             {{ getUsersSelectedCount() }} selecionado{{ getUsersSelectedCount() > 1 ? 's' : '' }}
           </span>
         </div>
-        
+
         <div class="user-list">
           <div *ngIf="loading" class="loading-indicator">
             <p>Carregando usuários...</p>
           </div>
-          
+
           <div *ngIf="!loading && filteredUsers.length === 0" class="no-results">
             <p>Nenhum usuário encontrado</p>
           </div>
-          
+
           <div
             *ngFor="let user of filteredUsers"
             class="user-item"
@@ -70,7 +70,7 @@
           </div>
         </div>
       </div>
-      
+
       <div *ngIf="error" class="error-message">
         {{ error }}
       </div>

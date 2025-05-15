@@ -44,8 +44,8 @@ export class PostComponent implements OnInit {
   }
 
   ngOnInit() {
-    this.isLoggedIn = this.authService.getToken() !== null;
-    
+    this.isLoggedIn = this.authService.getUserId() !== null;
+
     // Obter ID do usuário atual, se estiver logado
     if (this.isLoggedIn) {
       this.authService.getUserInfo().subscribe({
@@ -58,7 +58,7 @@ export class PostComponent implements OnInit {
         }
       });
     }
-    
+
     this.route.params.subscribe(params => {
       const id = params['id'];
       if (!id) {
@@ -148,7 +148,7 @@ export class PostComponent implements OnInit {
   likePost() {
     if (!this.post) return;
 
-    if (!this.authService.getToken()) {
+    if (!this.authService.getUserId()) {
       this.error = 'Você precisa estar logado para curtir uma postagem';
       return;
     }
@@ -192,7 +192,7 @@ export class PostComponent implements OnInit {
   likeComment(comment: Comment) {
     if (!this.post) return;
 
-    if (!this.authService.getToken()) {
+    if (!this.authService.getUserId()) {
       this.error = 'Você precisa estar logado para curtir um comentário';
       return;
     }
@@ -245,12 +245,12 @@ export class PostComponent implements OnInit {
     // Se for administrador, pode excluir qualquer comentário
     const isUserAdmin = this.authService.isAdmin();
     console.log('Verificando permissões para comentário - isAdmin:', isUserAdmin);
-    
+
     if (isUserAdmin) {
       console.log('Usuário é administrador, permissão concedida para comentário');
       return true;
     }
-    
+
     // Se não há usuário logado, não é o autor
     if (!this.userId) {
       return false;
@@ -259,7 +259,7 @@ export class PostComponent implements OnInit {
     // Verificação principal: checamos se o comment.user existe e tem o mesmo id que o usuário logado
     if (comment.user && this.userId) {
       return comment.user.id === this.userId;
-    } 
+    }
     // Verificação alternativa: se o comment tem um user_id, verificamos diretamente com ele
     else if (comment.user_id !== undefined && comment.user_id !== null && this.userId) {
       return comment.user_id === this.userId;
@@ -303,14 +303,14 @@ export class PostComponent implements OnInit {
     console.log("Verificando permissões de autor:");
     console.log("Post:", this.post);
     console.log("UserId:", this.userId);
-    
+
     // Se for administrador, pode excluir qualquer post
     if (this.authService.isAdmin()) {
       console.log("Usuário é administrador, permissão concedida.");
       this.isCurrentUserAuthor = true;
       return;
     }
-    
+
     // Se não há post ou usuário logado, não é o autor
     if (!this.post || !this.userId) {
       console.log("Sem post ou usuário logado");
@@ -318,22 +318,14 @@ export class PostComponent implements OnInit {
       return;
     }
 
-    // Obter o token atual e tentar extrair o id do usuário caso ainda não tenhamos
+    // Obter o ID do usuário atual caso ainda não tenhamos
     if (!this.userId) {
-      const token = this.authService.getToken();
-      if (token) {
-        try {
-          const tokenParts = token.split('.');
-          if (tokenParts.length === 3) {
-            const tokenPayload = JSON.parse(atob(tokenParts[1]));
-            console.log('Token payload:', tokenPayload);
-            if (tokenPayload.id) {
-              this.userId = tokenPayload.id;
-              console.log('ID do usuário extraído do token:', this.userId);
-            }
-          }
-        } catch (e) {
-          console.error('Erro ao decodificar token:', e);
+      const userIdFromAuth = this.authService.getUserId();
+      if (userIdFromAuth) {
+        const parsedUserId = parseInt(userIdFromAuth);
+        if (!isNaN(parsedUserId)) {
+          this.userId = parsedUserId;
+          console.log('ID do usuário obtido de authService.getUserId():', this.userId);
         }
       }
     }
@@ -342,7 +334,7 @@ export class PostComponent implements OnInit {
     if (this.post.user && this.userId) {
       console.log(`Comparando IDs do objeto user: post.user.id (${this.post.user.id}) === userId (${this.userId})`);
       this.isCurrentUserAuthor = this.post.user.id === this.userId;
-    } 
+    }
     // Verificação alternativa: se o post tem um user_id, verificamos diretamente com ele
     else if (this.post.user_id !== undefined && this.post.user_id !== null && this.userId) {
       console.log(`Comparando com user_id: post.user_id (${this.post.user_id}) === userId (${this.userId})`);
@@ -360,7 +352,7 @@ export class PostComponent implements OnInit {
         this.isCurrentUserAuthor = false;
       }
     }
-    
+
     console.log("Resultado da verificação de autor:", this.isCurrentUserAuthor);
   }
 

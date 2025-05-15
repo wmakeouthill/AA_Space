@@ -33,7 +33,7 @@ export class HomeComponent implements OnInit {
 
   ngOnInit() {
     // Verifica se o usuário está autenticado ou tem um apelido
-    const isAuthenticated = this.authService.getToken() !== null;
+    const isAuthenticated = this.authService.getUserId() !== null; // Changed from getToken()
     const hasGuestNickname = this.guestService.hasGuestNickname();
 
     // Verifica e permite acesso com base no tipo de usuário
@@ -58,6 +58,7 @@ export class HomeComponent implements OnInit {
     }
 
     this.loadPosts();
+
   }
 
   loadPosts() {
@@ -84,7 +85,7 @@ export class HomeComponent implements OnInit {
     event.preventDefault();
     event.stopPropagation();
 
-    if (!this.authService.getToken()) {
+    if (!this.authService.getUserId()) { // Changed from getToken()
       this.error = 'Você precisa estar logado para curtir uma postagem';
       return;
     }

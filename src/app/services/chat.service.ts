@@ -1,8 +1,8 @@
 import { Injectable } from '@angular/core';
-import { Observable, throwError, Subject } from 'rxjs';
+import { Observable, throwError, Subject, BehaviorSubject, of } from 'rxjs';
 import { catchError, map, tap } from 'rxjs/operators';
 import { HttpClient } from '@angular/common/http';
-import { ApiResponse, Chat, CreateChatRequest, Message, User, ChatParticipant, NewMessageEvent } from '../models/chat/chat.interface'; // Added NewMessageEvent
+import { ApiResponse, Chat, CreateChatRequest, Message, User, NewMessageEvent } from '../models/chat/chat.interface';
 import { AuthService } from './auth.service';
 import { ApiService } from './api.service';
 import { webSocket, WebSocketSubject } from 'rxjs/webSocket';
@@ -12,49 +12,61 @@ import { webSocket, WebSocketSubject } from 'rxjs/webSocket';
 })
 export class ChatService {
   private apiUrl: string;
-  private currentUserId: number;
-  private webSocketServiceUrlRoot: string; // For WebSocket connections
-  private chatSubjects = new Map<number, WebSocketSubject<Message>>(); // Manages active WebSocket subjects per chat
-  private newMessageSubject = new Subject<NewMessageEvent>(); // Subject for broadcasting new messages to ChatListComponent
+  private webSocketServiceUrlRoot: string;
+  private chatSubjects = new Map<number, WebSocketSubject<Message | any>>();
+  private newMessageSubject = new Subject<NewMessageEvent>();
+  private messageStatusUpdateSubject = new Subject<{ chatId: number; status: 'sent' | 'delivered' | 'read'; messageIds: string[] }>();
+
+  private totalUnreadCount = new BehaviorSubject<number>(0);
+  public totalUnreadCount$ = this.totalUnreadCount.asObservable();
+
+  private chatsCache: Chat[] = [];
 
   constructor(
     private http: HttpClient,
     private authService: AuthService,
     private apiService: ApiService
   ) {
-    const userId = this.authService.getUserId();
-    console.log(`[CHAT SERVICE] Inicializando com ID de usuário: ${userId}`);
-
-    if (userId && !isNaN(parseInt(userId))) {
-      this.currentUserId = parseInt(userId);
-    } else {
-      console.warn('[CHAT SERVICE] ID de usuário inválido ou não encontrado:', userId);
-      this.currentUserId = 0;
-    }
-
-    console.log(`[CHAT SERVICE] ID do usuário atual inicializado: ${this.currentUserId}`);
+    const userIdStr = this.authService.getUserId();
+    console.log(`[CHAT SERVICE] Initializing. User ID from authService at construction: ${userIdStr}`);
 
     let baseApiUrl = (this.apiService as any).API_URL;
-
     if (baseApiUrl.endsWith('/api')) {
       baseApiUrl = baseApiUrl.substring(0, baseApiUrl.length - 4);
     }
-
     this.apiUrl = `${baseApiUrl}/api/chat`;
-    console.log('[CHAT SERVICE] usando URL da API HTTP:', this.apiUrl);
-
-    // Derive WebSocket base URL from baseApiUrl
-    // Adjusted to match backend expectation (no /ws segment in the root path for WebSocket)
     this.webSocketServiceUrlRoot = baseApiUrl.replace(/^http/, 'ws');
-    console.log('[CHAT SERVICE] usando URL base para WebSocket:', this.webSocketServiceUrlRoot);
+    console.log('[CHAT SERVICE] HTTP API URL:', this.apiUrl);
+    console.log('[CHAT SERVICE] WebSocket base URL:', this.webSocketServiceUrlRoot);
+  }
+
+  public getCurrentUserId(): number {
+    const userIdStr = this.authService.getUserId();
+    console.log(`[CHAT SERVICE] getCurrentUserId - User ID string from authService: ${userIdStr}`); // LOG ADDED
+    if (userIdStr && !isNaN(parseInt(userIdStr))) {
+      const numericUserId = parseInt(userIdStr);
+      console.log(`[CHAT SERVICE] getCurrentUserId - Parsed numeric User ID: ${numericUserId}`); // LOG ADDED
+      return numericUserId;
+    } else {
+      console.warn('[CHAT SERVICE] getCurrentUserId: User ID is invalid or not found from AuthService. Returning 0.'); // LOG MODIFIED
+      return 0;
+    }
   }
 
   getChats(): Observable<Chat[]> {
+    const userId = this.getCurrentUserId();
+    console.log(`[CHAT SERVICE] getChats - User ID for fetching chats: ${userId}`); // LOG ADDED
+    if (userId === 0) {
+      console.warn('[CHAT SERVICE] GetChats: Aborted due to invalid user ID (0). Returning empty array.');
+      this.chatsCache = [];
+      this.totalUnreadCount.next(0);
+      return of([]);
+    }
+
     return this.http.get<ApiResponse<Chat>>(`${this.apiUrl}`).pipe(
       map(response => {
         const chats = response.conversations || [];
-
-        return chats.map(chat => ({
+        const processedChats = chats.map(chat => ({
           ...chat,
           avatarPath: chat.avatarPath,
           createdAt: new Date(chat.createdAt),
@@ -62,361 +74,320 @@ export class ChatService {
           lastMessage: chat.lastMessage ? {
             ...chat.lastMessage,
             timestamp: new Date(chat.lastMessage.timestamp)
-          } : undefined
+          } : undefined,
+          unreadCount: chat.unreadCount || 0
         }));
+
+        this.chatsCache = processedChats;
+        const initialTotalUnread = this.chatsCache.reduce((acc, c) => acc + (c.unreadCount || 0), 0);
+        console.log(`[CHAT SERVICE] getChats - Calculated initialTotalUnread: ${initialTotalUnread}`); // LOG ADDED
+        this.totalUnreadCount.next(initialTotalUnread);
+        console.log(`[CHAT SERVICE] Chats fetched. Initial total unread: ${initialTotalUnread}`);
+
+        this.chatsCache.forEach(chat => {
+          this.listenForNewMessages(chat.id);
+        });
+
+        return processedChats;
       }),
       catchError(error => {
-        console.error('Erro ao buscar chats:', error);
-        return throwError(() => new Error('Falha ao buscar chats. Tente novamente mais tarde.'));
+        console.error('[CHAT SERVICE] Error fetching chats:', error);
+        this.chatsCache = [];
+        this.totalUnreadCount.next(0);
+        return throwError(() => new Error('Failed to fetch chats. Please try again later.'));
       })
     );
   }
 
+  listenForNewMessages(chatId: number): Observable<Message | any> {
+    const userId = this.getCurrentUserId();
+    if (userId === 0) {
+      console.warn(`[CHAT SERVICE] ListenForNewMessages: Cannot listen for chat ${chatId}, user ID is 0.`);
+      return of();
+    }
+
+    if (this.chatSubjects.has(chatId)) {
+      console.log(`[CHAT SERVICE] ListenForNewMessages: Reusing existing WebSocket subject for chat ${chatId}`);
+      return this.chatSubjects.get(chatId)!.asObservable();
+    }
+
+    const wsUrl = `${this.webSocketServiceUrlRoot}/ws/chat/${chatId}/?userId=${userId}`;
+    console.log(`[CHAT SERVICE] Connecting to WebSocket for chat ${chatId}: ${wsUrl}`);
+
+    try {
+      const subject = webSocket<Message | any>(wsUrl);
+      this.chatSubjects.set(chatId, subject);
+
+      subject.pipe(
+        tap((receivedData: Message | any) => {
+          console.log(`[CHAT SERVICE] WebSocket data received for chat ${chatId}:`, receivedData);
+
+          if (receivedData.type === 'messageStatusUpdate') {
+            const { readerUserId, status, messageIds } = receivedData;
+            console.log(`[CHAT SERVICE] Received message status update for chat ${chatId}. Reader: ${readerUserId}, Status: ${status}, Message IDs: ${messageIds}`);
+            this.handleMessageStatusUpdate(chatId, status, messageIds, userId);
+          } else {
+            const message = receivedData as Message;
+            const chatIndex = this.chatsCache.findIndex(c => c.id === chatId);
+            if (chatIndex > -1) {
+              this.chatsCache[chatIndex].lastMessage = {
+                ...message,
+                timestamp: new Date(message.timestamp)
+              };
+              let isNewUnread = false;
+              if (message.senderId !== userId) {
+                this.chatsCache[chatIndex].unreadCount = (this.chatsCache[chatIndex].unreadCount || 0) + 1;
+                isNewUnread = true;
+                console.log(`[CHAT SERVICE] Unread count for chat ${chatId} incremented to ${this.chatsCache[chatIndex].unreadCount}`);
+              }
+
+              const newTotal = this.chatsCache.reduce((acc, c) => acc + (c.unreadCount || 0), 0);
+              this.totalUnreadCount.next(newTotal);
+              console.log(`[CHAT SERVICE] Total unread count updated to: ${newTotal}`);
+
+              this.newMessageSubject.next({ chatId, message, isNewUnread });
+            } else {
+              console.warn(`[CHAT SERVICE] Received message for chat ${chatId}, but chat not found in cache.`);
+            }
+          }
+        }),
+        catchError(error => {
+          console.error(`[CHAT SERVICE] WebSocket error for chat ${chatId}:`, error);
+          this.chatSubjects.delete(chatId);
+          return of();
+        })
+      ).subscribe({
+        error: (err) => console.error(`[CHAT SERVICE] Unhandled subscription error for WebSocket chat ${chatId}:`, err),
+        complete: () => {
+          console.log(`[CHAT SERVICE] WebSocket subject COMPLETED for chat ${chatId}. Removing from active subjects.`);
+          this.chatSubjects.delete(chatId);
+        }
+      });
+      return subject.asObservable();
+    } catch (error) {
+      console.error(`[CHAT SERVICE] Failed to create WebSocket for chat ${chatId}:`, error);
+      return of();
+    }
+  }
+
+  private handleMessageStatusUpdate(chatId: number, status: 'sent' | 'delivered' | 'read', messageIds: string[], currentUserId: number) {
+    const chat = this.chatsCache.find(c => c.id === chatId);
+    if (chat) {
+      console.log(`[CHAT SERVICE] Handling status update for chat ${chatId}: ${messageIds.length} messages to status ${status}.`);
+      this.messageStatusUpdateSubject.next({ chatId, status, messageIds });
+    }
+  }
+
+  getMessageStatusUpdateListener(): Observable<{ chatId: number; status: 'sent' | 'delivered' | 'read'; messageIds: string[] }> {
+    return this.messageStatusUpdateSubject.asObservable();
+  }
+
+  getNewMessageListener(): Observable<NewMessageEvent> {
+    return this.newMessageSubject.asObservable();
+  }
+
+  markChatAsRead(chatId: number): void {
+    const chatIndex = this.chatsCache.findIndex(c => c.id === chatId);
+    if (chatIndex > -1) {
+      if (this.chatsCache[chatIndex].unreadCount && this.chatsCache[chatIndex].unreadCount > 0) {
+        this.chatsCache[chatIndex].unreadCount = 0;
+        const newTotal = this.chatsCache.reduce((acc, c) => acc + (c.unreadCount || 0), 0);
+        this.totalUnreadCount.next(newTotal);
+        console.log(`[CHAT SERVICE] Chat ${chatId} marked as read. New total unread: ${newTotal}`);
+
+        const userId = this.getCurrentUserId();
+        if (userId === 0) {
+          console.warn(`[CHAT SERVICE] MarkChatAsRead: Cannot notify backend for chat ${chatId}, user ID is 0.`);
+          return;
+        }
+        this.http.post(`${this.apiUrl}/${chatId}/messages/mark-as-read`, {}).pipe(
+          catchError(err => {
+            console.error(`[CHAT SERVICE] Failed to mark messages as read on backend for chat ${chatId}:`, err);
+            return throwError(() => new Error('Failed to notify backend about read messages.'));
+          })
+        ).subscribe({
+          next: () => console.log(`[CHAT SERVICE] Backend notified: messages read for chat ${chatId}`)
+        });
+      }
+    } else {
+      console.warn(`[CHAT SERVICE] Attempted to mark unknown chat ${chatId} as read.`);
+    }
+  }
+
   getMessages(chatId: number): Observable<Message[]> {
+    const userId = this.getCurrentUserId();
+    if (userId === 0) {
+      console.warn(`[CHAT SERVICE] GetMessages: Aborted for chat ${chatId} due to invalid user ID (0).`);
+      return of([]);
+    }
     return this.http.get<ApiResponse<any>>(`${this.apiUrl}/${chatId}/messages`).pipe(
       map(response => {
         const messages = response.messages || [];
-        console.log('[CHAT SERVICE] Mensagens recebidas:', messages);
-
-        return messages.map((msg: any) => {
-          if (!msg.senderName) {
-            console.warn('[CHAT SERVICE] Mensagem sem nome do remetente:', msg);
-          }
-
-          const profileImage = msg.profileImage ? this.formatImageUrl(msg.profileImage) :
-                                              this.formatImageUrl('/uploads/assets/images/user.png');
-
-          return {
-            id: msg.id,
-            content: msg.content,
-            senderId: msg.senderId,
-            senderName: msg.senderName || 'Usuário',
-            senderProfileImage: profileImage,
-            timestamp: new Date(msg.timestamp),
-            read: msg.read || false
-          };
-        });
+        return messages.map((msg: any) => ({
+          id: msg.id,
+          content: msg.content,
+          senderId: msg.senderId,
+          senderName: msg.senderName || 'User',
+          senderProfileImage: this.formatImageUrl(msg.profileImage),
+          timestamp: new Date(msg.timestamp),
+          read: msg.read || false,
+          status: msg.status || 'sent' // Adicionar status aqui, default para 'sent' se não vier
+        }));
       }),
       catchError(error => {
-        console.error('Erro ao buscar mensagens:', error);
-        return throwError(() => new Error('Falha ao buscar mensagens. Tente novamente mais tarde.'));
+        console.error(`[CHAT SERVICE] Error fetching messages for chat ${chatId}:`, error);
+        return throwError(() => new Error('Failed to fetch messages.'));
       })
     );
   }
 
   sendMessage(chatId: number, content: string): Observable<Message> {
+    const userId = this.getCurrentUserId();
+    if (userId === 0) {
+      console.warn(`[CHAT SERVICE] SendMessage: Aborted for chat ${chatId} due to invalid user ID (0).`);
+      return throwError(() => new Error('Cannot send message: User not properly authenticated.'));
+    }
     return this.http.post<any>(`${this.apiUrl}/${chatId}/messages`, { content }).pipe(
       map(response => {
-        const msgData = response.message;
-        if (!msgData) {
-          throw new Error('Resposta inválida do servidor');
-        }
-
-        console.log('[CHAT SERVICE] Resposta ao enviar mensagem:', msgData);
-
+        // A resposta do backend para sendMessage agora é um objeto { message: string, chatMessage: Message }
+        // Vamos usar chatMessage que contém o objeto da mensagem completa.
+        const msgData = response.chatMessage;
+        if (!msgData) throw new Error('Invalid server response, missing chatMessage');
         return {
           id: msgData.id,
           content: msgData.content,
           senderId: msgData.senderId,
           senderName: msgData.senderName,
-          senderProfileImage: msgData.profileImage,
+          senderProfileImage: this.formatImageUrl(msgData.senderProfileImage), // Corrigido para senderProfileImage
           timestamp: new Date(msgData.timestamp),
-          read: msgData.read
+          read: msgData.read,
+          status: msgData.status // Adicionar status aqui
         };
       }),
       catchError(error => {
-        console.error('Erro ao enviar mensagem:', error);
-        return throwError(() => new Error('Falha ao enviar mensagem. Tente novamente mais tarde.'));
+        console.error(`[CHAT SERVICE] Error sending message to chat ${chatId}:`, error);
+        return throwError(() => new Error('Failed to send message.'));
       })
     );
   }
 
   createChat(isGroup: boolean, name: string | undefined, participants: number[]): Observable<Chat> {
-    const request: CreateChatRequest = {
-      isGroup,
-      name,
-      participants
-    };
+    const userId = this.getCurrentUserId();
+    if (userId === 0) {
+      console.warn(`[CHAT SERVICE] CreateChat: Aborted due to invalid user ID (0).`);
+      return throwError(() => new Error('Cannot create chat: User not properly authenticated.'));
+    }
+    if (!participants.includes(userId)) {
+      participants.push(userId);
+    }
+
+    const request: CreateChatRequest = { isGroup, name, participants };
+    console.log('[CHAT SERVICE] Creating chat with payload:', JSON.stringify(request, null, 2)); // Log do payload
 
     return this.http.post<any>(`${this.apiUrl}`, request).pipe(
       map(response => {
         const chatData = response.conversation;
-        if (!chatData) {
-          throw new Error('Resposta inválida do servidor');
-        }
-
-        return {
+        if (!chatData) throw new Error('Invalid server response');
+        const newChat: Chat = {
           ...chatData,
           avatarPath: chatData.avatarPath,
           createdAt: new Date(chatData.createdAt),
-          updatedAt: new Date(chatData.updatedAt)
+          updatedAt: new Date(chatData.updatedAt),
+          unreadCount: 0
         };
+        this.chatsCache.push(newChat);
+        this.listenForNewMessages(newChat.id);
+
+        return newChat;
       }),
       catchError(error => {
-        console.error('Erro ao criar chat:', error);
-        return throwError(() => new Error('Falha ao criar chat. Tente novamente mais tarde.'));
+        console.error('[CHAT SERVICE] Error creating chat:', error);
+        return throwError(() => new Error('Failed to create chat.'));
       })
     );
   }
 
   getAvailableUsers(): Observable<User[]> {
+    const userId = this.getCurrentUserId();
+    if (userId === 0) {
+      console.warn(`[CHAT SERVICE] GetAvailableUsers: Aborted due to invalid user ID (0).`);
+      return of([]);
+    }
     return this.http.get<any>(`${this.apiUrl}/users`).pipe(
       map(response => response.users || []),
       catchError(error => {
-        console.error('Erro ao buscar usuários:', error);
-        return throwError(() => new Error('Falha ao buscar usuários. Tente novamente mais tarde.'));
+        console.error('[CHAT SERVICE] Error fetching available users:', error);
+        return throwError(() => new Error('Failed to fetch users.'));
       })
     );
   }
 
-  getCurrentUserId(): number {
-    const userId = this.authService.getUserId();
-
-    if (!userId) {
-      console.error('[CHAT SERVICE] ID do usuário não encontrado! Utilizando 0 como fallback.');
-      return 0;
-    }
-
-    if (isNaN(parseInt(userId))) {
-      console.error(`[CHAT SERVICE] ID inválido: ${userId}. Utilizando 0 como fallback.`);
-      return 0;
-    }
-
-    const userIdNumber = parseInt(userId);
-    return userIdNumber;
+  public getPublicCurrentUserId(): number {
+    return this.getCurrentUserId();
   }
 
-  getOtherParticipant(chat: Chat): ChatParticipant | null {
-    if (!chat || chat.isGroup || !chat.participants || chat.participants.length === 0) {
-      console.warn(`[CHAT SERVICE] getOtherParticipant - Chat inválido ou grupo ou sem participantes: ${chat?.id}`);
-      return null;
+  public formatImageUrl(imagePath?: string): string {
+    if (!imagePath) {
+      return 'assets/images/user.png';
     }
-
-    const userId = this.getCurrentUserId();
-    const currentUserIdNumber = Number(userId);
-
-    for (const participant of chat.participants) {
-      const participantId = Number(participant.id);
-      if (participantId !== currentUserIdNumber) {
-        if (participant.profileImage) {
-          participant.profileImage = this.formatImageUrl(participant.profileImage);
-        }
-        return participant;
-      }
+    if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+      return imagePath;
     }
+    const baseApiUrl = (this.apiService as any).API_URL.endsWith('/api') ?
+      (this.apiService as any).API_URL.slice(0, -4) :
+      (this.apiService as any).API_URL;
 
-    if (chat.participants.length >= 2) {
-      const firstParticipantId = Number(chat.participants[0].id);
-      if (firstParticipantId === currentUserIdNumber) {
-        if (chat.participants[1].profileImage) {
-          chat.participants[1].profileImage = this.formatImageUrl(chat.participants[1].profileImage);
-        }
-        return chat.participants[1];
-      } else {
-        if (chat.participants[0].profileImage) {
-          chat.participants[0].profileImage = this.formatImageUrl(chat.participants[0].profileImage);
-        }
-        return chat.participants[0];
-      }
-    } else if (chat.participants.length === 1) {
-      if (chat.participants[0].profileImage) {
-        chat.participants[0].profileImage = this.formatImageUrl(chat.participants[0].profileImage);
-      }
-      return chat.participants[0];
-    }
-
-    console.error(`[CHAT SERVICE] Chat ${chat.id} não tem participantes válidos ou não foi possível determinar o outro participante.`);
-    return null;
+    return `${baseApiUrl}${imagePath.startsWith('/') ? imagePath : '/' + imagePath}`;
   }
 
-  uploadGroupAvatar(chatId: number, imageFile: File): Observable<{ avatarPath: string, fullImageUrl: string }> {
-    return new Observable(observer => {
-      const reader = new FileReader();
-      reader.onload = (e: any) => {
-        const base64Image = e.target.result;
-        this.http.post<any>(`${this.apiUrl}/${chatId}/avatar`, { groupAvatar: base64Image }).pipe(
-          map(response => {
-            if (!response || !response.avatarPath) {
-              throw new Error('Resposta inválida do servidor ao fazer upload do avatar do grupo.');
-            }
-            return {
-              avatarPath: response.avatarPath,
-              fullImageUrl: response.fullImageUrl
-            };
-          }),
-          tap(result => { // Dispatch global event on success
-            const event = new CustomEvent('chat:avatarUpdated', {
-              detail: { chatId: chatId, avatarPath: result.avatarPath, fullImageUrl: result.fullImageUrl }
-            });
-            window.dispatchEvent(event);
-            console.log('[CHAT SERVICE] Dispatched chat:avatarUpdated event for upload.');
-          }),
-          catchError(error => {
-            console.error('Erro ao fazer upload do avatar do grupo:', error);
-            return throwError(() => new Error('Falha ao fazer upload do avatar do grupo.'));
-          })
-        ).subscribe({
-          next: result => observer.next(result),
-          error: err => observer.error(err),
-          complete: () => observer.complete()
-        });
-      };
-      reader.onerror = error => {
-        observer.error(new Error('Falha ao ler o arquivo de imagem.'));
-      };
-      reader.readAsDataURL(imageFile);
-    });
+  public getOtherParticipant(chat: Chat): User | undefined {
+    const currentUserId = this.getCurrentUserId();
+    if (!chat || chat.isGroup || !chat.participants || currentUserId === 0) {
+      return undefined;
+    }
+    return chat.participants.find(p => p.id !== currentUserId);
+  }
+
+  uploadGroupAvatar(chatId: number, file: File): Observable<{ avatarPath: string }> {
+    const formData = new FormData();
+    formData.append('avatar', file);
+
+    return this.http.post<{ avatarPath: string }>(`${this.apiUrl}/${chatId}/avatar`, formData).pipe(
+      catchError(error => {
+        console.error(`[CHAT SERVICE] Error uploading group avatar for chat ${chatId}:`, error);
+        return throwError(() => new Error('Failed to upload group avatar.'));
+      })
+    );
   }
 
   removeGroupAvatar(chatId: number): Observable<{ message: string }> {
     return this.http.delete<{ message: string }>(`${this.apiUrl}/${chatId}/avatar`).pipe(
-      tap(() => { // Dispatch global event on success
-        const event = new CustomEvent('chat:avatarUpdated', {
-          detail: { chatId: chatId, avatarPath: null }
-        });
-        window.dispatchEvent(event);
-        console.log('[CHAT SERVICE] Dispatched chat:avatarUpdated event for removal.');
-      }),
       catchError(error => {
-        console.error('Erro ao remover o avatar do grupo:', error);
-        return throwError(() => new Error('Falha ao remover o avatar do grupo.'));
+        console.error(`[CHAT SERVICE] Error removing group avatar for chat ${chatId}:`, error);
+        return throwError(() => new Error('Failed to remove group avatar.'));
       })
     );
   }
 
-  listenForNewMessages(chatId: number): Observable<Message> {
+  public closeChatConnection(chatId: number): void {
+    console.log(`[CHAT SERVICE] closeChatConnection called for chat ${chatId}. Call stack:`, (new Error()).stack);
     if (this.chatSubjects.has(chatId)) {
-      console.log(`[CHAT SERVICE] Reusing existing WebSocket subject for chat ${chatId}`);
-      return this.chatSubjects.get(chatId)!.asObservable();
-    }
-
-    const wsUrl = `${this.webSocketServiceUrlRoot}/${chatId}`;
-    console.log(`[CHAT SERVICE] Attempting to connect to WebSocket: ${wsUrl}`);
-
-    const subject = webSocket<any>({
-      url: wsUrl,
-      openObserver: {
-        next: () => {
-          console.log(`[CHAT SERVICE] WebSocket OPENED successfully for chat ${chatId} at ${wsUrl}`);
-        }
-      },
-      closeObserver: {
-        next: (closeEvent) => {
-          // Type assertion for closeEvent
-          const event = closeEvent as CloseEvent;
-          console.log(`[CHAT SERVICE] WebSocket CLOSED for chat ${chatId}. Code: ${event.code}, Reason: ${event.reason}, Was Clean: ${event.wasClean}`);
-          this.chatSubjects.delete(chatId);
-        }
-      },
-      closingObserver: {
-        next: () => {
-          console.log(`[CHAT SERVICE] WebSocket CLOSING for chat ${chatId}`);
-        }
-      },
-      deserializer: (e: MessageEvent) => {
-        try {
-          const rawMessage = JSON.parse(e.data);
-          console.log(`[CHAT SERVICE] Raw WebSocket message received for chat ${chatId}:`, rawMessage);
-          // Transform raw message to Message interface
-          const transformedMessage: Message = {
-            id: rawMessage.id,
-            content: rawMessage.content,
-            senderId: rawMessage.senderId,
-            senderName: rawMessage.senderName, // Assuming backend sends this
-            senderProfileImage: rawMessage.senderProfileImage ? this.formatImageUrl(rawMessage.senderProfileImage) : this.formatImageUrl('/assets/images/user.png'),
-            timestamp: new Date(rawMessage.timestamp),
-            read: rawMessage.read || false
-          };
-          // Notify ChatListComponent AND ChatConversationComponent about the new message
-          console.log(`[CHAT SERVICE] Broadcasting transformed message via newMessageSubject for chat ${chatId}:`, transformedMessage);
-          this.newMessageSubject.next({ message: transformedMessage, chatId: chatId });
-          return transformedMessage; // This return is for the listenForNewMessages observable stream in ChatConversationComponent
-        } catch (error) {
-          console.error(`[CHAT SERVICE] Error parsing WebSocket message for chat ${chatId}:`, error, "Raw data:", e.data);
-          // Return a dummy message or handle error appropriately
-          // For now, returning an empty object to avoid breaking the stream, but this should be improved
-          return { id: -1, content: 'Error parsing message', senderId: -1, timestamp: new Date(), read: false };
-        }
-      }
-    });
-
-    this.chatSubjects.set(chatId, subject);
-    // Add error handling for the WebSocket subject itself
-    return subject.asObservable().pipe(
-      catchError(error => {
-        console.error(`[CHAT SERVICE] WebSocket error for chat ${chatId}:`, error);
-        this.chatSubjects.delete(chatId); // Remove subject on error
-        return throwError(() => new Error(`WebSocket error for chat ${chatId}`));
-      })
-    );
-  }
-
-  // Method for ChatListComponent to subscribe to new messages
-  getNewMessageListener(): Observable<NewMessageEvent> {
-    return this.newMessageSubject.asObservable();
-  }
-
-  closeChatConnection(chatId: number): void {
-    if (this.chatSubjects.has(chatId)) {
-      const subject = this.chatSubjects.get(chatId)!;
-      console.log(`[CHAT SERVICE] Closing WebSocket connection explicitly for chat ${chatId}`);
-      subject.complete();
-    }
-  }
-
-  private getDefaultProfileImageForSender(senderId: number): string {
-    return '/assets/images/user.png';
-  }
-
-  private determineApiOrigin(): string {
-    const currentOrigin = window.location.origin;
-    if (currentOrigin.includes('v3mrhcvc-4200.brs.devtunnels.ms')) {
-      return 'https://v3mrhcvc-3001.brs.devtunnels.ms';
-    } else if (currentOrigin.includes('.github.dev') || currentOrigin.includes('.github.io') || currentOrigin.includes('.app.github.dev')) {
-      return currentOrigin.replace(/-\d+(\.app\.github\.dev|\.github\.dev|\.github\.io)/, '-3001$1');
-    }
-    return 'http://localhost:3001';
-  }
-
-  formatImageUrl(imagePath: string): string {
-    const apiOrigin = this.determineApiOrigin();
-
-    if (!imagePath) {
-      return `${apiOrigin}/uploads/assets/images/user.png`;
-    }
-
-    if (imagePath.startsWith('http') || imagePath.startsWith('data:')) {
-      let updatedPath = imagePath;
-      if (updatedPath.includes('localhost:4200')) {
-        updatedPath = updatedPath.replace('localhost:4200', 'localhost:3001');
-      }
-      if (updatedPath.includes('v3mrhcvc-4200.brs.devtunnels.ms')) {
-        updatedPath = updatedPath.replace('v3mrhcvc-4200.brs.devtunnels.ms', 'v3mrhcvc-3001.brs.devtunnels.ms');
-      }
-      // Remove barras duplas, exceto em http:// ou https://
-      return updatedPath.replace(/([^:])\/\//g, '$1/');
-    }
-
-    // Para caminhos relativos, constrói a URL completa usando o apiOrigin
-    const pathStartsWithSlash = imagePath.startsWith('/');
-    let fullPath = apiOrigin;
-
-    if (pathStartsWithSlash) {
-      // Se já começa com /uploads/, não adiciona /uploads/ novamente
-      if (imagePath.startsWith('/uploads/')) {
-        fullPath += imagePath;
-      } else {
-        // Se começa com / mas não /uploads/, adiciona /uploads/
-        fullPath += '/uploads' + imagePath;
-      }
+      const subject = this.chatSubjects.get(chatId);
+      subject?.complete();
+      this.chatSubjects.delete(chatId);
+      console.log(`[CHAT SERVICE] WebSocket connection explicitly closed and removed for chat ${chatId}`);
     } else {
-      // Se não começa com /, adiciona /uploads/ e o caminho
-      fullPath += '/uploads/' + imagePath;
+      console.warn(`[CHAT SERVICE] No active WebSocket connection found for chat ${chatId} to close.`);
     }
+  }
 
-    // Remove quaisquer barras duplas que possam ter sido formadas, especialmente após o host
-    // Ex: https://host//path -> https://host/path
-    // Ex: https://host/uploads//profiles -> https://host/uploads/profiles
-    return fullPath.replace(/([^:])\/\//g, '$1/').replace(/\/uploads\/uploads\//g, '/uploads/');
+  cleanupUserSession(): void {
+    console.log('[CHAT SERVICE] Cleaning up user session.');
+    this.chatSubjects.forEach(subject => subject.complete());
+    this.chatSubjects.clear();
+    this.chatsCache = [];
+    this.totalUnreadCount.next(0);
+    this.newMessageSubject.complete();
+    this.newMessageSubject = new Subject<NewMessageEvent>();
   }
 }

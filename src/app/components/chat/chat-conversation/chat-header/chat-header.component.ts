@@ -150,7 +150,8 @@ export class ChatHeaderComponent implements OnChanges {
 
       if (!this.chat.isGroup && this.chat.participants?.length > 0) {
         // console.log('[CHAT HEADER] ngOnChanges - Participantes:', this.chat.participants.map(p => ({ id: p.id, type: typeof p.id, name: p.username, image: p.profileImage })));
-        this.otherParticipant = this.chatService.getOtherParticipant(this.chat);
+        const user = this.chatService.getOtherParticipant(this.chat);
+        this.otherParticipant = user ? user as ChatParticipant : null;
         // console.log('[CHAT HEADER] ngOnChanges - Outro participante armazenado:', this.otherParticipant);
       }
     }

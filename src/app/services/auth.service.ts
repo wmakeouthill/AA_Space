@@ -1,11 +1,19 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable, tap, catchError, of, map } from 'rxjs';
+import { BehaviorSubject, Observable, of, tap, catchError, map, shareReplay, finalize, distinctUntilChanged } from 'rxjs';
 import { ApiService } from './api.service';
 
 interface UserInfo {
   id: number;
   username: string;
   isAdmin?: boolean;
+}
+
+interface ValidationResponse {
+  valid: boolean;
+  username?: string;
+  userId?: number;
+  isAdmin?: boolean;
+  [key: string]: any;
 }
 
 @Injectable({
@@ -16,140 +24,159 @@ export class AuthService {
   private readonly USERNAME_KEY = 'username';
   private readonly USER_ID_KEY = 'user_id';
   private readonly IS_ADMIN_KEY = 'is_admin';
+  private readonly REMEMBER_ME_KEY = 'remember_me'; // Nova chave para localStorage
+
   private isAuthenticatedSubject = new BehaviorSubject<boolean>(false);
-  private tokenValidationInProgress = false;
+  private userIdSubject = new BehaviorSubject<string | null>(null);
+  public userId$ = this.userIdSubject.asObservable().pipe(distinctUntilChanged());
+
+  private initialValidation$: Observable<ValidationResponse>;
 
   constructor(private apiService: ApiService) {
-    // Inicializa o estado de autenticação baseado na presença do token
-    const hasToken = this.hasToken();
-    // console.log('AuthService inicializado, token existe:', hasToken);
-    this.isAuthenticatedSubject.next(hasToken);
+    this.initialValidation$ = this.createValidationObservable();
+    this.initializeAuthState();
+    this.userIdSubject.next(localStorage.getItem(this.USER_ID_KEY) || sessionStorage.getItem(this.USER_ID_KEY));
   }
 
-  private ensureToken(): string | null {
-    const token = localStorage.getItem(this.TOKEN_KEY);
-    // if (!token) {
-    //   // Se não há token no localStorage, verificar se é o ambiente de desenvolvimento
-    //   const isDev = true; // Em produção, isso viria do environment.ts
-    //   if (isDev) {
-    //     // Usar um token de desenvolvimento para testes que é válido por 24h
-    //     const devToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiaXNBZG1pbiI6dHJ1ZSwidXNlcm5hbWUiOiJhZG1pbiJ9.IAvPms6QrZR8lNnXo9d7J-traL-k2YgcLZFgQQe2HVc";
-    //     localStorage.setItem(this.TOKEN_KEY, devToken);
-    //     // Também definir outras informações necessárias
-    //     localStorage.setItem(this.USERNAME_KEY, 'admin');
-    //     localStorage.setItem(this.USER_ID_KEY, '1');
-    //     localStorage.setItem(this.IS_ADMIN_KEY, 'true');
-    //     return devToken;
-    //   }
-    // }
-    return token;
+  public getToken(): string | null {
+    return localStorage.getItem(this.TOKEN_KEY) || sessionStorage.getItem(this.TOKEN_KEY);
   }
 
-  getToken(): string | null {
-    return this.ensureToken();
-  }
-
-  validateToken(): Observable<any> {
-    if (this.tokenValidationInProgress) {
-      // console.log('Validação de token já em andamento, ignorando chamada duplicada');
-      return of(null);
-    }
-
+  private createValidationObservable(): Observable<ValidationResponse> {
     const token = this.getToken();
+    console.log('[AUTH SERVICE] createValidationObservable - Token from storage:', token); // LOG ADICIONADO/EXISTENTE
     if (!token) {
-      // console.log('Sem token para validar');
-      this.isAuthenticatedSubject.next(false);
-      return of(null);
+      console.log('[AUTH SERVICE] createValidationObservable - No token, returning { valid: false }');
+      this.userIdSubject.next(null);
+      this.isAuthenticatedSubject.next(false); // Garantir que isAuthenticatedSubject seja atualizado
+      return of({ valid: false, error: 'No token on creation' }).pipe(shareReplay(1));
     }
 
-    // console.log('Iniciando validação de token:', token.substring(0, 15) + '...');
-    this.tokenValidationInProgress = true;
+    const shouldRemember = localStorage.getItem(this.REMEMBER_ME_KEY) === 'true';
+    console.log(`[AUTH SERVICE] createValidationObservable - shouldRemember flag from localStorage: ${shouldRemember}`); // LOG ADICIONADO/EXISTENTE
 
+    console.log('[AUTH SERVICE] createValidationObservable - Token exists, calling apiService.validateToken()');
     return this.apiService.validateToken().pipe(
-      tap(response => {
-        this.tokenValidationInProgress = false;
-        // console.log('Resposta da validação de token:', response);
-
+      tap((response: ValidationResponse) => {
+        console.log('[AUTH SERVICE] createValidationObservable - API validateToken response:', response); // LOG ADICIONADO/EXISTENTE
         if (response && response.valid) {
-          // console.log('Token validado com sucesso');
-          this.isAuthenticatedSubject.next(true);
-
-          // Atualiza o nome de usuário caso tenha mudado
+          // O token em si não é re-salvo aqui, pois já deve estar no storage correto.
+          // Apenas os dados do usuário são atualizados/confirmados no storage correto.
           if (response.username) {
-            // console.log('Atualizando nome de usuário:', response.username);
-            localStorage.setItem(this.USERNAME_KEY, response.username);
+            this.setData(this.USERNAME_KEY, response.username, shouldRemember);
+            console.log(`[AUTH SERVICE] User data set with shouldRemember=${shouldRemember}: USERNAME_KEY`);
           }
-
-          // Salva o ID do usuário no localStorage
           if (response.userId) {
-            // console.log('Atualizando ID do usuário:', response.userId);
-            localStorage.setItem(this.USER_ID_KEY, response.userId.toString());
+            const userIdStr = response.userId.toString();
+            this.setData(this.USER_ID_KEY, userIdStr, shouldRemember);
+            this.userIdSubject.next(userIdStr); // Emitir o ID do usuário
+            console.log(`[AUTH SERVICE] User data set with shouldRemember=${shouldRemember}: USER_ID_KEY = ${userIdStr}`);
           }
-
-          // Salva a flag isAdmin no localStorage
           if (response.isAdmin !== undefined) {
-            // console.log('Atualizando status de admin:', response.isAdmin);
-            localStorage.setItem(this.IS_ADMIN_KEY, response.isAdmin ? 'true' : 'false');
+            this.setData(this.IS_ADMIN_KEY, response.isAdmin ? 'true' : 'false', shouldRemember);
+            console.log(`[AUTH SERVICE] User data set with shouldRemember=${shouldRemember}: IS_ADMIN_KEY`);
           }
+          this.isAuthenticatedSubject.next(true);
+          console.log('[AUTH SERVICE] createValidationObservable - isAuthenticatedSubject set to true.');
         } else {
-          // console.log('Resposta de validação inválida');
-          this.logout();
+          console.warn('[AUTH SERVICE] createValidationObservable - Token validation failed or response invalid. Logging out.');
+          this.logout(); // logout() já lida com a limpeza correta e reseta os subjects.
         }
       }),
+      map((response: ValidationResponse): ValidationResponse => { // Este map é mais para o consumidor do observable
+        return {
+          valid: !!(response && response.valid),
+          username: response?.username,
+          userId: response?.userId,
+          isAdmin: response?.isAdmin,
+          originalResponse: response
+        };
+      }),
       catchError(error => {
-        this.tokenValidationInProgress = false;
-        // console.error('Erro ao validar token:', error);
-
-        // Verifica se o erro é de autenticação (401)
-        if (error.status === 401) {
-          // console.log('Token inválido ou expirado, fazendo logout');
-          this.logout();
-        } else {
-          // Para outros erros (ex: servidor indisponível), mantemos o usuário logado
-          // para evitar logout desnecessário durante problemas de conectividade temporários
-          // console.log('Erro de serviço, mantendo estado de autenticação atual');
-        }
-
-        return of(null);
-      })
+        console.error('[AUTH SERVICE] createValidationObservable - Error during API validateToken:', error); // LOG ADICIONADO
+        this.logout(); // logout() já lida com a limpeza correta e reseta os subjects.
+        return of({ valid: false, error: error });
+      }),
+      shareReplay(1)
     );
   }
 
-  login(username: string, password: string): Observable<any> {
+  private initializeAuthState(): void {
+    console.log('[AUTH SERVICE] initializeAuthState - Initializing authentication state.'); // LOG ADICIONADO
+    // Verifica o token síncronamente primeiro para um estado inicial rápido
+    const token = this.getToken();
+    if (token) {
+        console.log('[AUTH SERVICE] initializeAuthState - Token found. Subscribing to initialValidation$.');
+        this.isAuthenticatedSubject.next(true); // Otimisticamente define como true, será corrigido pela validação se inválido
+        this.initialValidation$.subscribe({
+            next: (validationResult) => {
+                console.log('[AUTH SERVICE] initializeAuthState - initialValidation$ next:', validationResult);
+                if (!validationResult.valid) {
+                    // Se a validação falhar (após ter sido otimisticamente true), corrija.
+                    // logout() dentro de createValidationObservable já deve ter limpado e setado isAuthenticatedSubject para false.
+                }
+            },
+            error: (err) => {
+                console.error('[AUTH SERVICE] initializeAuthState - initialValidation$ error:', err);
+                // logout() dentro de createValidationObservable já deve ter limpado e setado isAuthenticatedSubject para false.
+            }
+        });
+    } else {
+        console.log('[AUTH SERVICE] initializeAuthState - No token found. Setting isAuthenticated to false.');
+        this.isAuthenticatedSubject.next(false);
+        this.userIdSubject.next(null);
+        // Não precisa se inscrever em initialValidation$ se não há token, pois ele já retorna of({valid: false})
+    }
+  }
+
+  public isAuthenticated(): Observable<boolean> {
+    return this.isAuthenticatedSubject.asObservable();
+  }
+
+  public validateToken(): Observable<ValidationResponse> {
+    if (!this.getToken()) {
+      if (this.isAuthenticatedSubject.value) {
+        this.isAuthenticatedSubject.next(false);
+        this.userIdSubject.next(null);
+      }
+      return of({ valid: false, error: 'No token for explicit validation call' });
+    }
+    return this.initialValidation$;
+  }
+
+  login(username: string, password: string, rememberMe: boolean = false): Observable<any> { // Adicionar rememberMe
     return this.apiService.login({ username, password }).pipe(
       tap(response => {
-        // console.log('Login response:', response);
         if (response && response.token) {
-          // Salva os dados no localStorage para persistir entre recargas
-          localStorage.setItem(this.TOKEN_KEY, response.token);
-          localStorage.setItem(this.USERNAME_KEY, response.username);
-
-          // Salvar a flag isAdmin
+          this.setData(this.TOKEN_KEY, response.token, rememberMe);
+          this.setData(this.USERNAME_KEY, response.username, rememberMe);
+          let userIdToStore: string | null = null;
           if (response.isAdmin !== undefined) {
-            localStorage.setItem(this.IS_ADMIN_KEY, response.isAdmin ? 'true' : 'false');
+            this.setData(this.IS_ADMIN_KEY, response.isAdmin ? 'true' : 'false', rememberMe);
           }
-
-          // Extrair o ID do token JWT
           try {
             const tokenParts = response.token.split('.');
             if (tokenParts.length === 3) {
               const tokenPayload = JSON.parse(atob(tokenParts[1]));
-              // console.log('Token payload:', tokenPayload);
               if (tokenPayload.id) {
-                // console.log('Salvando ID do usuário do token:', tokenPayload.id);
-                localStorage.setItem(this.USER_ID_KEY, String(tokenPayload.id));
+                userIdToStore = String(tokenPayload.id);
+                this.setData(this.USER_ID_KEY, userIdToStore, rememberMe);
               }
-
-              // Também extrair isAdmin do payload se existir
               if (tokenPayload.isAdmin !== undefined) {
-                localStorage.setItem(this.IS_ADMIN_KEY, tokenPayload.isAdmin ? 'true' : 'false');
+                this.setData(this.IS_ADMIN_KEY, tokenPayload.isAdmin ? 'true' : 'false', rememberMe);
               }
             }
           } catch (e) {
-            // console.error('Erro ao decodificar token:', e);
+            console.error('[AUTH SERVICE] Error parsing token during login:', e);
           }
 
+          this.userIdSubject.next(userIdToStore);
           this.isAuthenticatedSubject.next(true);
+          // Armazenar a preferência de "rememberMe"
+          localStorage.setItem(this.REMEMBER_ME_KEY, rememberMe ? 'true' : 'false');
+          this.initialValidation$ = this.createValidationObservable();
+          this.initialValidation$.subscribe();
+          console.log('[AUTH SERVICE] Login successful, isAuthenticatedSubject and userIdSubject updated.');
         }
       })
     );
@@ -158,85 +185,110 @@ export class AuthService {
   register(username: string, password: string, email?: string, phone?: string): Observable<any> {
     return this.apiService.register({ username, password, email, phone }).pipe(
       tap(response => {
-        // console.log('Register response:', response);
         if (response && response.token) {
-          localStorage.setItem(this.TOKEN_KEY, response.token);
-          localStorage.setItem(this.USERNAME_KEY, response.username);
+          // Por padrão, o registro não marca "lembrar sessão"
+          const rememberMe = false;
+          this.setData(this.TOKEN_KEY, response.token, rememberMe);
+          this.setData(this.USERNAME_KEY, response.username, rememberMe);
+          let userIdToStore: string | null = null;
+          try {
+            const tokenParts = response.token.split('.');
+            if (tokenParts.length === 3) {
+              const tokenPayload = JSON.parse(atob(tokenParts[1]));
+              if (tokenPayload.id) {
+                userIdToStore = String(tokenPayload.id);
+                this.setData(this.USER_ID_KEY, userIdToStore, rememberMe);
+              }
+              if (tokenPayload.isAdmin !== undefined) {
+                this.setData(this.IS_ADMIN_KEY, tokenPayload.isAdmin ? 'true' : 'false', rememberMe);
+              }
+            }
+          } catch (e) {
+            console.error('[AUTH SERVICE] Error parsing token during registration:', e);
+          }
+          this.userIdSubject.next(userIdToStore);
           this.isAuthenticatedSubject.next(true);
+          localStorage.setItem(this.REMEMBER_ME_KEY, rememberMe ? 'true' : 'false');
+          this.initialValidation$ = this.createValidationObservable();
+          this.initialValidation$.subscribe();
+          console.log('[AUTH SERVICE] Registration successful, isAuthenticatedSubject and userIdSubject updated.');
         }
       })
     );
   }
 
   logout(): void {
-    localStorage.removeItem(this.TOKEN_KEY);
-    localStorage.removeItem(this.USERNAME_KEY);
-    localStorage.removeItem(this.USER_ID_KEY);
-    localStorage.removeItem(this.IS_ADMIN_KEY);
+    console.log('[AUTH SERVICE] logout - Clearing authentication data.');
+    const rememberMeFlag = localStorage.getItem(this.REMEMBER_ME_KEY) === 'true'; // Lê a flag antes de limpar
+    console.log(`[AUTH SERVICE] logout - rememberMeFlag was: ${rememberMeFlag}`);
+
+    this.clearData(this.TOKEN_KEY, rememberMeFlag);
+    this.clearData(this.USERNAME_KEY, rememberMeFlag);
+    this.clearData(this.USER_ID_KEY, rememberMeFlag);
+    this.clearData(this.IS_ADMIN_KEY, rememberMeFlag);
+    localStorage.removeItem(this.REMEMBER_ME_KEY); // Limpar a preferência de rememberMe
+
     this.isAuthenticatedSubject.next(false);
+    this.userIdSubject.next(null);
+
+    // Recriar o observable de validação para refletir o estado de logout (sem token)
+    this.initialValidation$ = this.createValidationObservable();
+    // Opcionalmente, pode-se inscrever e desinscrever para "executá-lo" e colocar no cache o {valid:false}
+    // this.initialValidation$.subscribe().unsubscribe();
+    console.log('[AUTH SERVICE] logout - Authentication data cleared and subjects reset.');
   }
 
   getUsername(): string | null {
-    return localStorage.getItem(this.USERNAME_KEY);
+    return localStorage.getItem(this.USERNAME_KEY) || sessionStorage.getItem(this.USERNAME_KEY);
   }
 
   getUserId(): string | null {
-    return localStorage.getItem(this.USER_ID_KEY);
-  }
-
-  isAuthenticated(): Observable<boolean> {
-    return this.isAuthenticatedSubject.asObservable();
+    const userId = localStorage.getItem(this.USER_ID_KEY) || sessionStorage.getItem(this.USER_ID_KEY);
+    console.log('[AUTH SERVICE] getUserId - Returning from storage:', userId);
+    return userId;
   }
 
   isAdmin(): boolean {
-    return localStorage.getItem(this.IS_ADMIN_KEY) === 'true';
+    return (localStorage.getItem(this.IS_ADMIN_KEY) || sessionStorage.getItem(this.IS_ADMIN_KEY)) === 'true';
   }
 
   private hasToken(): boolean {
-    return !!this.getToken();
+    const tokenExists = !!this.getToken();
+    return tokenExists;
   }
 
   getUserInfo(): Observable<UserInfo> {
-    // Se tivermos uma validação de token prévia que retornou o ID do usuário
-    const userId = localStorage.getItem(this.USER_ID_KEY);
+    const userId = localStorage.getItem(this.USER_ID_KEY) || sessionStorage.getItem(this.USER_ID_KEY);
     const username = this.getUsername();
     const isAdmin = this.isAdmin();
 
     if (userId && username) {
-      // Retorna as informações armazenadas localmente
       return of({ id: parseInt(userId), username, isAdmin });
     } else {
-      // Se não tivermos o ID do usuário ainda, realizamos uma nova validação
       return this.apiService.validateToken().pipe(
         tap(response => {
           if (response && response.valid) {
-            // Verificar se userId existe antes de usar toString()
             if (response.userId !== undefined && response.userId !== null) {
-              localStorage.setItem(this.USER_ID_KEY, String(response.userId));
+              this.setData(this.USER_ID_KEY, String(response.userId));
             } else if (response.id !== undefined && response.id !== null) {
-              // Tenta usar response.id como alternativa
-              localStorage.setItem(this.USER_ID_KEY, String(response.id));
+              this.setData(this.USER_ID_KEY, String(response.id));
             }
 
-            // Atualiza também o nome de usuário se estiver presente
             if (response.username) {
-              localStorage.setItem(this.USERNAME_KEY, response.username);
+              this.setData(this.USERNAME_KEY, response.username);
             }
 
-            // Atualiza a flag de administrador se estiver presente
             if (response.isAdmin !== undefined) {
-              localStorage.setItem(this.IS_ADMIN_KEY, response.isAdmin ? 'true' : 'false');
+              this.setData(this.IS_ADMIN_KEY, response.isAdmin ? 'true' : 'false');
             }
           }
         }),
         catchError(error => {
-          // console.error('Erro ao obter informações do usuário:', error);
           this.logout();
           throw error;
         }),
         map(response => {
           if (response && response.valid) {
-            // Verificar diferentes possibilidades para o ID do usuário
             let id: number | undefined;
 
             if (response.userId !== undefined && response.userId !== null) {
@@ -253,7 +305,6 @@ export class AuthService {
               };
             }
 
-            // Se não encontrar ID válido, lança erro
             throw new Error('ID do usuário não encontrado na resposta');
           } else {
             throw new Error('Não foi possível obter informações do usuário');
@@ -263,41 +314,28 @@ export class AuthService {
     }
   }
 
-  // Método para forçar o armazenamento de admin para o usuário 'admin'
+  private setData(key: string, value: string, remember: boolean = false): void {
+    console.log(`[AUTH SERVICE] setData - Key: ${key}, Value: ${value}, Remember: ${remember}`); // LOG ADICIONADO
+    if (remember) {
+      localStorage.setItem(key, value);
+      sessionStorage.removeItem(key);
+    } else {
+      sessionStorage.setItem(key, value);
+      localStorage.removeItem(key);
+    }
+  }
+
+  private clearData(key: string, wasRemembered: boolean): void { // 'wasRemembered' vem da REMEMBER_ME_KEY
+    console.log(`[AUTH SERVICE] clearData - Key: ${key}, WasRemembered: ${wasRemembered}`); // LOG ADICIONADO
+    if (wasRemembered) {
+      localStorage.removeItem(key);
+    } else {
+      sessionStorage.removeItem(key);
+    }
+    // Não limpar a REMEMBER_ME_KEY aqui, ela é limpa separadamente no logout.
+  }
+
   forceAdminForUserAdmin() {
-    // const username = this.getUsername();
-    // if (username === 'admin') {
-    //   // console.log('Forçando status de administrador para usuário admin');
-    //   localStorage.setItem(this.IS_ADMIN_KEY, 'true');
-
-    //   // Tentar atualizar o token também
-    //   const token = this.getToken();
-    //   if (token) {
-    //     try {
-    //       const tokenParts = token.split('.');
-    //       if (tokenParts.length === 3) {
-    //         // Decodificar o payload atual
-    //         const payload = JSON.parse(atob(tokenParts[1]));
-
-    //         // Adicionar ou atualizar a propriedade isAdmin
-    //         payload.isAdmin = true;
-
-    //         // Criar um novo token com o payload modificado
-    //         const updatedPayload = btoa(JSON.stringify(payload)).replace(/=/g, '')
-    //                                .replace(/\+/g, '-')
-    //                                .replace(/\//g, '_');
-
-    //         // Criar token atualizado (apenas para uso local, não é uma assinatura válida)
-    //         const updatedToken = `${tokenParts[0]}.${updatedPayload}.${tokenParts[2]}`;
-
-    //         // Armazenar o token atualizado
-    //         localStorage.setItem(this.TOKEN_KEY, updatedToken);
-    //         // console.log('Token atualizado com informação de admin');
-    //       }
-    //     } catch (e) {
-    //       // console.error('Erro ao processar token:', e);
-    //     }
-    //   }
-    // }
+    // Method intentionally left blank
   }
 }

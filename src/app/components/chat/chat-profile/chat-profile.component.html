@@ -11,7 +11,7 @@
         <button *ngIf="hasCustomProfileImage()" (click)="viewEnlargedImage()">Ampliar Foto</button>
       </div>
 
-      <input type="file" #profileImageInput style="display:none" accept="image/*" (change)="onFileSelected($event)">
+      <input type="file" #profileImageInput style="display:none" accept="image/*" (change)="onFileSelected($event)" aria-label="Selecionar imagem de perfil">
     </div>
     <div class="profile-info">
       <div class="profile-username">{{ username }}</div>

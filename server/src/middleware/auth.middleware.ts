@@ -5,7 +5,7 @@ import { User } from '../models/entities';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'bondedobumbiboladao';
 
-interface AuthRequest extends Request {
+export interface AuthRequest extends Request {
     user?: { id: number; username: string; isAdmin?: boolean };
 }
 

@@ -1,10 +1,10 @@
 import { HttpInterceptorFn } from '@angular/common/http';
-import { inject } from '@angular/core';
-import { AuthService } from '../services/auth.service';
 
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
-  const authService = inject(AuthService);
-  const token = authService.getToken();
+  let token: string | null = null;
+  if (typeof window !== 'undefined') { // Garantir que estamos no navegador
+    token = localStorage.getItem('auth_token') || sessionStorage.getItem('auth_token');
+  }
 
   // Lista de rotas públicas que não precisam de autenticação
   const publicRoutes = [

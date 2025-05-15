@@ -28,17 +28,18 @@ const authMiddleware = (req, res, next) => __awaiter(void 0, void 0, void 0, fun
         console.log(`[AUTH MIDDLEWARE V3] Token Bearer detectado.`);
         try {
             const decoded = jsonwebtoken_1.default.verify(token, JWT_SECRET);
-            console.log(`[AUTH MIDDLEWARE V3] Token decodificado: UserID ${decoded.id}, Username ${decoded.username}`);
+            console.log(`[AUTH MIDDLEWARE V3] Token decodificado: UserID ${decoded.id}, Username ${decoded.username}, isAdmin (from token): ${decoded.isAdmin}`); // Log isAdmin from token
             const userRepository = database_1.AppDataSource.getRepository(entities_1.User);
             // Garante que estamos buscando pelo ID correto e que o usuário existe
             const userFromDb = yield userRepository.findOne({ where: { id: decoded.id } });
             if (userFromDb) {
+                console.log(`[AUTH MIDDLEWARE V3] User from DB: ID ${userFromDb.id}, Username ${userFromDb.username}, isAdmin (from DB): ${userFromDb.isAdmin}`); // Log isAdmin from DB
                 req.user = {
                     id: userFromDb.id,
                     username: userFromDb.username,
                     isAdmin: (_a = userFromDb.isAdmin) !== null && _a !== void 0 ? _a : false // Garante que isAdmin tenha um valor booleano
                 };
-                console.log(`[AUTH MIDDLEWARE V3] Usuário autenticado via token: ${req.user.username} (ID: ${req.user.id})`);
+                console.log(`[AUTH MIDDLEWARE V3] Usuário autenticado via token: ${req.user.username} (ID: ${req.user.id}), Final isAdmin: ${req.user.isAdmin}`);
             }
             else {
                 console.warn(`[AUTH MIDDLEWARE V3] Token válido, mas usuário ID ${decoded.id} não encontrado no banco de dados.`);

@@ -1,15 +1,12 @@
 import { Request, Response } from 'express';
 import { AppDataSource } from '../config/database';
 import { ChatConversation, ChatMessage, ChatParticipant, User } from '../models/entities';
-import { In } from 'typeorm';
+import { In, Not } from 'typeorm';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as crypto from 'crypto';
-import { broadcastMessageToChat } from '../index'; // Importar a função
-
-interface AuthRequest extends Request {
-    user?: { id: number; username: string; isAdmin?: boolean };
-}
+import { broadcastMessageToChat, broadcastMessageStatusUpdate } from '../index'; // Importar as funções
+import { AuthRequest } from '../middleware/auth.middleware'; // Corrigido o caminho do import
 
 // Diretório para armazenar as imagens de avatar de grupo
 const GROUP_AVATAR_UPLOAD_DIR = path.resolve(path.join(__dirname, '../../uploads/group-avatars'));
@@ -185,7 +182,6 @@ export const getConversationMessages = async (req: Request, res: Response) => {
         }
 
         const messageRepository = AppDataSource.getRepository(ChatMessage);
-        const userRepository = AppDataSource.getRepository(User);
 
         const messages = await messageRepository
             .createQueryBuilder('message')
@@ -194,14 +190,26 @@ export const getConversationMessages = async (req: Request, res: Response) => {
             .orderBy('message.createdAt', 'ASC')
             .getMany();
 
-        const unreadMessages = messages.filter(msg => msg.senderId !== userId && !msg.isRead);
-        if (unreadMessages.length > 0) {
+        // Este bloco marca as mensagens como isRead: true para o usuário ATUAL que está visualizando a conversa.
+        // Isso afeta a contagem de não lidas para ESTE usuário.
+        // O campo 'status' da mensagem (sent/delivered/read) é para a perspectiva do REMETENTE
+        // e é atualizado principalmente pela função markMessagesAsRead quando o DESTINATÁRIO lê.
+        const unreadMessagesByOthersForThisUser = messages.filter(msg => msg.senderId !== userId && !msg.isRead);
+        if (unreadMessagesByOthersForThisUser.length > 0) {
+            const unreadMessageIds = unreadMessagesByOthersForThisUser.map(m => m.id);
             await messageRepository
                 .createQueryBuilder()
-                .update()
-                .set({ isRead: true })
-                .where('id IN (:...ids)', { ids: unreadMessages.map(m => m.id) })
+                .update(ChatMessage)
+                .set({ isRead: true }) // Apenas atualiza isRead para a visualização do usuário atual.
+                .where('id IN (:...ids)', { ids: unreadMessageIds })
                 .execute();
+
+            // Atualiza o array local de mensagens para refletir isRead = true imediatamente na UI do visualizador.
+            messages.forEach(msg => {
+                if (unreadMessageIds.includes(msg.id)) {
+                    msg.isRead = true;
+                }
+            });
         }
 
         const formattedMessages = messages.map(msg => ({
@@ -211,7 +219,8 @@ export const getConversationMessages = async (req: Request, res: Response) => {
             senderName: msg.sender.username,
             profileImage: msg.sender.profileImage,
             timestamp: msg.createdAt,
-            read: msg.isRead
+            read: msg.isRead,
+            status: msg.status
         }));
 
         res.json({ messages: formattedMessages });
@@ -257,29 +266,36 @@ export const sendMessage = async (req: Request, res: Response) => {
             return res.status(404).json({ message: 'Usuário remetente não encontrado' });
         }
 
-        const newMessage = messageRepository.create({
+        // 1. Criar e salvar mensagem com status 'sent'
+        let newMessageEntity = messageRepository.create({
             conversationId,
             senderId: userId,
             content,
-            isRead: false // Default para false, será atualizado quando lido
+            isRead: false,
+            status: 'sent'
         });
+        const savedSentMessage = await messageRepository.save(newMessageEntity);
 
-        const savedMessage = await messageRepository.save(newMessage);
+        // 2. Atualizar imediatamente o status para 'delivered' no banco de dados
+        // Esta é uma simplificação. Em um sistema real, 'delivered' seria confirmado pelo cliente do destinatário.
+        savedSentMessage.status = 'delivered';
+        const savedDeliveredMessage = await messageRepository.save(savedSentMessage);
 
         await conversationRepository.update(
             { id: conversationId },
             { updatedAt: new Date() }
         );
 
-        // Preparar a mensagem para o frontend e para o broadcast
+        // 3. Preparar a mensagem para o frontend e para o broadcast com status 'delivered'
         const messageForFrontend = {
-            id: savedMessage.id,
-            content: savedMessage.content,
+            id: savedDeliveredMessage.id,
+            content: savedDeliveredMessage.content,
             senderId: sender.id,
             senderName: sender.username,
-            senderProfileImage: sender.profileImage, // O frontend irá formatar a URL completa
-            timestamp: savedMessage.createdAt,
-            read: savedMessage.isRead
+            senderProfileImage: sender.profileImage,
+            timestamp: savedDeliveredMessage.createdAt,
+            read: savedDeliveredMessage.isRead, // continuará false até ser lida
+            status: savedDeliveredMessage.status // Deve ser 'delivered'
         };
 
         // Transmitir a mensagem via WebSocket para os clientes conectados na conversa
@@ -287,8 +303,8 @@ export const sendMessage = async (req: Request, res: Response) => {
 
         // Responder à requisição HTTP
         return res.status(201).json({
-            message: 'Mensagem enviada com sucesso', // Mensagem de sucesso para HTTP
-            chatMessage: messageForFrontend // A mensagem enviada
+            message: 'Mensagem enviada com sucesso',
+            chatMessage: messageForFrontend
         });
 
     } catch (error) {
@@ -307,6 +323,9 @@ export const createConversation = async (req: Request, res: Response) => {
             return res.status(401).json({ message: 'Usuário não autenticado' });
         }
 
+        // Log do payload recebido
+        console.log(`[CHAT CONTROLLER] createConversation - Payload recebido: isGroup=${isGroup}, name=${name}, participants=${JSON.stringify(participants)}, userId=${userId}`);
+
         if (!participants || !Array.isArray(participants) || participants.length === 0) {
             return res.status(400).json({ message: 'É necessário selecionar pelo menos um participante' });
         }
@@ -320,8 +339,31 @@ export const createConversation = async (req: Request, res: Response) => {
             id: In([...participants, userId])
         });
 
-        if (existingUsers.length !== participants.length + 1) {
-            return res.status(400).json({ message: 'Um ou mais participantes selecionados não existem' });
+        // Log dos IDs que serão usados na consulta In()
+        const idsForInQuery = [...new Set([...participants, userId])];
+        console.log(`[CHAT CONTROLLER] createConversation - IDs para consulta In() (antes de new Set): ${JSON.stringify([...participants, userId])}`);
+        console.log(`[CHAT CONTROLLER] createConversation - IDs para consulta In() (depois de new Set): ${JSON.stringify(idsForInQuery)}`);
+
+        if (existingUsers.length !== participants.length + 1 && !isGroup && participants.length === 1) {
+            // Para chat individual, esperamos encontrar o criador (userId) e o outro participante.
+            // Se participants já inclui o userId, então participants.length será 1, e esperamos existingUsers.length === 1 (apenas o outro).
+            // Esta lógica precisa ser cuidadosa.
+            // A verificação original era: existingUsers.length !== participants.length + 1
+            // Se participants = [11] e userId = 10, então [...participants, userId] = [11, 10]. Esperamos existingUsers.length === 2.
+            // Se participants = [11, 10] (frontend já incluiu o criador), então [...participants, userId] = [11, 10, 10] -> Set -> [11,10]. Esperamos existingUsers.length === 2.
+
+            // Vamos verificar se todos os IDs em idsForInQuery existem em existingUsers
+            const foundUserIds = existingUsers.map(u => u.id);
+            const allRequestedUsersExist = idsForInQuery.every(id => foundUserIds.includes(id));
+
+            if (!allRequestedUsersExist) {
+                 console.error(`[CHAT CONTROLLER] createConversation - Discrepância de usuários: Esperados ${idsForInQuery.length} usuários únicos, encontrados ${existingUsers.length}. IDs consultados: ${JSON.stringify(idsForInQuery)}. Usuários encontrados: ${JSON.stringify(foundUserIds)}`);
+                 return res.status(400).json({ message: 'Um ou mais participantes selecionados não existem ou há uma inconsistência nos IDs.' });
+            }
+        } else if (isGroup && existingUsers.length !== idsForInQuery.length) {
+            // Para grupos, o número de usuários existentes deve corresponder ao número de IDs únicos.
+            console.error(`[CHAT CONTROLLER] createConversation - Discrepância de usuários em grupo: Esperados ${idsForInQuery.length} usuários únicos, encontrados ${existingUsers.length}. IDs consultados: ${JSON.stringify(idsForInQuery)}`);
+            return res.status(400).json({ message: 'Um ou mais participantes selecionados para o grupo não existem.' });
         }
 
         if (!isGroup && participants.length === 1) {
@@ -398,6 +440,8 @@ export const createConversation = async (req: Request, res: Response) => {
         await conversationRepository.save(newConversation);
 
         const allParticipantIds = [...new Set([...participants, userId])];
+        // Log final dos IDs de participantes antes de salvar
+        console.log(`[CHAT CONTROLLER] createConversation - IDs finais para ChatParticipant: ${JSON.stringify(allParticipantIds)}`);
 
         for (const participantId of allParticipantIds) {
             await participantRepository.save({
@@ -502,6 +546,87 @@ export const uploadGroupChatAvatar = async (req: Request, res: Response) => {
     } catch (error) {
         console.error('[CHAT CONTROLLER] Erro ao atualizar avatar do grupo:', error);
         return res.status(500).json({ message: 'Erro interno do servidor', details: (error as Error).message });
+    }
+};
+
+// Marcar mensagens como lidas
+export const markMessagesAsRead = async (req: Request, res: Response) => {
+    const authReq = req as AuthRequest;
+    const conversationIdStr = req.params.id; // CORRIGIDO de req.params.conversationId para req.params.id
+    const userId = authReq.user?.id; // ID do usuário que está lendo as mensagens
+
+    // Detailed logging at the beginning of the function
+    console.log('[CHAT CONTROLLER] markMessagesAsRead: Entered function.');
+    console.log('[CHAT CONTROLLER] markMessagesAsRead: req.params:', JSON.stringify(req.params));
+    console.log('[CHAT CONTROLLER] markMessagesAsRead: req.body:', JSON.stringify(req.body));
+    console.log('[CHAT CONTROLLER] markMessagesAsRead: Raw userId from req.user:', userId);
+    console.log('[CHAT CONTROLLER] markMessagesAsRead: Raw conversationIdStr from req.params.id:', conversationIdStr);
+
+    if (!userId) {
+        return res.status(401).json({ message: "User not authenticated" });
+    }
+
+    try {
+        const conversationId = parseInt(conversationIdStr);
+        if (isNaN(conversationId)) {
+            console.error('[CHAT CONTROLLER] markMessagesAsRead: Invalid conversation ID format:', conversationIdStr);
+            return res.status(400).json({ message: 'Invalid conversation ID format.' });
+        }
+        console.log('[CHAT CONTROLLER] markMessagesAsRead: Parsed conversationId:', conversationId);
+        console.log('[CHAT CONTROLLER] markMessagesAsRead: Authenticated userId:', userId);
+
+        const messageRepository = AppDataSource.getRepository(ChatMessage);
+        const conversationRepository = AppDataSource.getRepository(ChatConversation);
+
+        const conversation = await conversationRepository.findOne({ where: { id: conversationId } });
+        if (!conversation) {
+            return res.status(404).json({ message: 'Conversation not found' });
+        }
+
+        // Encontrar mensagens nesta conversa:
+        // - Não enviadas pelo usuário atual (ou seja, enviadas por OUTROS para este usuário)
+        // - Cujo status atual seja 'sent' ou 'delivered' (ainda não marcadas como 'read' para o remetente)
+        const messagesToUpdate = await messageRepository.find({
+            where: {
+                conversation: { id: conversationId },
+                senderId: Not(userId), // Mensagens enviadas por OUTROS
+                status: In(['sent', 'delivered']) // Apenas se o status for 'sent' ou 'delivered'
+            },
+            select: ['id'] // Apenas IDs são necessários para a atualização
+        });
+
+        if (messagesToUpdate.length === 0) {
+            console.log(`[CHAT CONTROLLER] No messages with status 'sent' or 'delivered' to mark as read in conversation ${conversationId} for user ${userId}`);
+            return res.status(200).json({ message: 'No new messages to mark as read' });
+        }
+
+        const messageIdsToUpdate = messagesToUpdate.map(msg => msg.id);
+        console.log(`[CHAT CONTROLLER] Marking ${messageIdsToUpdate.length} messages as read (new status 'read'). IDs: ${messageIdsToUpdate.join(', ')}`);
+
+        // Atualizar tanto isRead (para a perspectiva do destinatário) quanto status (para a perspectiva do remetente)
+        const updateResult = await messageRepository
+            .createQueryBuilder()
+            .update(ChatMessage)
+            .set({ isRead: true, status: 'read' }) // Define isRead para true e status para 'read'
+            .whereInIds(messageIdsToUpdate)
+            .execute();
+
+        if (updateResult.affected && updateResult.affected > 0) {
+            // Notificar o remetente (e outros na conversa) que estas mensagens foram lidas
+            // O `userId` aqui é o ID do usuário que LEU as mensagens.
+            broadcastMessageStatusUpdate(conversationId.toString(), userId.toString(), 'read', messageIdsToUpdate.map(id => id.toString()));
+            console.log(`[CHAT CONTROLLER] ${updateResult.affected} messages marked as read in conversation ${conversationId} by user ${userId}. WebSocket update sent.`);
+            return res.status(200).json({
+                message: `${updateResult.affected} messages marked as read`,
+                updatedMessageIds: messageIdsToUpdate
+            });
+        } else {
+            console.log(`[CHAT CONTROLLER] No messages were updated in the database, though ${messageIdsToUpdate.length} were targeted.`);
+            return res.status(200).json({ message: 'No messages were updated' });
+        }
+    } catch (error) {
+        console.error('[CHAT CONTROLLER] Error marking messages as read:', error);
+        return res.status(500).json({ message: 'Error marking messages as read', error: (error as Error).message });
     }
 };
 

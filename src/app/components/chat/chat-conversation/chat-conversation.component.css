@@ -49,26 +49,30 @@
 
 .conversation-messages {
   scrollbar-width: thin;
-  scrollbar-color: #888 #f1f1f1;
+  scrollbar-color: #1a5f7a transparent; /* Cor do polegar e da trilha para Firefox */
 }
 
 /* Estilos da barra de rolagem para Chrome, Edge e Safari */
 .conversation-messages::-webkit-scrollbar {
-  width: 8px; /* Reduzido para ser menos intrusivo */
+  width: 5px; /* Largura da barra de rolagem */
 }
 
 .conversation-messages::-webkit-scrollbar-track {
-  background: #f1f1f1;
-  border-radius: 10px;
+  background: transparent; /* Fundo da trilha transparente */
 }
 
 .conversation-messages::-webkit-scrollbar-thumb {
-  background: #888;
-  border-radius: 10px;
+  background-color: #1a5f7a; /* Cor do polegar da barra de rolagem */
+  border-radius: 10px; /* Bordas arredondadas para o polegar */
 }
 
 .conversation-messages::-webkit-scrollbar-thumb:hover {
-  background: #555;
+  background-color: #134b61; /* Cor do polegar ao passar o mouse */
+}
+
+/* Remove as setas da barra de rolagem no Webkit */
+.conversation-messages::-webkit-scrollbar-button {
+  display: none;
 }
 
 .no-messages {

@@ -3,6 +3,7 @@ import { RouterLink, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { AuthService } from '../../services/auth.service';
 import { GuestService } from '../../services/guest.service';
+import { ChatService } from '../../services/chat.service'; // <--- ADICIONAR ChatService
 import { Subscription } from 'rxjs';
 
 @Component({
@@ -18,12 +19,15 @@ export class HeaderComponent implements OnInit, OnDestroy {
   username: string | null = null;
   guestNickname: string | null = null;
   isMenuOpen = false; // Property to toggle menu
+  totalUnreadMessages = 0; // <--- ADICIONAR ESTA LINHA
   private authSubscription: Subscription | null = null;
   private guestNicknameSubscription: Subscription | null = null;
+  private unreadCountSubscription: Subscription | null = null; // <--- ADICIONAR ESTA LINHA
 
   constructor(
     private authService: AuthService,
     private guestService: GuestService,
+    private chatService: ChatService, // <--- INJETAR ChatService
     private router: Router
   ) {}
 
@@ -59,6 +63,11 @@ export class HeaderComponent implements OnInit, OnDestroy {
         }
       }
     );
+
+    // Inscreve-se para mudanças na contagem total de mensagens não lidas
+    this.unreadCountSubscription = this.chatService.totalUnreadCount$.subscribe(count => { // <--- ADICIONAR ESTE BLOCO
+      this.totalUnreadMessages = count;
+    });
   }
 
   ngOnDestroy() {
@@ -68,6 +77,9 @@ export class HeaderComponent implements OnInit, OnDestroy {
     }
     if (this.guestNicknameSubscription) {
       this.guestNicknameSubscription.unsubscribe();
+    }
+    if (this.unreadCountSubscription) { // <--- ADICIONAR ESTE BLOCO
+      this.unreadCountSubscription.unsubscribe();
     }
   }
 

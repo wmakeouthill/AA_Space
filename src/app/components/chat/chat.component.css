@@ -5,7 +5,6 @@
   width: 100%;
   margin-top: 70px; /* Compensar o header fixo */
   position: relative;
-  overflow: hidden; /* Impedir que o conteúdo estoure */
   max-width: 1400px; /* Largura máxima para telas muito grandes */
   margin-left: auto;
   margin-right: auto;
@@ -21,8 +20,15 @@
   flex-direction: column;
   background-color: #f5f5f5;
   height: 100%; /* Ocupa toda a altura disponível */
-  overflow: hidden; /* Esconde conteúdo excedente */
   flex-shrink: 0; /* Impede que a sidebar diminua */
+}
+
+/* Adicionado para garantir que o componente app-chat-list preencha o sidebar corretamente */
+.chat-sidebar app-chat-list {
+  flex: 1; /* Faz com que app-chat-list ocupe o espaço vertical disponível */
+  min-height: 0; /* Essencial para scroll em containers flex aninhados */
+  display: flex; /* Torna app-chat-list um container flex */
+  flex-direction: column; /* Para que .chat-list-container (dentro de app-chat-list) possa usar height: 100% */
 }
 
 .chat-main {

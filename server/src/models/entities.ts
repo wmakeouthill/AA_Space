@@ -233,6 +233,9 @@ export class ChatMessage {
     @Column({ name: 'is_read', default: false })
     isRead: boolean;
 
+    @Column({ type: 'varchar', length: 10, nullable: true, default: 'sent' })
+    status: 'sent' | 'delivered' | 'read';
+
     @ManyToOne(() => ChatConversation, conversation => conversation.messages)
     @JoinColumn({ name: 'conversation_id' })
     conversation: ChatConversation;

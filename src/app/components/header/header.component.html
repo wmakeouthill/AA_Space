@@ -5,14 +5,17 @@
     </div>
 
     <!-- Hamburger Icon -->
-    <button class="menu-toggle" (click)="toggleMenu()">
+    <button type="button" class="menu-toggle" (click)="toggleMenu()">
       <span>&#9776;</span> <!-- Unicode for hamburger icon -->
     </button>
 
     <nav class="nav-links" [class.active]="isMenuOpen">
       <a routerLink="/" class="nav-link" (click)="isMenuOpen = false">Início</a>
       <a routerLink="/create" class="nav-link" (click)="isMenuOpen = false">Compartilhar História</a>
-      <a *ngIf="isLoggedIn" routerLink="/chat" class="nav-link" (click)="isMenuOpen = false">Chat</a>
+      <a *ngIf="isLoggedIn" routerLink="/chat" class="nav-link" (click)="isMenuOpen = false">
+        Chat
+        <span *ngIf="totalUnreadMessages > 0" class="unread-badge badge">{{ totalUnreadMessages }}</span>
+      </a>
       <a *ngIf="isAdmin" routerLink="/admin" class="nav-link admin-link" (click)="isMenuOpen = false">Administração</a>
     </nav>
     <div class="auth-buttons">

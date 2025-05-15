@@ -28,7 +28,8 @@ export class AuthComponent implements OnInit {
       username: ['', [Validators.required, Validators.minLength(3)]],
       password: ['', [Validators.required, Validators.minLength(6)]],
       email: ['', [Validators.email]],
-      phone: ['']
+      phone: [''],
+      rememberMe: [false] // Adicionar FormControl para rememberMe
     });
   }
 
@@ -44,10 +45,12 @@ export class AuthComponent implements OnInit {
       // Mantém apenas os campos obrigatórios para login
       this.authForm.get('email')?.disable();
       this.authForm.get('phone')?.disable();
+      this.authForm.get('rememberMe')?.enable(); // Habilitar rememberMe no login
     } else {
       // Habilita todos os campos para registro
       this.authForm.get('email')?.enable();
       this.authForm.get('phone')?.enable();
+      this.authForm.get('rememberMe')?.disable(); // Desabilitar rememberMe no registro
     }
   }
 
@@ -75,9 +78,10 @@ export class AuthComponent implements OnInit {
       // Só incluir email e phone se estiver no modo de registro
       const email = this.isLogin ? undefined : formValue.email;
       const phone = this.isLogin ? undefined : formValue.phone;
+      const rememberMe = this.isLogin ? formValue.rememberMe : false; // Obter valor de rememberMe
 
       const authAction = this.isLogin
-        ? this.authService.login(username, password)
+        ? this.authService.login(username, password, rememberMe) // Passar rememberMe para o serviço
         : this.authService.register(username, password, email, phone).pipe(
             tap(() => {
               // Após registro bem-sucedido, faz login automaticamente

@@ -36,12 +36,12 @@ export class ChatListComponent implements OnInit, OnDestroy {
   private newMessagesSubscription!: Subscription; // Initialized with !
 
   constructor(private chatService: ChatService) {
-    this.currentUserId = this.chatService.getCurrentUserId();
+    this.currentUserId = this.chatService.getPublicCurrentUserId(); // Use public method
 
     // Certifica-se de que temos um ID válido
     if (!this.currentUserId || this.currentUserId === 0) {
       setTimeout(() => {
-        this.currentUserId = this.chatService.getCurrentUserId();
+        this.currentUserId = this.chatService.getPublicCurrentUserId(); // Use public method
       }, 500);
     }
 
@@ -79,7 +79,7 @@ export class ChatListComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     // Verificar ID do usuário novamente (caso tenha sido carregado assincronamente)
     if (!this.currentUserId || this.currentUserId === 0) {
-      this.currentUserId = this.chatService.getCurrentUserId();
+      this.currentUserId = this.chatService.getPublicCurrentUserId(); // Use public method
     }
 
     this.loadChats();
@@ -93,19 +93,37 @@ export class ChatListComponent implements OnInit, OnDestroy {
 
     // Subscribe to new messages from ChatService
     this.newMessagesSubscription = this.chatService.getNewMessageListener().subscribe({
-      next: (event: NewMessageEvent) => { // Expect NewMessageEvent
+      next: (event: NewMessageEvent) => {
         const message = event.message;
         const chatId = event.chatId;
         const chatToUpdate = this.chats.find(chat => chat.id === chatId);
+
         if (chatToUpdate) {
           chatToUpdate.lastMessage = message;
-          // sortChats will use the timestamp from the new lastMessage
+          // Se a mensagem não for do usuário atual e o chat não estiver selecionado,
+          // ou se o chat estiver selecionado mas o componente de conversa não estiver visível (ex: outra aba do navegador)
+          // incrementamos o contador localmente para reflexo imediato.
+          // A lógica principal de contagem e totalização fica no ChatService.
+          if (message.senderId !== this.currentUserId && this.selectedChatId !== chatId) {
+            chatToUpdate.unreadCount = (chatToUpdate.unreadCount || 0) + 1;
+          }
           this.sortChats();
         }
       },
-      error: (err: any) => { // Added type for err
+      error: (err: any) => {
         console.error('[CHAT LIST] Error subscribing to new message listener:', err);
       }
+    });
+
+    // Inscrever-se às atualizações do total de mensagens não lidas do ChatService
+    // para manter a lista de chats sincronizada, especialmente o unreadCount.
+    this.chatService.totalUnreadCount$.subscribe(total => {
+      // Esta subscrição é mais para garantir que, se o total mudar por outra via,
+      // a lista possa refletir isso. A atualização individual de unreadCount
+      // ao receber mensagem ou selecionar chat já acontece.
+      // Poderíamos forçar um reload dos chats ou uma atualização mais granular se necessário.
+      // Por ora, vamos manter a lógica de atualização de unreadCount no `next` do `getNewMessageListener`
+      // e no `selectChat`.
     });
   }
 
@@ -130,13 +148,12 @@ export class ChatListComponent implements OnInit, OnDestroy {
     this.loading = true;
     this.error = null;
 
-    // Buscar os chats do serviço
     this.chatService.getChats().subscribe({
       next: (chats) => {
-        this.chats = chats;
-        this.sortChats(); // Sort after loading
+        this.chats = chats; // O ChatService já calcula o totalUnread ao popular o cache
+        this.sortChats();
         this.loading = false;
-        // If there's a selected chat, ensure its data is up-to-date
+
         if (this.selectedChatId) {
           const currentSelected = this.chats.find(c => c.id === this.selectedChatId);
           if (currentSelected) {
@@ -162,7 +179,20 @@ export class ChatListComponent implements OnInit, OnDestroy {
 
   selectChat(chat: Chat): void {
     this.selectedChatId = chat.id;
-    this.chatSelected.emit(chat);
+    this.chatService.markChatAsRead(chat.id); // <--- CHAMAR markChatAsRead
+
+    // Atualiza a visualização local imediatamente para refletir a leitura
+    const chatIndex = this.chats.findIndex(c => c.id === chat.id);
+    if (chatIndex > -1 && this.chats[chatIndex].unreadCount && this.chats[chatIndex].unreadCount > 0) {
+      // Cria uma nova referência para o array de chats, atualizando o chat modificado
+      const updatedChats = [...this.chats];
+      updatedChats[chatIndex] = { ...this.chats[chatIndex], unreadCount: 0 };
+      this.chats = updatedChats; // Reatribui this.chats para acionar a detecção de mudanças
+    }
+
+    // Emitir o chat selecionado (pode ser o original ou o atualizado se estava na lista)
+    const chatToEmit = this.chats.find(c => c.id === chat.id) || chat;
+    this.chatSelected.emit(chatToEmit);
   }
 
   getParticipantName(chat: Chat): string {
@@ -176,7 +206,6 @@ export class ChatListComponent implements OnInit, OnDestroy {
     const otherParticipant = this.chatService.getOtherParticipant(chat);
 
     if (otherParticipant) {
-      // return otherParticipant.username || 'Usuário'; // Commented out
       return otherParticipant.username || 'Usuário';
     }
 
@@ -236,7 +265,7 @@ export class ChatListComponent implements OnInit, OnDestroy {
   formatImageUrl(imagePath: string): string {
     // Usamos o método centralizado do ChatService para garantir consistência
     // em toda a aplicação e evitar problemas de URLs
-    return this.chatService.formatImageUrl(imagePath);
+    return this.chatService.formatImageUrl(imagePath); // Already using public, ensure it's correct
   }
   // Removido o método getOtherParticipant redundante, agora estamos usando
   // diretamente chatService.getOtherParticipant em getParticipantName e getParticipantProfileImage
@@ -245,18 +274,18 @@ export class ChatListComponent implements OnInit, OnDestroy {
     if (chat.isGroup) {
       // Use group avatar if available, otherwise default group image
       return chat.avatarPath
-        ? this.chatService.formatImageUrl(chat.avatarPath)
-        : this.chatService.formatImageUrl(this.defaultGroupImage);
+        ? this.chatService.formatImageUrl(chat.avatarPath) // Already using public
+        : this.chatService.formatImageUrl(this.defaultGroupImage); // Already using public
     }
 
     // For direct chats, get the other participant's image
-    const otherParticipant = this.chatService.getOtherParticipant(chat);
+    const otherParticipant = this.chatService.getOtherParticipant(chat); // Already using public
     if (otherParticipant?.profileImage) {
       // The chatService.getOtherParticipant now ensures the profileImage is a fully qualified URL or a path that formatImageUrl can handle.
-      return this.chatService.formatImageUrl(otherParticipant.profileImage);
+      return this.chatService.formatImageUrl(otherParticipant.profileImage); // Already using public
     }
 
     // Fallback for direct chats if no image found for the other participant
-    return this.chatService.formatImageUrl(this.defaultImage);
+    return this.chatService.formatImageUrl(this.defaultImage); // Already using public
   }
 }

@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Chat, User } from '../../../models/chat/chat.interface';
 import { ChatService } from '../../../services/chat.service';
+import { ApiService } from '../../../services/api.service';
 
 @Component({
   selector: 'app-chat-new',
@@ -22,37 +23,44 @@ export class ChatNewComponent implements OnInit {
   loading = false;
   error: string | null = null;
   defaultImage: string = '/assets/images/user.png';
+  private baseApiUrl: string;
+  private imageUrlCache = new Map<string, string>(); // Cache para URLs de imagem
 
   // Lista de usuários disponíveis
   users: User[] = [];
   filteredUsers: User[] = [];
   searchQuery: string = '';
 
-  constructor(private chatService: ChatService) {
+  constructor(private chatService: ChatService, private apiService: ApiService) {
     this.currentUserId = this.chatService.getCurrentUserId();
+    this.baseApiUrl = this.apiService.getApiBaseUrl(); // Método a ser criado no ApiService
   }
 
   ngOnInit(): void {
     // Carregar lista de usuários disponíveis ao inicializar
     this.loadAvailableUsers();
-    
+
     // Adiciona listener para atualização de imagem de perfil
-    window.addEventListener('profile:imageUpdated', () => {
-      console.log('[CHAT NEW] Evento de atualização de imagem detectado, recarregando usuários');
-      this.loadAvailableUsers(); // Recarrega a lista de usuários para atualizar imagens
-    });
+    window.addEventListener('profile:imageUpdated', this.handleProfileImageUpdate);
   }
-  
+
   ngOnDestroy(): void {
     // Remove event listener quando o componente é destruído
-    window.removeEventListener('profile:imageUpdated', () => {
-      console.log('[CHAT NEW] Removendo listener de atualização de imagem');
-    });
+    window.removeEventListener('profile:imageUpdated', this.handleProfileImageUpdate);
+    this.imageUrlCache.clear(); // Limpar cache ao destruir
+  }
+
+  // Handler para o evento de atualização de imagem
+  private handleProfileImageUpdate = (): void => {
+    console.log('[CHAT NEW] Evento de atualização de imagem detectado, recarregando usuários e limpando cache de imagens.');
+    this.imageUrlCache.clear(); // Limpar cache de URLs de imagem
+    this.loadAvailableUsers(); // Recarrega a lista de usuários para atualizar imagens
   }
 
   loadAvailableUsers(): void {
     this.loading = true;
     this.error = null;
+    this.imageUrlCache.clear(); // Limpar cache antes de carregar novos usuários
 
     this.chatService.getAvailableUsers().subscribe({
       next: (users) => {
@@ -76,8 +84,8 @@ export class ChatNewComponent implements OnInit {
     }
 
     const query = this.searchQuery.toLowerCase().trim();
-    this.filteredUsers = this.users.filter(user => 
-      user.username.toLowerCase().includes(query) || 
+    this.filteredUsers = this.users.filter(user =>
+      user.username.toLowerCase().includes(query) ||
       (user.email && user.email.toLowerCase().includes(query))
     );
   }
@@ -185,43 +193,42 @@ export class ChatNewComponent implements OnInit {
   // Método para formatar URL da imagem para funcionar no GitHub Codespaces
   formatImageUrl(imagePath: string): string {
     if (!imagePath) return this.defaultImage;
-    
+
     // Se o caminho já começar com http(s), não modificar
     if (imagePath.startsWith('http')) return imagePath;
-    
+
     // Se o caminho for uma imagem base64, não modificar
     if (imagePath.startsWith('data:')) return imagePath;
-    
+
+    // Chave para o cache pode ser o imagePath original
+    const cacheKey = imagePath;
+
+    if (this.imageUrlCache.has(cacheKey)) {
+      return this.imageUrlCache.get(cacheKey)!;
+    }
+
     // Se não começar com barra, adicionar
     if (!imagePath.startsWith('/')) {
       imagePath = '/' + imagePath;
     }
-    
-    // Modificar o caminho para imagens de assets para usar a pasta do servidor
-    if (imagePath.includes('/assets/')) {
-      imagePath = imagePath.replace('/assets/', '/uploads/assets/');
+
+    const apiOrigin = this.baseApiUrl;
+    let fullImagePath = `${apiOrigin}${imagePath}`;
+
+    // Adicionar timestamp apenas para imagens de perfil ou grupo, e apenas uma vez
+    if (imagePath.includes('/uploads/profiles/') || imagePath.includes('/uploads/group-avatars/')) {
+      fullImagePath += `?t=${new Date().getTime()}`;
     }
-    
-    // Usar sempre a porta 3001 para todas as imagens (backend)
-    const origin = document.location.origin;
-    const apiOrigin = origin.replace(/-4200\./, '-3001.');
-    
-    // Adicionar timestamp para evitar cache do navegador quando for uma imagem de perfil
-    if (imagePath.includes('/uploads/profiles/')) {
-      const timestamp = new Date().getTime();
-      return `${apiOrigin}${imagePath}?t=${timestamp}`;
-    }
-    
-    return `${apiOrigin}${imagePath}`;
+
+    this.imageUrlCache.set(cacheKey, fullImagePath);
+    return fullImagePath;
   }
-  
+
   // Método para obter a imagem de perfil do usuário
   getUserProfileImage(user: User): string {
     if (user.profileImage) {
-      console.log(`[CHAT NEW] Usando imagem de perfil para ${user.username}: ${user.profileImage}`);
       return this.formatImageUrl(user.profileImage);
     }
-    console.log(`[CHAT NEW] Usando imagem padrão para ${user.username}`);
     return this.formatImageUrl(this.defaultImage);
   }
 }

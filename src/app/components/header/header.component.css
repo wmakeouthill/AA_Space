@@ -109,6 +109,26 @@
   text-transform: uppercase;
 }
 
+/* Adicionado para estilizar o contador de mensagens não lidas */
+.unread-badge.badge {
+  background-color: red;
+  color: white;
+  width: 18px; /* Largura fixa para um círculo */
+  height: 18px; /* Altura fixa para um círculo */
+  padding: 0; /* Remover padding, pois width/height controlam o tamanho */
+  border-radius: 50%; /* Garante um círculo perfeito */
+  font-size: 0.65rem;
+  font-weight: bold;
+  display: inline-flex; /* Mudar para inline-flex para centralização com flexbox */
+  align-items: center; /* Centraliza o conteúdo (número) verticalmente */
+  justify-content: center; /* Centraliza o conteúdo (número) horizontalmente */
+  margin-left: 3px;
+  vertical-align: middle;
+  position: relative;
+  top: -1.9px;
+  line-height: 1; /* Ajuda a consistência da altura da linha */
+}
+
 /* Styles for Mobile Menu (Hamburger) */
 .menu-toggle {
   display: none; /* Hidden by default, shown on mobile */
@@ -121,10 +141,6 @@
 }
 
 @media (max-width: 768px) {
-  .header-content {
-    /* Allow items to wrap if needed, though space-between should handle it */
-  }
-
   .nav-links {
     display: none; /* Hide nav links by default on mobile */
     flex-direction: column;

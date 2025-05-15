@@ -6,7 +6,8 @@
     <div *ngFor="let chat of chats" class="chat-item" [class.active]="selectedChatId === chat.id" (click)="selectChat(chat)">
       <div class="chat-avatar">
         <img [src]="getParticipantProfileImage(chat)" alt="Avatar">
-      </div>      <div class="chat-info">
+      </div>
+      <div class="chat-info">
         <div class="chat-name">{{ chat.isGroup ? chat.name : getParticipantName(chat) }}</div>
         <div class="chat-last-message" *ngIf="chat.lastMessage">
           {{ getLastMessagePreview(chat) }}
@@ -16,8 +17,8 @@
         <div class="chat-time" *ngIf="chat.lastMessage">
           {{ chat.lastMessage.timestamp | date:'shortTime' }}
         </div>
-        <div class="chat-unread" *ngIf="chat.lastMessage && !chat.lastMessage.read && chat.lastMessage.senderId !== currentUserId">
-          <span class="badge">●</span>
+        <div class="chat-unread-count" *ngIf="chat.unreadCount && chat.unreadCount > 0">
+          <span class="badge">{{ chat.unreadCount }}</span>
         </div>
       </div>
     </div>

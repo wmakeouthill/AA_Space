@@ -38,6 +38,16 @@ export class ApiService {
     return 'http://localhost:3001/api';
   }
 
+  // Método para obter a URL base da API (sem o /api no final)
+  public getApiBaseUrl(): string {
+    const apiUrl = this.getApiUrl();
+    // Remove /api do final, se existir
+    if (apiUrl.endsWith('/api')) {
+      return apiUrl.substring(0, apiUrl.length - '/api'.length);
+    }
+    return apiUrl; // Caso já não tenha /api, retorna como está
+  }
+
   // Auth endpoints
   login(credentials: { username: string; password: string }): Observable<any> {
     return this.http.post(`${this.API_URL}/auth/login`, credentials);

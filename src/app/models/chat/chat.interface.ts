@@ -1,13 +1,13 @@
 export interface Chat {
     id: number;
-    name?: string;
+    name?: string; // Nome do grupo ou do outro participante em chat individual
     isGroup: boolean;
-    avatarPath?: string | null; // Adicionado para o avatar do grupo
     participants: ChatParticipant[];
     lastMessage?: Message;
-    unreadCount?: number;
-    createdAt: Date | string;
-    updatedAt: Date | string;
+    avatarPath?: string | null; // Caminho para o avatar do chat (grupo ou usuário)
+    createdAt: Date;
+    updatedAt: Date;
+    unreadCount?: number; // <--- ADICIONAR ESTA LINHA
 }
 
 export interface ChatParticipant {
@@ -25,6 +25,7 @@ export interface Message {
     senderProfileImage?: string; // URL da imagem de perfil do remetente
     timestamp: Date | string;
     read: boolean;
+    status?: 'sent' | 'delivered' | 'read'; // Novo campo para status da mensagem
 }
 
 export interface CreateChatRequest {
@@ -52,4 +53,5 @@ export interface User {
 export interface NewMessageEvent {
     message: Message;
     chatId: number;
+    isNewUnread?: boolean; // Added to indicate if the message contributes to unread count
 }

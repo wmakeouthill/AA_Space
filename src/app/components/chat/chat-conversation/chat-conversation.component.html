@@ -1,19 +1,21 @@
 <div class="conversation-container" *ngIf="selectedChat; else noChat">
   <!-- Cabeçalho do chat -->
-  <app-chat-header 
-    [chat]="selectedChat" 
+  <app-chat-header
+    [chat]="selectedChat"
     [currentUserId]="currentUserId">
   </app-chat-header>
-  
+
   <!-- Área de mensagens com scroll -->
-  <app-chat-messages 
+  <app-chat-messages
     [messages]="messages"
     [currentUserId]="currentUserId"
+    [currentUserAvatarUrl]="currentUserProfileImageUrl"
     [isGroup]="selectedChat.isGroup"
     [participants]="selectedChat.participants"
-    [defaultImage]="defaultImage">
+    [defaultImage]="defaultImage"
+    [chatId]="selectedChat.id.toString()">
   </app-chat-messages>
-  
+
   <!-- Removido app-chat-input daqui para ser colocado no componente pai -->
 </div>
 
