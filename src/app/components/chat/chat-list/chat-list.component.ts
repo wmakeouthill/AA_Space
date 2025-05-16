@@ -27,8 +27,8 @@ export class ChatListComponent implements OnInit, OnDestroy {
   currentUserId: number;
   loading = false;
   error: string | null = null;
-  defaultImage: string = '/assets/images/user.png'; // Updated to use absolute path
-  defaultGroupImage: string = '/assets/images/group.png'; // Updated to use absolute path
+  defaultImage: string = 'assets/images/user.png'; // Updated to use absolute path
+  defaultGroupImage: string = 'assets/images/group.png'; // Updated to use absolute path
 
   // Listener para evento de chat criado
   private chatCreatedHandler: (event: CustomEvent<Chat>) => void;

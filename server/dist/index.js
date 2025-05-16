@@ -28,11 +28,27 @@ const auth_1 = __importDefault(require("./routes/auth"));
 const posts_1 = __importDefault(require("./routes/posts"));
 const chat_1 = __importDefault(require("./routes/chat"));
 const profile_1 = __importDefault(require("./routes/profile"));
+const admin_routes_1 = __importDefault(require("./routes/admin.routes")); // Adicionar import para as rotas de admin
+const ip_block_middleware_1 = require("./middleware/ip-block.middleware"); // Adicionar import
 // Chave secreta para JWT - deve ser igual à usada no controlador de auth
 const JWT_SECRET = process.env.JWT_SECRET || 'bondedobumbiboladao';
 dotenv_1.default.config();
 const app = (0, express_1.default)();
-const port = Number(process.env.PORT || 3001);
+// Robust port initialization
+const envPort = process.env.PORT;
+let port = 3001; // Default port
+if (envPort) {
+    const parsedPort = parseInt(envPort, 10);
+    if (!isNaN(parsedPort) && parsedPort >= 0 && parsedPort < 65536) {
+        port = parsedPort;
+    }
+    else {
+        console.warn(`[SERVER] Invalid PORT environment variable: "${envPort}". Falling back to default port ${port}.`);
+    }
+}
+else {
+    console.log(`[SERVER] PORT environment variable not set. Using default port ${port}.`);
+}
 const isCodespacesEnv = process.env.CODESPACES === 'true' || process.env.GITHUB_CODESPACES === 'true';
 // Create HTTP server
 const server = http_1.default.createServer(app); // Added
@@ -299,6 +315,8 @@ app.use((req, res, next) => {
 app.use((0, cors_1.default)(corsOptions));
 // Parse JSON bodies
 app.use(express_1.default.json({ limit: '50mb' })); // Aumentando o limite para permitir uploads de imagens
+// Aplicar o middleware de bloqueio de IP globalmente ANTES das rotas da API
+app.use(ip_block_middleware_1.checkIpBlocked);
 // Headers adicionais para CORS
 app.use((req, res, next) => {
     const origin = req.headers.origin;
@@ -402,6 +420,7 @@ app.use('/api/auth', auth_1.default);
 app.use('/api/posts', posts_1.default);
 app.use('/api/chat', chat_1.default);
 app.use('/api/profile', profile_1.default);
+app.use('/api/admin', admin_routes_1.default); // Adicionar as rotas de admin
 // Rota explícita de fallback para o perfil do usuário atual
 app.get('/api/profile/me', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     console.log('[FALLBACK ROUTE] Interceptada requisição para /api/profile/me');

@@ -341,9 +341,11 @@ export class ChatService {
     if (!imagePath) {
       return 'assets/images/user.png';
     }
-    if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+    // Se já for uma URL completa ou um ativo local do Angular, retorna como está
+    if (imagePath.startsWith('http://') || imagePath.startsWith('https://') || imagePath.startsWith('assets/')) {
       return imagePath;
     }
+
     const baseApiUrl = (this.apiService as any).API_URL.endsWith('/api') ?
       (this.apiService as any).API_URL.slice(0, -4) :
       (this.apiService as any).API_URL;

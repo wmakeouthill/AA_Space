@@ -1,9 +1,9 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
+import { Component, OnInit } from '@angular/core'; // Removed ViewChild
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { ChatListComponent } from './chat-list/chat-list.component';
 import { ChatConversationComponent } from './chat-conversation/chat-conversation.component';
-import { ChatInputComponent } from './chat-conversation/chat-input/chat-input.component';
+// ChatInputComponent is no longer directly used here, it's part of ChatConversationComponent
 import { ChatNewComponent } from './chat-new/chat-new.component';
 import { ChatProfileComponent } from './chat-profile/chat-profile.component';
 import { ChatService } from '../../services/chat.service';
@@ -19,7 +19,6 @@ import { Chat } from '../../models/chat/chat.interface';
     RouterModule,
     ChatListComponent,
     ChatConversationComponent,
-    ChatInputComponent,
     ChatNewComponent,
     ChatProfileComponent
   ]
@@ -29,8 +28,6 @@ export class ChatComponent implements OnInit {
   isLoading = false;
   error: string | null = null;
   sending = false; // to control the sending state
-
-  @ViewChild(ChatInputComponent) private chatInputComponent!: ChatInputComponent;
 
   constructor(private chatService: ChatService) {}
 
@@ -68,15 +65,10 @@ export class ChatComponent implements OnInit {
       next: (response) => {
         console.log('[CHAT COMPONENT] Message sent successfully via HTTP by ChatComponent:', response);
         this.sending = false;
-        // Call focus on the child input component directly after send operation is complete and input is re-enabled
-        // The child's focusInputElement method has its own internal setTimeout(0)
-        this.chatInputComponent?.focusInputElement();
       },
       error: (error) => {
         console.error('[CHAT COMPONENT] Error sending message via ChatComponent:', error);
         this.sending = false;
-        // Also attempt to focus on error, to allow user to correct and resend
-        this.chatInputComponent?.focusInputElement();
       }
     });
   }

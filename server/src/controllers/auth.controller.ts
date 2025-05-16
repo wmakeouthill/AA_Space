@@ -14,6 +14,8 @@ interface AuthRequest extends Request {
 export const register = async (req: Request, res: Response) => {
     try {
         const { username, password, email, phone } = req.body;
+        const ipAddress = req.ip || req.socket?.remoteAddress; // Get IP address from request
+
         if (!username || !password) {
             return res.status(400).json({ message: 'Usuário e senha são obrigatórios' });
         }
@@ -34,7 +36,8 @@ export const register = async (req: Request, res: Response) => {
             username,
             password: hashedPassword,
             email: email || null,
-            phone: phone || null
+            phone: phone || null,
+            lastIpAddress: ipAddress // Store IP address
         });
 
         const savedUser = await userRepository.save(user);
@@ -61,6 +64,8 @@ export const register = async (req: Request, res: Response) => {
 export const login = async (req: Request, res: Response) => {
     try {
         const { username, password } = req.body;
+        const ipAddress = req.ip || req.socket?.remoteAddress; // Get IP address from request
+
         if (!username || !password) {
             return res.status(400).json({ message: 'Usuário e senha são obrigatórios' });
         }
@@ -77,6 +82,12 @@ export const login = async (req: Request, res: Response) => {
         const validPassword = await bcrypt.compare(password, user.password);
         if (!validPassword) {
             return res.status(401).json({ message: 'Senha inválida' });
+        }
+
+        // Update last IP address
+        if (ipAddress) {
+            user.lastIpAddress = ipAddress;
+            await userRepository.save(user);
         }
 
         // Gera o token JWT incluindo a informação de admin
@@ -396,7 +407,7 @@ export const listAllUsers = async (req: AuthRequest, res: Response) => {
         const userRepository = AppDataSource.getRepository(User);
 
         // Consulta SQL explícita para garantir que os campos email e phone sejam retornados
-        console.log('[DEBUG] Buscando todos os usuários com informações de contato');
+        console.log('[DEBUG] Buscando todos os usuários com informações de contato e último IP');
 
         const users = await userRepository.createQueryBuilder('user')
             .select([
@@ -405,7 +416,8 @@ export const listAllUsers = async (req: AuthRequest, res: Response) => {
                 'user.email',
                 'user.phone',
                 'user.isAdmin',
-                'user.isMainAdmin'
+                'user.isMainAdmin',
+                'user.lastIpAddress' // Adicionar lastIpAddress à seleção
             ])
             .getMany();
 
@@ -418,7 +430,8 @@ export const listAllUsers = async (req: AuthRequest, res: Response) => {
                 email: user.email,
                 phone: user.phone,
                 isAdmin: user.isAdmin,
-                isMainAdmin: user.isMainAdmin
+                isMainAdmin: user.isMainAdmin,
+                lastIpAddress: user.lastIpAddress // Adicionar lastIpAddress ao mapeamento
             }))
         });
     } catch (error) {

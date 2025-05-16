@@ -2,7 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
-import { ApiService } from '../../services/api.service';
+import { ApiService, BlockedIp } from '../../services/api.service'; // Import BlockedIp
 import { AuthService } from '../../services/auth.service';
 
 interface AdminUser {
@@ -20,6 +20,7 @@ interface User {
   phone?: string;
   isAdmin: boolean;
   isMainAdmin?: boolean;
+  lastIpAddress?: string; // Adicionar lastIpAddress
 }
 
 @Component({
@@ -34,9 +35,11 @@ export class AdminComponent implements OnInit {
   removeForm: FormGroup;
   transferForm: FormGroup;
   searchForm: FormGroup;
+  blockIpForm: FormGroup; // Novo formulário para bloquear IP
   isSubmitting = false;
   isRemoveSubmitting = false;
   isTransferSubmitting = false;
+  isBlockingIp = false; // Estado de carregamento para bloqueio de IP
   error: string | null = null;
   successMessage: string | null = null;
   isAdmin = false;
@@ -48,6 +51,8 @@ export class AdminComponent implements OnInit {
   currentUserId: number | null = null;
   isLoadingUsers = false;
   searchTerm = '';
+  blockedIps: BlockedIp[] = []; // Lista de IPs bloqueados
+  isLoadingBlockedIps = false; // Estado de carregamento para lista de IPs bloqueados
 
   constructor(
     private fb: FormBuilder,
@@ -69,6 +74,12 @@ export class AdminComponent implements OnInit {
 
     this.searchForm = this.fb.group({
       search: ['']
+    });
+
+    // Inicializar o novo formulário
+    this.blockIpForm = this.fb.group({
+      ipAddress: ['', [Validators.required, Validators.pattern(/^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$|^::1$|^localhost$/)]],
+      reason: ['']
     });
   }
 
@@ -102,6 +113,9 @@ export class AdminComponent implements OnInit {
       this.searchTerm = term;
       this.filterUsers();
     });
+
+    // Carrega a lista de IPs bloqueados
+    this.fetchBlockedIps();
   }
 
   fetchAdmins(): void {
@@ -157,10 +171,10 @@ export class AdminComponent implements OnInit {
           this.allUsers = response.users;
           this.filteredUsers = [...this.allUsers];
 
-          // Log detalhado para depurar informações de contato
+          // Log detalhado para depurar informações de contato e IP
           console.log('Detalhes dos usuários:');
           this.allUsers.forEach(user => {
-            console.log(`Usuário: ${user.username}, Email: ${user.email || 'não definido'}, Telefone: ${user.phone || 'não definido'}`);
+            console.log(`Usuário: ${user.username}, Email: ${user.email || 'não definido'}, Telefone: ${user.phone || 'não definido'}, Último IP: ${user.lastIpAddress || 'não definido'}`);
           });
         }
         this.isLoadingUsers = false;
@@ -169,6 +183,22 @@ export class AdminComponent implements OnInit {
         console.error('Erro ao buscar usuários:', error);
         this.error = 'Não foi possível buscar a lista de usuários.';
         this.isLoadingUsers = false;
+      }
+    });
+  }
+
+  fetchBlockedIps(): void {
+    this.isLoadingBlockedIps = true;
+    this.error = null;
+    this.apiService.getBlockedIps().subscribe({
+      next: (ips) => {
+        this.blockedIps = ips;
+        this.isLoadingBlockedIps = false;
+      },
+      error: (err) => {
+        console.error('Erro ao buscar IPs bloqueados:', err);
+        this.error = err.error?.message || 'Não foi possível carregar a lista de IPs bloqueados.';
+        this.isLoadingBlockedIps = false;
       }
     });
   }
@@ -320,6 +350,70 @@ export class AdminComponent implements OnInit {
           this.isTransferSubmitting = false;
         }
       });
+    }
+  }
+
+  onBlockIp(): void {
+    if (this.blockIpForm.invalid) {
+      this.error = 'Por favor, insira um endereço IP válido (IPv4, localhost ou ::1).';
+      // Marcar campos como tocados para exibir erros de validação do formulário, se houver
+      this.blockIpForm.markAllAsTouched();
+      return;
+    }
+    this.isBlockingIp = true;
+    this.error = null;
+    this.successMessage = null;
+
+    const { ipAddress, reason } = this.blockIpForm.value;
+
+    this.apiService.blockIp({ ipAddress, reason }).subscribe({
+      next: (response) => {
+        this.successMessage = response.message || 'IP bloqueado com sucesso.';
+        this.blockIpForm.reset();
+        this.fetchBlockedIps(); // Atualiza a lista
+        this.isBlockingIp = false;
+      },
+      error: (err) => {
+        console.error('Erro ao bloquear IP:', err);
+        this.error = err.error?.message || 'Não foi possível bloquear o IP. Verifique se já não está bloqueado ou se o formato é válido.';
+        this.isBlockingIp = false;
+      }
+    });
+  }
+
+  onUnblockIp(ipAddress: string): void {
+    this.error = null;
+    this.successMessage = null;
+    // Adicionar um estado de carregamento específico se necessário, e.g., this.isUnblockingIp = ipAddress;
+
+    this.apiService.unblockIp(ipAddress).subscribe({
+      next: (response) => {
+        this.successMessage = response.message || 'IP desbloqueado com sucesso.';
+        this.fetchBlockedIps(); // Atualiza a lista
+        // Resetar estado de carregamento específico se usado
+      },
+      error: (err) => {
+        console.error('Erro ao desbloquear IP:', err);
+        this.error = err.error?.message || 'Não foi possível desbloquear o IP.';
+        // Resetar estado de carregamento específico se usado
+      }
+    });
+  }
+
+  // Função para copiar o IP para o formulário de bloqueio
+  copyIpToBlockForm(ipAddress?: string): void {
+    if (ipAddress) {
+      this.blockIpForm.patchValue({ ipAddress: ipAddress });
+      this.successMessage = `IP ${ipAddress} copiado para o formulário de bloqueio.`;
+      this.error = null;
+      // Opcional: rolar para o formulário de bloqueio ou focar no campo
+      const ipInput = document.getElementById('ipAddress');
+      if (ipInput) {
+        ipInput.focus();
+      }
+    } else {
+      this.error = 'Não foi possível copiar o IP: endereço IP não disponível.';
+      this.successMessage = null;
     }
   }
 }

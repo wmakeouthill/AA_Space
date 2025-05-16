@@ -26,6 +26,9 @@ export class User {
     @Column({ nullable: true })
     profileImage: string;
 
+    @Column({ type: 'varchar', length: 45, nullable: true }) // IPv6 can be up to 45 chars, IPv4 is 15
+    lastIpAddress: string; 
+
     @CreateDateColumn()
     created_at: Date;
 
@@ -243,4 +246,19 @@ export class ChatMessage {
     @ManyToOne(() => User, user => user.chatMessages)
     @JoinColumn({ name: 'sender_id' })
     sender: User;
+}
+
+@Entity('blocked_ips')
+export class BlockedIp {
+    @PrimaryGeneratedColumn()
+    id: number;
+
+    @Column({ name: 'ip_address', unique: true })
+    ipAddress: string;
+
+    @Column({ nullable: true })
+    reason: string;
+
+    @CreateDateColumn({ name: 'created_at' })
+    createdAt: Date;
 }

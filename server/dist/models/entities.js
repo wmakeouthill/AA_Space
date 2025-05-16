@@ -9,7 +9,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.ChatMessage = exports.ChatParticipant = exports.ChatConversation = exports.CommentLike = exports.PostLike = exports.Comment = exports.Post = exports.User = void 0;
+exports.BlockedIp = exports.ChatMessage = exports.ChatParticipant = exports.ChatConversation = exports.CommentLike = exports.PostLike = exports.Comment = exports.Post = exports.User = void 0;
 const typeorm_1 = require("typeorm");
 let User = class User {
 };
@@ -46,6 +46,11 @@ __decorate([
     (0, typeorm_1.Column)({ nullable: true }),
     __metadata("design:type", String)
 ], User.prototype, "profileImage", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'varchar', length: 45, nullable: true }) // IPv6 can be up to 45 chars, IPv4 is 15
+    ,
+    __metadata("design:type", String)
+], User.prototype, "lastIpAddress", void 0);
 __decorate([
     (0, typeorm_1.CreateDateColumn)(),
     __metadata("design:type", Date)
@@ -349,3 +354,25 @@ __decorate([
 exports.ChatMessage = ChatMessage = __decorate([
     (0, typeorm_1.Entity)('chat_message')
 ], ChatMessage);
+let BlockedIp = class BlockedIp {
+};
+exports.BlockedIp = BlockedIp;
+__decorate([
+    (0, typeorm_1.PrimaryGeneratedColumn)(),
+    __metadata("design:type", Number)
+], BlockedIp.prototype, "id", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'ip_address', unique: true }),
+    __metadata("design:type", String)
+], BlockedIp.prototype, "ipAddress", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ nullable: true }),
+    __metadata("design:type", String)
+], BlockedIp.prototype, "reason", void 0);
+__decorate([
+    (0, typeorm_1.CreateDateColumn)({ name: 'created_at' }),
+    __metadata("design:type", Date)
+], BlockedIp.prototype, "createdAt", void 0);
+exports.BlockedIp = BlockedIp = __decorate([
+    (0, typeorm_1.Entity)('blocked_ips')
+], BlockedIp);

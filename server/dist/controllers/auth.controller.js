@@ -20,8 +20,10 @@ const entities_1 = require("../models/entities");
 const JWT_SECRET = process.env.JWT_SECRET || 'bondedobumbiboladao';
 const TOKEN_EXPIRATION = '24h';
 const register = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
     try {
         const { username, password, email, phone } = req.body;
+        const ipAddress = req.ip || ((_a = req.socket) === null || _a === void 0 ? void 0 : _a.remoteAddress); // Get IP address from request
         if (!username || !password) {
             return res.status(400).json({ message: 'Usuário e senha são obrigatórios' });
         }
@@ -38,7 +40,8 @@ const register = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             username,
             password: hashedPassword,
             email: email || null,
-            phone: phone || null
+            phone: phone || null,
+            lastIpAddress: ipAddress // Store IP address
         });
         const savedUser = yield userRepository.save(user);
         console.log('Usuário criado:', { id: savedUser.id, username: savedUser.username });
@@ -57,8 +60,10 @@ const register = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
 });
 exports.register = register;
 const login = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
     try {
         const { username, password } = req.body;
+        const ipAddress = req.ip || ((_a = req.socket) === null || _a === void 0 ? void 0 : _a.remoteAddress); // Get IP address from request
         if (!username || !password) {
             return res.status(400).json({ message: 'Usuário e senha são obrigatórios' });
         }
@@ -72,6 +77,11 @@ const login = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         const validPassword = yield bcrypt_1.default.compare(password, user.password);
         if (!validPassword) {
             return res.status(401).json({ message: 'Senha inválida' });
+        }
+        // Update last IP address
+        if (ipAddress) {
+            user.lastIpAddress = ipAddress;
+            yield userRepository.save(user);
         }
         // Gera o token JWT incluindo a informação de admin
         const token = jsonwebtoken_1.default.sign({ id: user.id, username: user.username, isAdmin: user.isAdmin }, JWT_SECRET, { expiresIn: TOKEN_EXPIRATION });
@@ -347,7 +357,7 @@ const listAllUsers = (req, res) => __awaiter(void 0, void 0, void 0, function* (
         }
         const userRepository = database_1.AppDataSource.getRepository(entities_1.User);
         // Consulta SQL explícita para garantir que os campos email e phone sejam retornados
-        console.log('[DEBUG] Buscando todos os usuários com informações de contato');
+        console.log('[DEBUG] Buscando todos os usuários com informações de contato e último IP');
         const users = yield userRepository.createQueryBuilder('user')
             .select([
             'user.id',
@@ -355,7 +365,8 @@ const listAllUsers = (req, res) => __awaiter(void 0, void 0, void 0, function* (
             'user.email',
             'user.phone',
             'user.isAdmin',
-            'user.isMainAdmin'
+            'user.isMainAdmin',
+            'user.lastIpAddress' // Adicionar lastIpAddress à seleção
         ])
             .getMany();
         console.log('[DEBUG] Usuários encontrados:', users);
@@ -366,7 +377,8 @@ const listAllUsers = (req, res) => __awaiter(void 0, void 0, void 0, function* (
                 email: user.email,
                 phone: user.phone,
                 isAdmin: user.isAdmin,
-                isMainAdmin: user.isMainAdmin
+                isMainAdmin: user.isMainAdmin,
+                lastIpAddress: user.lastIpAddress // Adicionar lastIpAddress ao mapeamento
             }))
         });
     }

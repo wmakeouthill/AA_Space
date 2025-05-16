@@ -116,6 +116,86 @@
             </button>
           </form>
         </div>
+
+        <!-- Seção para Gerenciar IPs Bloqueados -->
+        <div class="admin-section">
+          <h2>Gerenciar IPs Bloqueados</h2>
+
+          <!-- Formulário para bloquear IP -->
+          <h3>Bloquear Novo IP</h3>
+          <form [formGroup]="blockIpForm" (ngSubmit)="onBlockIp()" class="admin-form">
+            <div class="form-group">
+              <label for="ipAddress">Endereço IP</label>
+              <input
+                type="text"
+                formControlName="ipAddress"
+                id="ipAddress"
+                placeholder="Ex: 192.168.1.1, localhost, ::1"
+                [disabled]="isBlockingIp"
+              >
+              <div class="error-message" *ngIf="blockIpForm.get('ipAddress')?.errors?.['required'] && blockIpForm.get('ipAddress')?.touched">
+                O endereço IP é obrigatório.
+              </div>
+              <div class="error-message" *ngIf="blockIpForm.get('ipAddress')?.errors?.['pattern'] && blockIpForm.get('ipAddress')?.touched">
+                Formato de IP inválido. Use IPv4 (ex: 192.168.1.1), localhost ou ::1.
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="reason">Motivo (Opcional)</label>
+              <input
+                type="text"
+                formControlName="reason"
+                id="reason"
+                placeholder="Motivo do bloqueio"
+                [disabled]="isBlockingIp"
+              >
+            </div>
+
+            <button
+              type="submit"
+              [disabled]="!blockIpForm.valid || isBlockingIp"
+              class="submit-button"
+            >
+              {{ isBlockingIp ? 'Bloqueando...' : 'Bloquear IP' }}
+            </button>
+          </form>
+
+          <!-- Lista de IPs bloqueados -->
+          <div class="blocked-ips-list-section">
+            <h3>IPs Bloqueados Atualmente</h3>
+            <div *ngIf="isLoadingBlockedIps" class="loading-spinner">
+              Carregando IPs bloqueados...
+            </div>
+            <div *ngIf="!isLoadingBlockedIps && blockedIps.length === 0" class="no-blocked-ips">
+              <p>Nenhum IP bloqueado no momento.</p>
+            </div>
+            <div *ngIf="!isLoadingBlockedIps && blockedIps.length > 0" class="blocked-ips-list">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Endereço IP</th>
+                    <th>Motivo</th>
+                    <th>Data do Bloqueio</th>
+                    <th>Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let ip of blockedIps">
+                    <td>{{ ip.ipAddress }}</td>
+                    <td>{{ ip.reason || 'N/A' }}</td>
+                    <td>{{ ip.created_at | date:'dd/MM/yyyy HH:mm' }}</td>
+                    <td>
+                      <button (click)="onUnblockIp(ip.ipAddress)" class="action-button remove-button">
+                        Desbloquear
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -162,8 +242,20 @@
               <span class="contact-icon">📞</span>
               <span class="contact-value">{{ user.phone }}</span>
             </div>
-            <div *ngIf="!user.email && !user.phone" class="no-contact-info">
-              <em>Sem informações de contato</em>
+            <div *ngIf="user.lastIpAddress" class="contact-detail ip-address-detail">
+              <span class="contact-icon">🌐</span>
+              <span class="contact-value">{{ user.lastIpAddress }}</span>
+              <button
+                *ngIf="user.lastIpAddress"
+                (click)="copyIpToBlockForm(user.lastIpAddress)"
+                class="action-button copy-ip-button"
+                title="Copiar IP para formulário de bloqueio"
+              >
+                📋
+              </button>
+            </div>
+            <div *ngIf="!user.email && !user.phone && !user.lastIpAddress" class="no-contact-info">
+              <em>Sem informações de contato ou IP</em>
             </div>
           </div>
         </div>

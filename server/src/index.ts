@@ -13,6 +13,8 @@ import authRoutes from './routes/auth';
 import postRoutes from './routes/posts';
 import chatRoutes from './routes/chat';
 import profileRoutes from './routes/profile';
+import adminRoutes from './routes/admin.routes'; // Adicionar import para as rotas de admin
+import { checkIpBlocked } from './middleware/ip-block.middleware'; // Adicionar import
 
 // Chave secreta para JWT - deve ser igual à usada no controlador de auth
 const JWT_SECRET = process.env.JWT_SECRET || 'bondedobumbiboladao';
@@ -20,7 +22,21 @@ const JWT_SECRET = process.env.JWT_SECRET || 'bondedobumbiboladao';
 dotenv.config();
 
 const app = express();
-const port = Number(process.env.PORT || 3001);
+
+// Robust port initialization
+const envPort = process.env.PORT;
+let port = 3001; // Default port
+if (envPort) {
+  const parsedPort = parseInt(envPort, 10);
+  if (!isNaN(parsedPort) && parsedPort >= 0 && parsedPort < 65536) {
+    port = parsedPort;
+  } else {
+    console.warn(`[SERVER] Invalid PORT environment variable: "${envPort}". Falling back to default port ${port}.`);
+  }
+} else {
+  console.log(`[SERVER] PORT environment variable not set. Using default port ${port}.`);
+}
+
 const isCodespacesEnv = process.env.CODESPACES === 'true' || process.env.GITHUB_CODESPACES === 'true';
 
 // Create HTTP server
@@ -308,6 +324,9 @@ app.use(cors(corsOptions));
 // Parse JSON bodies
 app.use(express.json({ limit: '50mb' }));  // Aumentando o limite para permitir uploads de imagens
 
+// Aplicar o middleware de bloqueio de IP globalmente ANTES das rotas da API
+app.use(checkIpBlocked);
+
 // Headers adicionais para CORS
 app.use((req: Request, res: Response, next: NextFunction) => {
     const origin = req.headers.origin;
@@ -436,6 +455,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/posts', postRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/profile', profileRoutes);
+app.use('/api/admin', adminRoutes); // Adicionar as rotas de admin
 
 // Rota explícita de fallback para o perfil do usuário atual
 app.get('/api/profile/me', async (req: Request, res: Response) => {

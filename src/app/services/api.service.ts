@@ -4,6 +4,14 @@ import { Observable } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { Post, Comment, LikeResponse } from '../models/post.interface';
 
+// Interface para IP Bloqueado
+export interface BlockedIp {
+  id?: number;
+  ipAddress: string;
+  reason?: string;
+  created_at?: Date;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -138,5 +146,18 @@ export class ApiService {
   // Método para listar todos os usuários
   listAllUsers(): Observable<any> {
     return this.http.get<any>(`${this.API_URL}/auth/users`);
+  }
+
+  // Admin IP Blocking endpoints
+  getBlockedIps(): Observable<BlockedIp[]> {
+    return this.http.get<BlockedIp[]>(`${this.API_URL}/admin/blocked-ips`);
+  }
+
+  blockIp(ipData: { ipAddress: string; reason?: string }): Observable<any> {
+    return this.http.post<any>(`${this.API_URL}/admin/block-ip`, ipData);
+  }
+
+  unblockIp(ipAddress: string): Observable<any> {
+    return this.http.delete<any>(`${this.API_URL}/admin/unblock-ip/${ipAddress}`);
   }
 }
