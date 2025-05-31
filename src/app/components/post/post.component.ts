@@ -49,9 +49,13 @@ export class PostComponent implements OnInit {
     // Obter ID do usuário atual, se estiver logado
     if (this.isLoggedIn) {
       this.authService.getUserInfo().subscribe({
-        next: (user: UserInfo) => {
-          this.userId = user.id;
-          this.checkAuthorPermissions();
+        next: (user: UserInfo | null) => { // Changed to UserInfo | null
+          if (user) { // Check if user is not null
+            this.userId = user.id;
+            this.checkAuthorPermissions();
+          } else {
+            this.userId = null; // Handle null case
+          }
         },
         error: () => {
           this.userId = null;

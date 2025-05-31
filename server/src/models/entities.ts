@@ -27,7 +27,10 @@ export class User {
     profileImage: string;
 
     @Column({ type: 'varchar', length: 45, nullable: true }) // IPv6 can be up to 45 chars, IPv4 is 15
-    lastIpAddress: string; 
+    lastIpAddress: string;
+
+    @Column({ type: 'varchar', length: 20, default: 'member' }) // Adicionando o campo role
+    role: string; // Pode ser 'member', 'leader', 'admin'
 
     @CreateDateColumn()
     created_at: Date;
@@ -53,6 +56,9 @@ export class User {
 
     @OneToMany(() => ChatMessage, message => message.sender)
     chatMessages: ChatMessage[];
+
+    @OneToMany(() => UserReward, userReward => userReward.user) // Relação com UserReward
+    userRewards: UserReward[];
 }
 
 @Entity()
@@ -261,4 +267,60 @@ export class BlockedIp {
 
     @CreateDateColumn({ name: 'created_at' })
     createdAt: Date;
+}
+
+// Novas entidades para o sistema de Recompensas
+
+@Entity('reward')
+export class Reward {
+    @PrimaryGeneratedColumn()
+    id: number;
+
+    @Column({ length: 100 })
+    milestone: string; // Ex: "24 Horas", "1 Mês"
+
+    @Column({ length: 100 })
+    name: string; // Ex: "Nova Aurora", "Renovação Mensal"
+
+    @Column({ type: 'text', nullable: true })
+    designConcept: string; // Ex: "Sol nascente sutil, chama de vela única, círculo simples."
+
+    @Column({ length: 100, nullable: true })
+    colorPalette: string; // Ex: "Amarelo suave, branco"
+
+    @Column({ nullable: true })
+    iconUrl: string; // Futuramente para armazenar o caminho do ícone/emoji
+
+    @OneToMany(() => UserReward, userReward => userReward.reward)
+    userRewards: UserReward[];
+}
+
+@Entity('user_reward')
+export class UserReward {
+    @PrimaryGeneratedColumn()
+    id: number;
+
+    @ManyToOne(() => User, user => user.userRewards)
+    @JoinColumn({ name: 'user_id' })
+    user: User;
+
+    @Column()
+    user_id: number;
+
+    @ManyToOne(() => Reward, reward => reward.userRewards)
+    @JoinColumn({ name: 'reward_id' })
+    reward: Reward;
+
+    @Column()
+    reward_id: number;
+
+    @CreateDateColumn({ name: 'date_earned' })
+    dateEarned: Date;
+
+    @Column({ name: 'awarded_by_user_id', nullable: true })
+    awardedByUserId: number; // ID do usuário (líder/admin) que concedeu a recompensa
+
+    @ManyToOne(() => User, { nullable: true })
+    @JoinColumn({ name: 'awarded_by_user_id' })
+    awardedBy: User;
 }

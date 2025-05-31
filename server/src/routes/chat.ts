@@ -8,7 +8,7 @@ const router = Router();
 router.use(authMiddleware);
 
 // Rotas para conversas
-router.get('/', getUserConversations);
+router.get('/conversations', getUserConversations); // Changed from '/'
 router.post('/', createConversation);
 router.get('/users', getAvailableUsers);
 router.get('/:id/messages', getConversationMessages);

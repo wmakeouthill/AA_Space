@@ -19,7 +19,7 @@ export class ChatNewComponent implements OnInit {
   isGroup = false;
   groupName = '';
   selectedUsers: number[] = [];
-  currentUserId: number;
+  currentUserId: number | null; // Changed to number | null
   loading = false;
   error: string | null = null;
   defaultImage: string = '/assets/images/user.png';
@@ -52,7 +52,7 @@ export class ChatNewComponent implements OnInit {
 
   // Handler para o evento de atualização de imagem
   private handleProfileImageUpdate = (): void => {
-    console.log('[CHAT NEW] Evento de atualização de imagem detectado, recarregando usuários e limpando cache de imagens.');
+    // console.log('[CHAT NEW] Evento de atualização de imagem detectado, recarregando usuários e limpando cache de imagens.');
     this.imageUrlCache.clear(); // Limpar cache de URLs de imagem
     this.loadAvailableUsers(); // Recarrega a lista de usuários para atualizar imagens
   }
@@ -62,15 +62,15 @@ export class ChatNewComponent implements OnInit {
     this.error = null;
     this.imageUrlCache.clear(); // Limpar cache antes de carregar novos usuários
 
-    this.chatService.getAvailableUsers().subscribe({
-      next: (users) => {
+    this.chatService.getAvailableUsers().subscribe({ // Changed to getAvailableUsers
+      next: (users: User[]) => { // Added type for users
         // Ordenar usuários por username em ordem alfabética
-        this.users = users.sort((a, b) => a.username.localeCompare(b.username));
+        this.users = users.sort((a: User, b: User) => a.username.localeCompare(b.username)); // Added type for a and b
         this.applyFilter();
         this.loading = false;
       },
-      error: (err) => {
-        console.error('Erro ao carregar usuários:', err);
+      error: (err: any) => { // Added type for err
+        // console.error('Erro ao carregar usuários:', err);
         this.error = 'Não foi possível carregar a lista de usuários. Tente novamente mais tarde.';
         this.loading = false;
       }
@@ -173,8 +173,8 @@ export class ChatNewComponent implements OnInit {
 
     // Usar o serviço para criar o chat
     this.chatService.createChat(
+      this.isGroup ? this.groupName.trim() : undefined, // Pass undefined for name if not a group
       this.isGroup,
-      this.isGroup ? this.groupName.trim() : undefined,
       [...this.selectedUsers]
     ).subscribe({
       next: (newChat) => {
@@ -183,7 +183,7 @@ export class ChatNewComponent implements OnInit {
         this.closeModal();
       },
       error: (err) => {
-        console.error('Erro ao criar chat:', err);
+        // console.error('Erro ao criar chat:', err);
         this.error = err.message || 'Falha ao criar conversa. Tente novamente.';
         this.loading = false;
       }

@@ -236,6 +236,7 @@ export class AdminComponent implements OnInit {
 
     if (this.promoteForm.valid) {
       this.isSubmitting = true;
+      this.promoteForm.get('username')?.disable(); // Disable control
       this.error = null;
       this.successMessage = null;
 
@@ -247,6 +248,7 @@ export class AdminComponent implements OnInit {
           this.successMessage = response.message || 'Usuário promovido a administrador com sucesso.';
           this.promoteForm.reset();
           this.isSubmitting = false;
+          this.promoteForm.get('username')?.enable(); // Enable control
 
           // Atualiza a lista de administradores
           this.fetchAdmins();
@@ -257,6 +259,7 @@ export class AdminComponent implements OnInit {
           console.error('Erro ao promover usuário:', error);
           this.error = error.error?.message || 'Não foi possível promover o usuário. Por favor, verifique o nome e tente novamente.';
           this.isSubmitting = false;
+          this.promoteForm.get('username')?.enable(); // Enable control on error
         }
       });
     }
@@ -270,6 +273,7 @@ export class AdminComponent implements OnInit {
 
     if (this.removeForm.valid) {
       this.isRemoveSubmitting = true;
+      this.removeForm.get('username')?.disable(); // Disable control
       this.error = null;
       this.successMessage = null;
 
@@ -281,12 +285,14 @@ export class AdminComponent implements OnInit {
       if (adminToRemove?.isMainAdmin) {
         this.error = 'Não é possível remover os privilégios do administrador principal.';
         this.isRemoveSubmitting = false;
+        this.removeForm.get('username')?.enable(); // Enable control
         return;
       }
 
       if (username === this.currentUsername) {
         this.error = 'Você não pode remover seus próprios privilégios de administrador.';
         this.isRemoveSubmitting = false;
+        this.removeForm.get('username')?.enable(); // Enable control
         return;
       }
 
@@ -296,6 +302,7 @@ export class AdminComponent implements OnInit {
           this.successMessage = response.message || 'Privilégios de administrador removidos com sucesso.';
           this.removeForm.reset();
           this.isRemoveSubmitting = false;
+          this.removeForm.get('username')?.enable(); // Enable control
 
           // Atualiza a lista de administradores
           this.fetchAdmins();
@@ -306,6 +313,7 @@ export class AdminComponent implements OnInit {
           console.error('Erro ao remover privilégios de administrador:', error);
           this.error = error.error?.message || 'Não foi possível remover os privilégios do administrador. Por favor, verifique o nome e tente novamente.';
           this.isRemoveSubmitting = false;
+          this.removeForm.get('username')?.enable(); // Enable control on error
         }
       });
     }
@@ -319,6 +327,7 @@ export class AdminComponent implements OnInit {
 
     if (this.transferForm.valid) {
       this.isTransferSubmitting = true;
+      this.transferForm.get('username')?.disable(); // Disable control
       this.error = null;
       this.successMessage = null;
 
@@ -328,6 +337,7 @@ export class AdminComponent implements OnInit {
       if (username === this.currentUsername) {
         this.error = 'Você já é o administrador principal.';
         this.isTransferSubmitting = false;
+        this.transferForm.get('username')?.enable(); // Enable control
         return;
       }
 
@@ -337,6 +347,7 @@ export class AdminComponent implements OnInit {
           this.successMessage = response.message || 'Título de administrador principal transferido com sucesso.';
           this.transferForm.reset();
           this.isTransferSubmitting = false;
+          this.transferForm.get('username')?.enable(); // Enable control
 
           // Atualiza a interface depois da transferência
           this.isMainAdmin = false;
@@ -348,6 +359,7 @@ export class AdminComponent implements OnInit {
           console.error('Erro ao transferir título de administrador principal:', error);
           this.error = error.error?.message || 'Não foi possível transferir o título de administrador principal. Por favor, verifique o nome e tente novamente.';
           this.isTransferSubmitting = false;
+          this.transferForm.get('username')?.enable(); // Enable control on error
         }
       });
     }
@@ -361,6 +373,8 @@ export class AdminComponent implements OnInit {
       return;
     }
     this.isBlockingIp = true;
+    this.blockIpForm.get('ipAddress')?.disable();
+    this.blockIpForm.get('reason')?.disable();
     this.error = null;
     this.successMessage = null;
 
@@ -372,11 +386,15 @@ export class AdminComponent implements OnInit {
         this.blockIpForm.reset();
         this.fetchBlockedIps(); // Atualiza a lista
         this.isBlockingIp = false;
+        this.blockIpForm.get('ipAddress')?.enable();
+        this.blockIpForm.get('reason')?.enable();
       },
       error: (err) => {
         console.error('Erro ao bloquear IP:', err);
         this.error = err.error?.message || 'Não foi possível bloquear o IP. Verifique se já não está bloqueado ou se o formato é válido.';
         this.isBlockingIp = false;
+        this.blockIpForm.get('ipAddress')?.enable();
+        this.blockIpForm.get('reason')?.enable();
       }
     });
   }

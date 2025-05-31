@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
 import { AuthService } from '../../../services/auth.service';
 import { ProfileService } from '../../../services/profile.service';
+import { FrontendUserReward } from '../../../models/chat/chat.interface'; // Added import
 
 @Component({
   selector: 'app-chat-profile',
@@ -16,6 +17,7 @@ export class ChatProfileComponent implements OnInit, OnDestroy {
   profileImage: string | null = null;
   defaultImage = 'assets/images/user.png';
   username: string = 'Nome do Usuário'; // Default value
+  userRewards: FrontendUserReward[] = []; // Added to store user rewards
   isUploading = false;
   error: string | null = null;
   showEnlargedImage = false;
@@ -71,10 +73,16 @@ export class ChatProfileComponent implements OnInit, OnDestroy {
         } else {
           this.profileImage = this.defaultImage;
         }
+        if (profile && profile.userRewards) { // Added to load user rewards
+          this.userRewards = profile.userRewards;
+        } else {
+          this.userRewards = [];
+        }
         this.cdr.detectChanges();
       },
       error: () => {
         this.profileImage = this.defaultImage;
+        this.userRewards = []; // Added to clear rewards on error
         this.cdr.detectChanges();
       }
     });
@@ -85,13 +93,13 @@ export class ChatProfileComponent implements OnInit, OnDestroy {
   }
 
   toggleProfileMenu(event: MouseEvent): void {
-    console.log('[ChatProfileComponent] toggleProfileMenu CALLED'); // LOG 1
+    console.warn('[ChatProfileComponent] toggleProfileMenu CALLED'); // LOG 1
     event.stopPropagation();
-    console.log('[ChatProfileComponent] Current showProfileMenu before toggle:', this.showProfileMenu); // LOG 2
+    console.warn('[ChatProfileComponent] Current showProfileMenu before toggle:', this.showProfileMenu); // LOG 2
     this.showProfileMenu = !this.showProfileMenu;
-    console.log('[ChatProfileComponent] New showProfileMenu after toggle:', this.showProfileMenu); // LOG 3
+    console.warn('[ChatProfileComponent] New showProfileMenu after toggle:', this.showProfileMenu); // LOG 3
     this.cdr.detectChanges(); // Ensure Angular picks up the change
-    console.log('[ChatProfileComponent] detectChanges called after toggle'); // LOG 4
+    console.warn('[ChatProfileComponent] detectChanges called after toggle'); // LOG 4
   }
 
   selectProfileImageFile(): void {

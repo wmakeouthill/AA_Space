@@ -16,6 +16,22 @@
     <div class="profile-info">
       <div class="profile-username">{{ username }}</div>
       <div class="profile-status">Online</div>
+      <!-- Added section to display rewards -->
+      <div class="profile-rewards" *ngIf="userRewards.length > 0">
+        <h4>Recompensas:</h4>
+        <ul>
+          <li *ngFor="let userReward of userRewards">
+            <img [src]="userReward.reward.iconUrl || 'assets/images/default-reward-icon.png'"
+                 [alt]="userReward.reward.name"
+                 class="reward-icon"
+                 [title]="userReward.reward.name + ' - ' + userReward.reward.milestone">
+            <span>{{ userReward.reward.name }} ({{ userReward.reward.milestone }}) - Conquistada em: {{ userReward.dateEarned | date:'dd/MM/yyyy' }}</span>
+          </li>
+        </ul>
+      </div>
+      <div class="profile-rewards" *ngIf="userRewards.length === 0">
+        <p>Nenhuma recompensa ainda.</p>
+      </div>
     </div>
   </div>
 

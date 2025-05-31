@@ -9,7 +9,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.BlockedIp = exports.ChatMessage = exports.ChatParticipant = exports.ChatConversation = exports.CommentLike = exports.PostLike = exports.Comment = exports.Post = exports.User = void 0;
+exports.UserReward = exports.Reward = exports.BlockedIp = exports.ChatMessage = exports.ChatParticipant = exports.ChatConversation = exports.CommentLike = exports.PostLike = exports.Comment = exports.Post = exports.User = void 0;
 const typeorm_1 = require("typeorm");
 let User = class User {
 };
@@ -52,6 +52,11 @@ __decorate([
     __metadata("design:type", String)
 ], User.prototype, "lastIpAddress", void 0);
 __decorate([
+    (0, typeorm_1.Column)({ type: 'varchar', length: 20, default: 'member' }) // Adicionando o campo role
+    ,
+    __metadata("design:type", String)
+], User.prototype, "role", void 0);
+__decorate([
     (0, typeorm_1.CreateDateColumn)(),
     __metadata("design:type", Date)
 ], User.prototype, "created_at", void 0);
@@ -83,6 +88,11 @@ __decorate([
     (0, typeorm_1.OneToMany)(() => ChatMessage, message => message.sender),
     __metadata("design:type", Array)
 ], User.prototype, "chatMessages", void 0);
+__decorate([
+    (0, typeorm_1.OneToMany)(() => UserReward, userReward => userReward.user) // Relação com UserReward
+    ,
+    __metadata("design:type", Array)
+], User.prototype, "userRewards", void 0);
 exports.User = User = __decorate([
     (0, typeorm_1.Entity)()
 ], User);
@@ -376,3 +386,79 @@ __decorate([
 exports.BlockedIp = BlockedIp = __decorate([
     (0, typeorm_1.Entity)('blocked_ips')
 ], BlockedIp);
+// Novas entidades para o sistema de Recompensas
+let Reward = class Reward {
+};
+exports.Reward = Reward;
+__decorate([
+    (0, typeorm_1.PrimaryGeneratedColumn)(),
+    __metadata("design:type", Number)
+], Reward.prototype, "id", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ length: 100 }),
+    __metadata("design:type", String)
+], Reward.prototype, "milestone", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ length: 100 }),
+    __metadata("design:type", String)
+], Reward.prototype, "name", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'text', nullable: true }),
+    __metadata("design:type", String)
+], Reward.prototype, "designConcept", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ length: 100, nullable: true }),
+    __metadata("design:type", String)
+], Reward.prototype, "colorPalette", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ nullable: true }),
+    __metadata("design:type", String)
+], Reward.prototype, "iconUrl", void 0);
+__decorate([
+    (0, typeorm_1.OneToMany)(() => UserReward, userReward => userReward.reward),
+    __metadata("design:type", Array)
+], Reward.prototype, "userRewards", void 0);
+exports.Reward = Reward = __decorate([
+    (0, typeorm_1.Entity)('reward')
+], Reward);
+let UserReward = class UserReward {
+};
+exports.UserReward = UserReward;
+__decorate([
+    (0, typeorm_1.PrimaryGeneratedColumn)(),
+    __metadata("design:type", Number)
+], UserReward.prototype, "id", void 0);
+__decorate([
+    (0, typeorm_1.ManyToOne)(() => User, user => user.userRewards),
+    (0, typeorm_1.JoinColumn)({ name: 'user_id' }),
+    __metadata("design:type", User)
+], UserReward.prototype, "user", void 0);
+__decorate([
+    (0, typeorm_1.Column)(),
+    __metadata("design:type", Number)
+], UserReward.prototype, "user_id", void 0);
+__decorate([
+    (0, typeorm_1.ManyToOne)(() => Reward, reward => reward.userRewards),
+    (0, typeorm_1.JoinColumn)({ name: 'reward_id' }),
+    __metadata("design:type", Reward)
+], UserReward.prototype, "reward", void 0);
+__decorate([
+    (0, typeorm_1.Column)(),
+    __metadata("design:type", Number)
+], UserReward.prototype, "reward_id", void 0);
+__decorate([
+    (0, typeorm_1.CreateDateColumn)({ name: 'date_earned' }),
+    __metadata("design:type", Date)
+], UserReward.prototype, "dateEarned", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'awarded_by_user_id', nullable: true }),
+    __metadata("design:type", Number)
+], UserReward.prototype, "awardedByUserId", void 0);
+__decorate([
+    (0, typeorm_1.ManyToOne)(() => User, { nullable: true }),
+    (0, typeorm_1.JoinColumn)({ name: 'awarded_by_user_id' }),
+    __metadata("design:type", User)
+], UserReward.prototype, "awardedBy", void 0);
+exports.UserReward = UserReward = __decorate([
+    (0, typeorm_1.Entity)('user_reward')
+], UserReward);

@@ -20,36 +20,31 @@ export class ApiService {
   private readonly API_URL = this.getApiUrl();
 
   constructor(private http: HttpClient) {
-    console.log('API_URL configurada como:', this.API_URL);
+    // console.log('API_URL configurada como:', this.API_URL);
   }
 
   // Método para detectar o ambiente e fornecer a URL correta
   private getApiUrl(): string {
     const currentOrigin = window.location.origin;
-    console.log('Origem atual detectada:', currentOrigin);
+    // console.log('Origem atual detectada:', currentOrigin);
 
     if (currentOrigin.includes('v3mrhcvc-4200.brs.devtunnels.ms')) {
-      console.log('Ambiente DevTunnel (Frontend) detectado, usando API URL do DevTunnel (Backend).');
+      // console.log('Ambiente DevTunnel (Frontend) detectado, usando API URL do DevTunnel (Backend).');
       return 'https://v3mrhcvc-3001.brs.devtunnels.ms/api';
     } else if (currentOrigin.includes('.github.dev') || currentOrigin.includes('.github.io') || currentOrigin.includes('.app.github.dev')) {
-      // No ambiente Codespaces, precisamos usar a porta 3001 explicitamente
-      // Substituímos a porta atual (provavelmente 4200 ou outra) por 3001
       const codespacesApiUrl = currentOrigin.replace(/-\d+(\.app\.github\.dev|\.github\.dev|\.github\.io)/, '-3001$1') + '/api';
-      // Garante que não haja duplicidade de /api
       const finalCodespacesApiUrl = codespacesApiUrl.replace(/\/api\/api$/, '/api');
-      console.log('Ambiente Codespaces detectado, usando API URL:', finalCodespacesApiUrl);
+      // console.log('Ambiente Codespaces detectado, usando API URL:', finalCodespacesApiUrl);
       return finalCodespacesApiUrl;
     }
 
-    // Caso contrário, usamos o localhost padrão
-    console.log('Ambiente local detectado, usando localhost:3001/api');
+    // console.log('Ambiente local detectado, usando localhost:3001/api');
     return 'http://localhost:3001/api';
   }
 
   // Método para obter a URL base da API (sem o /api no final)
   public getApiBaseUrl(): string {
     const apiUrl = this.getApiUrl();
-    // Remove /api do final, se existir
     if (apiUrl.endsWith('/api')) {
       return apiUrl.substring(0, apiUrl.length - '/api'.length);
     }
@@ -122,8 +117,12 @@ export class ApiService {
       .pipe(
         catchError(error => {
           // Se a nova rota falhar, tentamos a rota original
-          console.log('Tentativa com rota alternativa falhou, tentando rota original...');
-          return this.http.post<any>(`${this.API_URL}/auth/promote`, userIdOrUsername);
+          // console.log('Tentativa com rota alternativa falhou, tentando rota original...');
+          // Assuming the original route for promoteToAdmin was also /auth/make-admin or similar
+          // and not /auth/login. If /auth/login was a placeholder, this should be corrected.
+          // For now, re-throwing the error from the first attempt as the fallback logic seems incorrect.
+          console.error('Erro ao tentar promover para admin na rota alternativa:', error);
+          throw error;
         })
       );
   }

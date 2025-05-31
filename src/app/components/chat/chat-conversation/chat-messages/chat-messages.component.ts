@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, ElementRef, Input, OnInit, ViewChild, OnChanges, SimpleChanges, AfterViewChecked, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Message, ChatParticipant } from '../../../../models/chat/chat.interface';
+import { Message, ChatParticipant, MessageStatusUpdate } from '../../../../models/chat/chat.interface'; // Added MessageStatusUpdate
 import { ChatService } from '../../../../services/chat.service';
 import { Subscription } from 'rxjs';
 
@@ -226,15 +226,13 @@ export class ChatMessagesComponent implements OnInit, OnChanges, AfterViewChecke
 
   @Input()
   set messages(value: Message[]) {
-    console.log(`[CHAT MESSAGES] Setter: messages received. Length: ${value ? value.length : 'null/undefined'}`);
+    console.log(`[CHAT MESSAGES] Setter: messages @Input received. Raw value:`, JSON.stringify(value?.map(m => ({id: m.id, content: m.content, senderId: m.senderId, status: m.status})))); // ADDED DETAILED LOG
     if (value) {
       const currentMessageStatuses = new Map<number, 'sent' | 'delivered' | 'read'>();
       this._messages.forEach(msg => {
         const msgIdNum = typeof msg.id === 'string' ? parseInt(msg.id, 10) : msg.id;
-        if (msgIdNum !== undefined && !isNaN(msgIdNum) && msg.status) { // Ensure msg.status is not undefined
+        if (msgIdNum !== undefined && !isNaN(msgIdNum) && msg.status) {
           currentMessageStatuses.set(msgIdNum, msg.status);
-        } else {
-          console.warn(`[CHAT MESSAGES] Setter: Existing message in _messages has invalid ID, no status, or unparsable ID: ${JSON.stringify(msg)}`);
         }
       });
 
@@ -243,29 +241,26 @@ export class ChatMessagesComponent implements OnInit, OnChanges, AfterViewChecke
 
         if (newMessageIdNum !== undefined && !isNaN(newMessageIdNum)) {
           const existingStatus = currentMessageStatuses.get(newMessageIdNum);
-          if (existingStatus && newMessage.status) { // Ensure newMessage.status is not undefined
+          if (existingStatus && newMessage.status) {
             const statusHierarchy = { sent: 1, delivered: 2, read: 3 };
             if (statusHierarchy[existingStatus] > statusHierarchy[newMessage.status]) {
-              console.log(`[CHAT MESSAGES] Setter: Preserving status '${existingStatus}' for message ID ${newMessageIdNum} over incoming status '${newMessage.status}'.`);
               return { ...newMessage, status: existingStatus };
             }
           }
-        } else {
-            console.warn(`[CHAT MESSAGES] Setter: Incoming new message has invalid or unparsable ID: ${JSON.stringify(newMessage)}`);
         }
         return newMessage;
       });
 
       this._messages = [...processedNewMessages];
-      console.log(`[CHAT MESSAGES] Setter: _messages populated after status preservation. Current length: ${this._messages.length}`);
+      console.log(`[CHAT MESSAGES] Setter: _messages updated. New _messages:`, JSON.stringify(this._messages?.map(m => ({id: m.id, content: m.content, senderId: m.senderId, status: m.status})))); // ADDED DETAILED LOG
 
       if (this.isViewInitialized) {
         this.scrollToBottom();
         this.cdr.detectChanges();
       }
     } else {
-      console.warn('[CHAT MESSAGES] Setter: messages received as null or undefined. Clearing _messages.');
       this._messages = [];
+      console.log(`[CHAT MESSAGES] Setter: messages @Input was null/undefined. _messages cleared.`); // Existing log
       if (this.isViewInitialized) {
         this.cdr.detectChanges();
       }
@@ -281,44 +276,44 @@ export class ChatMessagesComponent implements OnInit, OnChanges, AfterViewChecke
     private cdr: ChangeDetectorRef,
     private el: ElementRef
   ) {
-    console.log('[CHAT MESSAGES] Constructor');
+    // console.log('[CHAT MESSAGES] Constructor');
   }
 
   ngOnInit(): void {
-    console.log('[CHAT MESSAGES] ngOnInit. Chat ID:', this.chatId, 'Current User ID:', this.currentUserId);
+    // console.log('[CHAT MESSAGES] ngOnInit. Chat ID:', this.chatId, 'Current User ID:', this.currentUserId);
 
     if (this.currentUserId === undefined || this.currentUserId === null) {
-        console.error('[CHAT MESSAGES] ngOnInit: currentUserId is not provided or is null.');
+        // console.error('[CHAT MESSAGES] ngOnInit: currentUserId is not provided or is null.');
     }
     if (!this.chatId) {
-        console.error('[CHAT MESSAGES] ngOnInit: chatId is not provided.');
+        // console.error('[CHAT MESSAGES] ngOnInit: chatId is not provided.');
     }
 
     this.subscribeToMessageStatusUpdates();
   }
 
   ngOnChanges(changes: SimpleChanges): void {
-    console.log('[CHAT MESSAGES] ngOnChanges triggered.', changes);
+    // console.log('[CHAT MESSAGES] ngOnChanges triggered.', changes);
     if (changes['messages']) {
-      console.log('[CHAT MESSAGES] ngOnChanges: messages @Input changed. New length:', this._messages.length);
+      // console.log('[CHAT MESSAGES] ngOnChanges: messages @Input changed. New length:', this._messages.length);
     }
     if (changes['chatId']) {
-      console.log('[CHAT MESSAGES] ngOnChanges: chatId changed to', this.chatId);
+      // console.log('[CHAT MESSAGES] ngOnChanges: chatId changed to', this.chatId);
       if (this.chatId) {
         this.subscribeToMessageStatusUpdates();
       } else {
-         console.warn('[CHAT MESSAGES] ngOnChanges: chatId changed to null/undefined. Not subscribing to status updates.');
+         // console.warn('[CHAT MESSAGES] ngOnChanges: chatId changed to null/undefined. Not subscribing to status updates.');
          if (this.messageStatusSubscription) {
             this.messageStatusSubscription.unsubscribe();
          }
       }
     }
     if (changes['currentUserId']) {
-        console.log('[CHAT MESSAGES] ngOnChanges: currentUserId changed to', this.currentUserId);
+        // console.log('[CHAT MESSAGES] ngOnChanges: currentUserId changed to', this.currentUserId);
         this.cdr.detectChanges();
     }
     if (changes['isGroup']) {
-        console.log('[CHAT MESSAGES] ngOnChanges: isGroup changed to', this.isGroup);
+        // console.log('[CHAT MESSAGES] ngOnChanges: isGroup changed to', this.isGroup);
         this.cdr.detectChanges();
     }
   }
@@ -326,7 +321,7 @@ export class ChatMessagesComponent implements OnInit, OnChanges, AfterViewChecke
   ngAfterViewChecked(): void {
     if (!this.isViewInitialized) {
       this.isViewInitialized = true;
-      console.log('[CHAT MESSAGES] ngAfterViewChecked: View initialized, scrolling to bottom.');
+      // console.log('[CHAT MESSAGES] ngAfterViewChecked: View initialized, scrolling to bottom.');
       this.scrollToBottom();
     }
   }
@@ -334,30 +329,33 @@ export class ChatMessagesComponent implements OnInit, OnChanges, AfterViewChecke
   private subscribeToMessageStatusUpdates(): void {
     if (this.messageStatusSubscription) {
       this.messageStatusSubscription.unsubscribe();
-      console.log('[CHAT MESSAGES] WS Update: Unsubscribed from previous message status listener.');
+      // console.log('[CHAT MESSAGES] WS Update: Unsubscribed from previous message status listener.');
     }
     if (!this.chatId) {
-      console.warn('[CHAT MESSAGES] WS Update: Cannot subscribe to message status updates without a valid chatId.');
+      // console.warn('[CHAT MESSAGES] WS Update: Cannot subscribe to message status updates without a valid chatId.');
       return;
     }
-    console.log('[CHAT MESSAGES] WS Update: Subscribing to message status updates for chatId:', this.chatId);
+    // console.log('[CHAT MESSAGES] WS Update: Subscribing to message status updates for chatId:', this.chatId);
     this.messageStatusSubscription = this.chatService.getMessageStatusUpdateListener()
-      .subscribe((update: { chatId: number; status: 'sent' | 'delivered' | 'read'; messageIds: string[] }) => {
-        console.log(`[CHAT MESSAGES] WS Update: Received event. Update chatId: ${update?.chatId}, Status: ${update?.status}, Message IDs: ${update?.messageIds?.join(',')}. Current component chatId: ${this.chatId}`);
+      .subscribe((update: MessageStatusUpdate | null) => {
+        if (!update) {
+          // console.warn('[CHAT MESSAGES] WS Update: Received null update from ChatService subject.');
+          return;
+        }
+        // console.log(`[CHAT MESSAGES] WS Update: Received event. Update chatId: ${update?.chatId}, Status: ${update?.status}, Message IDs: ${update?.messageIds?.join(',')}. Current component chatId: ${this.chatId}`);
 
-        if (!update || update.chatId === undefined || !update.messageIds || !update.status) {
-          console.error('[CHAT MESSAGES] WS Update: Invalid payload received from ChatService subject.', JSON.stringify(update));
+        if (update.chatId === undefined || !update.messageIds || !update.status) {
+          // console.error('[CHAT MESSAGES] WS Update: Invalid payload received from ChatService subject.', JSON.stringify(update));
           return;
         }
 
         if (update.chatId.toString() === this.chatId) {
-          console.log(`[CHAT MESSAGES] WS Update: Processing status update for current conversation ${this.chatId}. ${update.messageIds.length} message ID(s) in payload with status '${update.status}'.`);
+          // console.log(`[CHAT MESSAGES] WS Update: Processing status update for current conversation ${this.chatId}. ${update.messageIds.length} message ID(s) in payload with status '${update.status}'.`);
 
-          // Assuming message.id is a number. If it's a string, adjust parsing/comparison.
-          const idsToUpdate = new Set(update.messageIds.map(idStr => parseInt(idStr, 10)).filter(idNum => !isNaN(idNum)));
+          const idsToUpdate = new Set(update.messageIds.map((idStr: string) => parseInt(idStr, 10)).filter((idNum: number) => !isNaN(idNum))); // Added types for idStr and idNum
 
           if (idsToUpdate.size === 0 && update.messageIds.length > 0) {
-            console.warn('[CHAT MESSAGES] WS Update: No valid numeric message IDs found in the update after parsing.');
+            // console.warn('[CHAT MESSAGES] WS Update: No valid numeric message IDs found in the update after parsing.');
             return;
           }
 
@@ -369,7 +367,7 @@ export class ChatMessagesComponent implements OnInit, OnChanges, AfterViewChecke
             if (msgIdAsNumber !== undefined && !isNaN(msgIdAsNumber) && idsToUpdate.has(msgIdAsNumber)) {
               if (msg.status !== update.status) {
                 messagesWereUpdated = true;
-                console.log(`[CHAT MESSAGES] WS Update: Updating status of message ID ${msg.id} to '${update.status}'`);
+                // console.log(`[CHAT MESSAGES] WS Update: Updating status of message ID ${msg.id} to '${update.status}'`);
                 return { ...msg, status: update.status };
               }
             }
@@ -377,15 +375,15 @@ export class ChatMessagesComponent implements OnInit, OnChanges, AfterViewChecke
           });
 
           if (messagesWereUpdated) {
-            console.log('[CHAT MESSAGES] WS Update: Messages were updated. Assigning new array and triggering change detection.');
+            // console.log('[CHAT MESSAGES] WS Update: Messages were updated. Assigning new array and triggering change detection.');
             this._messages = newMessages; // Assign the new array
             this.cdr.detectChanges(); // Trigger change detection
           } else {
-            console.log('[CHAT MESSAGES] WS Update: No messages required a status change.');
+            // console.log('[CHAT MESSAGES] WS Update: No messages required a status change.');
           }
         }
       }, (error: any) => {
-        console.error('[CHAT MESSAGES] WS Update: Error in messageStatusUpdate subscription:', error);
+        // console.error('[CHAT MESSAGES] WS Update: Error in messageStatusUpdate subscription:', error);
       });
   }
 
@@ -394,22 +392,22 @@ export class ChatMessagesComponent implements OnInit, OnChanges, AfterViewChecke
       if (this.myScrollContainer && this.myScrollContainer.nativeElement) {
         setTimeout(() => {
           this.myScrollContainer.nativeElement.scrollTop = this.myScrollContainer.nativeElement.scrollHeight;
-          console.log('[CHAT MESSAGES] Scrolled to bottom.');
+          // console.log('[CHAT MESSAGES] Scrolled to bottom.');
         }, 0);
       }
     } catch (err) {
-      console.error('[CHAT MESSAGES] Error scrolling to bottom:', err);
+      // console.error('[CHAT MESSAGES] Error scrolling to bottom:', err);
     }
   }
 
   trackByMessageId(index: number, message: Message): number | string {
     if (!message) {
-      console.warn(`[CHAT MESSAGES] trackByMessageId: Message at index ${index} is UNDEFINED/NULL.`);
+      // console.warn(`[CHAT MESSAGES] trackByMessageId: Message at index ${index} is UNDEFINED/NULL.`);
       return `error-null-${index}-${Date.now()}`;
     }
     if (message.id === undefined || message.id === null) {
       const contentPreview = message.content ? message.content.substring(0, 30) + "..." : "N/A";
-      console.warn(`[CHAT MESSAGES] trackByMessageId: Message at index ${index} has UNDEFINED/NULL ID. Content: \"${contentPreview}\". Assigning temporary ID: error-id-${index}-${Date.now()}`);
+      // console.warn(`[CHAT MESSAGES] trackByMessageId: Message at index ${index} has UNDEFINED/NULL ID. Content: \\"${contentPreview}\\". Assigning temporary ID: error-id-${index}-${Date.now()}`);
       return `error-id-${index}-${Date.now()}`;
     }
     return message.id;
@@ -440,7 +438,7 @@ export class ChatMessagesComponent implements OnInit, OnChanges, AfterViewChecke
   ngOnDestroy(): void {
     if (this.messageStatusSubscription) {
       this.messageStatusSubscription.unsubscribe();
-      console.log('[CHAT MESSAGES] Unsubscribed from message status updates on destroy.');
+      // console.log('[CHAT MESSAGES] Unsubscribed from message status updates on destroy.');
     }
   }
 }

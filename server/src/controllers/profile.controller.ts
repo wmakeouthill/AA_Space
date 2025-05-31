@@ -232,19 +232,36 @@ export const getUserProfileInfo = async (req: Request, res: Response) => {
             return res.status(401).json({ message: 'Usuário não autenticado' });
         }
 
-        // Buscar informações do usuário solicitado
         const userRepository = AppDataSource.getRepository(User);
-        const user = await userRepository.findOneBy({ id: targetUserId });
+        const user = await userRepository.findOne({
+            where: { id: targetUserId },
+            relations: {
+                userRewards: {
+                    reward: true
+                }
+            }
+        });
 
         if (!user) {
             return res.status(404).json({ message: 'Usuário não encontrado' });
         }
 
-        // Retornar apenas informações públicas
         return res.status(200).json({
             id: user.id,
             username: user.username,
-            profileImage: user.profileImage
+            profileImage: user.profileImage,
+            userRewards: user.userRewards.map(ur => ({
+                id: ur.id,
+                reward: {
+                    id: ur.reward.id,
+                    name: ur.reward.name,
+                    milestone: ur.reward.milestone,
+                    designConcept: ur.reward.designConcept, // Corrigido
+                    colorPalette: ur.reward.colorPalette,
+                    iconUrl: ur.reward.iconUrl // Corrigido
+                },
+                dateEarned: ur.dateEarned // Corrigido
+            }))
         });
     } catch (error) {
         console.error('Erro ao buscar informações de perfil:', error);

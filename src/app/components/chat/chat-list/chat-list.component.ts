@@ -27,8 +27,6 @@ export class ChatListComponent implements OnInit, OnDestroy {
   currentUserId: number;
   loading = false;
   error: string | null = null;
-  defaultImage: string = 'assets/images/user.png'; // Updated to use absolute path
-  defaultGroupImage: string = 'assets/images/group.png'; // Updated to use absolute path
 
   // Listener para evento de chat criado
   private chatCreatedHandler: (event: CustomEvent<Chat>) => void;
@@ -37,12 +35,14 @@ export class ChatListComponent implements OnInit, OnDestroy {
   private chatMarkedAsReadSubscription!: Subscription; // For the new listener
 
   constructor(private chatService: ChatService) {
-    this.currentUserId = this.chatService.getPublicCurrentUserId(); // Use public method
+    const currentUserIdString = this.chatService.getCurrentUserId(); // Use public method
+    this.currentUserId = currentUserIdString ? +currentUserIdString : 0;
 
     // Certifica-se de que temos um ID válido
     if (!this.currentUserId || this.currentUserId === 0) {
       setTimeout(() => {
-        this.currentUserId = this.chatService.getPublicCurrentUserId(); // Use public method
+        const userIdStr = this.chatService.getCurrentUserId(); // Use public method
+        this.currentUserId = userIdStr ? +userIdStr : 0;
       }, 500);
     }
 
@@ -77,16 +77,18 @@ export class ChatListComponent implements OnInit, OnDestroy {
     };
 
     // Subscribe to chat marked as read events
-    this.chatMarkedAsReadSubscription = this.chatService.getChatMarkedAsReadListener().subscribe(chatId => {
-      const chatToUpdate = this.chats.find(c => c.id === chatId);
-      if (chatToUpdate && chatToUpdate.unreadCount !== 0) {
-        // Create a new reference for the array of chats, updating the modified chat
-        const updatedChats = [...this.chats];
-        const chatIndex = updatedChats.findIndex(c => c.id === chatId);
-        if (chatIndex > -1) {
-            updatedChats[chatIndex] = { ...updatedChats[chatIndex], unreadCount: 0 };
-            this.chats = updatedChats; // Reassign this.chats to trigger change detection
-            this.sortChats(); // Re-sort if order depends on unread status or last activity
+    this.chatMarkedAsReadSubscription = this.chatService.getMessageStatusUpdateListener().subscribe(update => {
+      if (update && update.status === 'read') {
+        const chatToUpdate = this.chats.find(c => c.id === update.chatId);
+        if (chatToUpdate && chatToUpdate.unreadCount !== 0) {
+          // Create a new reference for the array of chats, updating the modified chat
+          const updatedChats = [...this.chats];
+          const chatIndex = updatedChats.findIndex(c => c.id === update.chatId);
+          if (chatIndex > -1) {
+              updatedChats[chatIndex] = { ...updatedChats[chatIndex], unreadCount: 0 };
+              this.chats = updatedChats; // Reassign this.chats to trigger change detection
+              this.sortChats(); // Re-sort if order depends on unread status or last activity
+          }
         }
       }
     });
@@ -95,7 +97,8 @@ export class ChatListComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     // Verificar ID do usuário novamente (caso tenha sido carregado assincronamente)
     if (!this.currentUserId || this.currentUserId === 0) {
-      this.currentUserId = this.chatService.getPublicCurrentUserId(); // Use public method
+      const userIdStr = this.chatService.getCurrentUserId(); // Use public method
+      this.currentUserId = userIdStr ? +userIdStr : 0;
     }
 
     this.loadChats();
@@ -108,15 +111,18 @@ export class ChatListComponent implements OnInit, OnDestroy {
     window.addEventListener('profile:imageUpdated', this.profileImageUpdatedHandler);
 
     // Subscribe to new messages from ChatService
-    this.newMessagesSubscription = this.chatService.getNewMessageListener().subscribe({
-      next: (event: NewMessageEvent) => {
-        const message = event.message;
-        const chatId = event.chatId;
-        const chatToUpdate = this.chats.find(chat => chat.id === chatId);
-
-        if (chatToUpdate) {
-          chatToUpdate.lastMessage = message;
-          this.sortChats();
+    this.newMessagesSubscription = this.chatService.messages$.subscribe({
+      next: (messages: Message[]) => {
+        // Assuming messages$ emits the full list for the current chat,
+        // or that we need to find the relevant chat and update its last message.
+        // This part might need adjustment based on how messages$ is implemented.
+        if (messages.length > 0) {
+          const latestMessage = messages[messages.length - 1];
+          const chatToUpdate = this.chats.find(chat => chat.id === latestMessage.chatId);
+          if (chatToUpdate) {
+            chatToUpdate.lastMessage = latestMessage;
+            this.sortChats();
+          }
         }
       },
       error: (err: any) => {
@@ -126,7 +132,7 @@ export class ChatListComponent implements OnInit, OnDestroy {
 
     // Inscrever-se às atualizações do total de mensagens não lidas do ChatService
     // para manter a lista de chats sincronizada, especialmente o unreadCount.
-    this.chatService.totalUnreadCount$.subscribe(total => {
+    this.chatService.unreadMessagesCount$.subscribe(total => {
       // Esta subscrição é mais para garantir que, se o total mudar por outra via,
       // a lista possa refletir isso. A atualização individual de unreadCount
       // ao receber mensagem ou selecionar chat já acontece.
@@ -160,7 +166,7 @@ export class ChatListComponent implements OnInit, OnDestroy {
     this.loading = true;
     this.error = null;
 
-    this.chatService.getChats().subscribe({
+    this.chatService.fetchConversations().subscribe({
       next: (chats) => {
         this.chats = chats; // O ChatService já calcula o totalUnread ao popular o cache
         this.sortChats();
@@ -191,7 +197,7 @@ export class ChatListComponent implements OnInit, OnDestroy {
 
   selectChat(chat: Chat): void {
     this.selectedChatId = chat.id;
-    this.chatService.markChatAsRead(chat.id); // This will trigger the chatMarkedAsReadSubscription
+    this.chatService.markMessagesAsRead(chat.id, []); // This will trigger the chatMarkedAsReadSubscription
 
     // Emitir o chat selecionado (pode ser o original ou o atualizado se estava na lista)
     const chatToEmit = this.chats.find(c => c.id === chat.id) || chat;
@@ -206,7 +212,7 @@ export class ChatListComponent implements OnInit, OnDestroy {
 
     // Usar o serviço centralizado diretamente para obter o outro participante
     // Sem passar por nosso método local que pode fazer formatações extras
-    const otherParticipant = this.chatService.getOtherParticipant(chat);
+    const otherParticipant = this.chatService.getOtherParticipant(chat, this.currentUserId);
 
     if (otherParticipant) {
       return otherParticipant.username || 'Usuário';
@@ -277,18 +283,17 @@ export class ChatListComponent implements OnInit, OnDestroy {
     if (chat.isGroup) {
       // Use group avatar if available, otherwise default group image
       return chat.avatarPath
-        ? this.chatService.formatImageUrl(chat.avatarPath) // Already using public
-        : this.chatService.formatImageUrl(this.defaultGroupImage); // Already using public
+        ? this.chatService.formatImageUrl(chat.avatarPath)
+        : this.chatService.formatImageUrl('assets/images/group.png'); // Use formatImageUrl for default
     }
 
     // For direct chats, get the other participant's image
-    const otherParticipant = this.chatService.getOtherParticipant(chat); // Already using public
+    const otherParticipant = this.chatService.getOtherParticipant(chat, this.currentUserId);
     if (otherParticipant?.profileImage) {
-      // The chatService.getOtherParticipant now ensures the profileImage is a fully qualified URL or a path that formatImageUrl can handle.
-      return this.chatService.formatImageUrl(otherParticipant.profileImage); // Already using public
+      return this.chatService.formatImageUrl(otherParticipant.profileImage);
     }
 
     // Fallback for direct chats if no image found for the other participant
-    return this.chatService.formatImageUrl(this.defaultImage); // Already using public
+    return this.chatService.formatImageUrl('assets/images/user.png'); // Use formatImageUrl for default
   }
 }

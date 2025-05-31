@@ -6,7 +6,7 @@ import { User } from '../models/entities';
 const JWT_SECRET = process.env.JWT_SECRET || 'bondedobumbiboladao';
 
 export interface AuthRequest extends Request {
-    user?: { id: number; username: string; isAdmin?: boolean };
+    user?: { id: number; username: string; isAdmin?: boolean; role?: string; isMainAdmin?: boolean }; // Adicionado role e isMainAdmin
 }
 
 export const authMiddleware = async (req: AuthRequest, res: Response, next: NextFunction) => {
@@ -19,21 +19,22 @@ export const authMiddleware = async (req: AuthRequest, res: Response, next: Next
         const token = authHeader.split(' ')[1];
         console.log(`[AUTH MIDDLEWARE V3] Token Bearer detectado.`);
         try {
-            const decoded = jwt.verify(token, JWT_SECRET) as { id: number; username: string; isAdmin?: boolean };
-            console.log(`[AUTH MIDDLEWARE V3] Token decodificado: UserID ${decoded.id}, Username ${decoded.username}, isAdmin (from token): ${decoded.isAdmin}`); // Log isAdmin from token
+            const decoded = jwt.verify(token, JWT_SECRET) as { id: number; username: string; isAdmin?: boolean; role?: string; isMainAdmin?: boolean }; // Adicionado role e isMainAdmin
+            console.log(`[AUTH MIDDLEWARE V3] Token decodificado: UserID ${decoded.id}, Username ${decoded.username}, isAdmin (from token): ${decoded.isAdmin}, role (from token): ${decoded.role}, isMainAdmin (from token): ${decoded.isMainAdmin}`);
 
             const userRepository = AppDataSource.getRepository(User);
-            // Garante que estamos buscando pelo ID correto e que o usuário existe
             const userFromDb = await userRepository.findOne({ where: { id: decoded.id } });
 
             if (userFromDb) {
-                console.log(`[AUTH MIDDLEWARE V3] User from DB: ID ${userFromDb.id}, Username ${userFromDb.username}, isAdmin (from DB): ${userFromDb.isAdmin}`); // Log isAdmin from DB
+                console.log(`[AUTH MIDDLEWARE V3] User from DB: ID ${userFromDb.id}, Username ${userFromDb.username}, isAdmin (from DB): ${userFromDb.isAdmin}, role (from DB): ${userFromDb.role}, isMainAdmin (from DB): ${userFromDb.isMainAdmin}`);
                 req.user = {
                     id: userFromDb.id,
                     username: userFromDb.username,
-                    isAdmin: userFromDb.isAdmin ?? false // Garante que isAdmin tenha um valor booleano
+                    isAdmin: userFromDb.isAdmin ?? false,
+                    role: userFromDb.role, // Adicionado role
+                    isMainAdmin: userFromDb.isMainAdmin ?? false // Adicionado isMainAdmin
                 };
-                console.log(`[AUTH MIDDLEWARE V3] Usuário autenticado via token: ${req.user.username} (ID: ${req.user.id}), Final isAdmin: ${req.user.isAdmin}`);
+                console.log(`[AUTH MIDDLEWARE V3] Usuário autenticado via token: ${req.user.username} (ID: ${req.user.id}), Final isAdmin: ${req.user.isAdmin}, Final role: ${req.user.role}, Final isMainAdmin: ${req.user.isMainAdmin}`);
             } else {
                 console.warn(`[AUTH MIDDLEWARE V3] Token válido, mas usuário ID ${decoded.id} não encontrado no banco de dados.`);
                 // req.user permanece undefined, acesso não autenticado
@@ -95,5 +96,41 @@ export const authMiddleware = async (req: AuthRequest, res: Response, next: Next
     // req.user é populado se o token era válido, caso contrário, é undefined.
     // Os controllers podem verificar req.user para adaptar respostas (ex: userLiked, ou associar post/comentário ao usuário).
     console.log(`[AUTH MIDDLEWARE V3] Prosseguindo para ${req.method} ${req.originalUrl}. Usuário autenticado: ${req.user ? `${req.user.username} (ID: ${req.user.id})` : 'Nenhum (anônimo/convidado)'}`);
-    return next();
+    next();
+};
+
+// Renomeado para authenticateToken para clareza
+export const authenticateToken = (req: AuthRequest, res: Response, next: NextFunction) => {
+    // Este middleware agora apenas verifica se req.user está definido pela authMiddleware global.
+    // A authMiddleware já tentou popular req.user se um token estava presente.
+    if (!req.user) {
+        return res.status(401).json({ message: 'Acesso não autorizado: Token não fornecido ou inválido' });
+    }
+    next();
+};
+
+export const isAdmin = (req: AuthRequest, res: Response, next: NextFunction) => {
+    if (!req.user || (!req.user.isAdmin && !req.user.isMainAdmin)) { // Verifica isAdmin ou isMainAdmin
+        return res.status(403).json({ message: 'Acesso negado: Requer privilégios de administrador' });
+    }
+    next();
+};
+
+export const isMainAdmin = (req: AuthRequest, res: Response, next: NextFunction) => {
+    if (!req.user || !req.user.isMainAdmin) {
+        return res.status(403).json({ message: 'Acesso negado: Requer privilégios de administrador principal' });
+    }
+    next();
+};
+
+// Novo middleware para verificar se o usuário é líder, padrinho/madrinha ou admin
+export const isLeaderOrAdmin = (req: AuthRequest, res: Response, next: NextFunction) => {
+    if (!req.user || !req.user.role) {
+        return res.status(403).json({ message: 'Acesso negado: Função do usuário não definida.' });
+    }
+    const allowedRoles = ['leader', 'admin']; // Adicione 'padrinho', 'madrinha' se forem valores distintos em `role`
+    if (!allowedRoles.includes(req.user.role) && !req.user.isAdmin && !req.user.isMainAdmin) {
+        return res.status(403).json({ message: 'Acesso negado: Requer privilégios de líder, padrinho/madrinha ou administrador.' });
+    }
+    next();
 };

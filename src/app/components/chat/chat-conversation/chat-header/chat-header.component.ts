@@ -150,7 +150,7 @@ export class ChatHeaderComponent implements OnChanges {
 
       if (!this.chat.isGroup && this.chat.participants?.length > 0) {
         // console.log('[CHAT HEADER] ngOnChanges - Participantes:', this.chat.participants.map(p => ({ id: p.id, type: typeof p.id, name: p.username, image: p.profileImage })));
-        const user = this.chatService.getOtherParticipant(this.chat);
+        const user = this.chatService.getOtherParticipant(this.chat, this.currentUserId);
         this.otherParticipant = user ? user as ChatParticipant : null;
         // console.log('[CHAT HEADER] ngOnChanges - Outro participante armazenado:', this.otherParticipant);
       }
@@ -255,7 +255,7 @@ export class ChatHeaderComponent implements OnChanges {
   getParticipantName(chat: Chat): string {
     if (!chat.isGroup) {
       if (chat.participants && chat.participants.length > 0) {
-        const otherParticipant = this.chatService.getOtherParticipant(chat);
+        const otherParticipant = this.chatService.getOtherParticipant(chat, this.currentUserId);
         if (otherParticipant) {
           return otherParticipant.username || 'Usuário';
         }
@@ -277,7 +277,7 @@ export class ChatHeaderComponent implements OnChanges {
     if (!this.chat || this.chat.isGroup) {
       return this.chatService.formatImageUrl('/assets/images/user.png');
     }
-    const otherParticipant = this.chatService.getOtherParticipant(this.chat);
+    const otherParticipant = this.chatService.getOtherParticipant(this.chat, this.currentUserId);
     if (otherParticipant?.profileImage) {
       return this.chatService.formatImageUrl(otherParticipant.profileImage);
     }

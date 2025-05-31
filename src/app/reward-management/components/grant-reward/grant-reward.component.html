@@ -1,0 +1,43 @@
+<div class="grant-reward-container">
+  <h2>Conceder Recompensa</h2>
+  <a routerLink="/reward-management" class="btn btn-link mb-3">Voltar para a Lista de Recompensas</a>
+
+  <div *ngIf="successMessage" class="alert alert-success">
+    {{ successMessage }}
+  </div>
+  <div *ngIf="errorMessage" class="alert alert-danger">
+    {{ errorMessage }}
+  </div>
+
+  <form [formGroup]="grantRewardForm" (ngSubmit)="onSubmit()">
+    <div class="mb-3">
+      <label for="userId" class="form-label">ID do Usuário:</label>
+      <input type="text" id="userId" formControlName="userId" class="form-control"
+             [ngClass]="{ 'is-invalid': grantRewardForm.get('userId')?.invalid && grantRewardForm.get('userId')?.touched }">
+      <div *ngIf="grantRewardForm.get('userId')?.invalid && grantRewardForm.get('userId')?.touched" class="invalid-feedback">
+        <div *ngIf="grantRewardForm.get('userId')?.errors?.['required']">ID do usuário é obrigatório.</div>
+        <div *ngIf="grantRewardForm.get('userId')?.errors?.['pattern']">ID do usuário deve ser um número.</div>
+      </div>
+    </div>
+
+    <div class="mb-3">
+      <label for="rewardId" class="form-label">Recompensa:</label>
+      <select id="rewardId" formControlName="rewardId" class="form-select"
+              [ngClass]="{ 'is-invalid': grantRewardForm.get('rewardId')?.invalid && grantRewardForm.get('rewardId')?.touched }">
+        <option value="" disabled>Selecione uma recompensa</option>
+        <option *ngFor="let reward of (rewards$ | async)" [value]="reward.id">
+          {{ reward.name }} (Marco: {{ reward.milestone }})
+        </option>
+      </select>
+      <div *ngIf="grantRewardForm.get('rewardId')?.invalid && grantRewardForm.get('rewardId')?.touched" class="invalid-feedback">
+        <div *ngIf="grantRewardForm.get('rewardId')?.errors?.['required']">Recompensa é obrigatória.</div>
+      </div>
+      <div *ngIf="isLoadingRewards" class="form-text">Carregando recompensas...</div>
+    </div>
+
+    <button type="submit" class="btn btn-primary" [disabled]="grantRewardForm.invalid || isSubmitting">
+      <span *ngIf="isSubmitting" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+      {{ isSubmitting ? 'Concedendo...' : 'Conceder Recompensa' }}
+    </button>
+  </form>
+</div>

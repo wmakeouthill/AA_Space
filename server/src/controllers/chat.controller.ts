@@ -66,8 +66,10 @@ const saveGroupAvatarBase64Image = (base64Data: string, conversationId: number):
 export const getUserConversations = async (req: Request, res: Response) => {
     try {
         const userId = (req as AuthRequest).user?.id;
+        console.log(`[CHAT CONTROLLER] getUserConversations called for userId: ${userId}`);
 
         if (!userId) {
+            console.warn('[CHAT CONTROLLER] getUserConversations: userId is missing, user not authenticated.');
             return res.status(401).json({ message: 'Usuário não autenticado' });
         }
 
@@ -81,6 +83,7 @@ export const getUserConversations = async (req: Request, res: Response) => {
         });
 
         const conversationIds = userParticipations.map(p => p.conversationId);
+        console.log(`[CHAT CONTROLLER] User participates in conversation IDs: ${JSON.stringify(conversationIds)}`);
 
         if (conversationIds.length === 0) {
             return res.json({ conversations: [] });
@@ -94,7 +97,11 @@ export const getUserConversations = async (req: Request, res: Response) => {
             .orderBy('conversation.updatedAt', 'DESC')
             .getMany();
 
+        console.log(`[CHAT CONTROLLER] Found ${conversations.length} conversations to process.`);
+
         const conversationsWithDetails = await Promise.all(conversations.map(async (conv) => {
+            console.log(`[CHAT CONTROLLER] Processing conversation ID: ${conv.id}`);
+
             const lastMessage = await messageRepository
                 .createQueryBuilder('message')
                 .where('message.conversationId = :convId', { convId: conv.id })
@@ -105,21 +112,23 @@ export const getUserConversations = async (req: Request, res: Response) => {
             const unreadMessages = await messageRepository
                 .createQueryBuilder('message')
                 .where('message.conversationId = :convId', { convId: conv.id })
-                .andWhere('message.senderId != :userId', { userId })
+                .andWhere('message.senderId != :userId', { userId: Number(userId) }) // Ensure userId is number
                 .andWhere('message.isRead = :isRead', { isRead: false })
                 .getCount();
 
-            const participantNames = conv.participants
-                .filter(p => p.userId !== userId)
-                .map(p => p.user.username);
+            const currentParticipants = Array.isArray(conv.participants) ? conv.participants : [];
+
+            const participantNames = currentParticipants
+                .filter(p => p && p.userId !== userId) // Added p null check
+                .map(p => (p.user ? p.user.username : 'Unknown User'));
 
             let conversationName = conv.name;
             let conversationImage = conv.avatarPath;
 
             if (!conv.isGroup) {
-                const otherParticipant = conv.participants.find(p => p.userId !== userId)?.user;
-                conversationName = otherParticipant?.username || 'Usuário';
-                conversationImage = otherParticipant?.profileImage;
+                const otherParticipant = currentParticipants.find(p => p && p.userId !== userId); // Added p null check
+                conversationName = otherParticipant?.user?.username || 'Usuário';
+                conversationImage = otherParticipant?.user?.profileImage;
             }
 
             return {
@@ -127,12 +136,15 @@ export const getUserConversations = async (req: Request, res: Response) => {
                 name: conversationName,
                 isGroup: conv.isGroup,
                 avatarPath: conversationImage,
-                participants: conv.participants.map(p => ({
-                    id: p.userId,
-                    username: p.user.username,
-                    profileImage: p.user.profileImage,
-                    isAdmin: p.isAdmin
-                })),
+                participants: currentParticipants.map(p => {
+                    if (!p) return null;
+                    return {
+                        id: p.userId,
+                        username: p.user ? p.user.username : 'Unknown User',
+                        profileImage: p.user ? p.user.profileImage : null,
+                        isAdmin: p.isAdmin
+                    };
+                }).filter(p => p !== null),
                 lastMessage: lastMessage ? {
                     id: lastMessage.id,
                     content: lastMessage.content,
@@ -147,15 +159,32 @@ export const getUserConversations = async (req: Request, res: Response) => {
         }));
 
         conversationsWithDetails.sort((a, b) => {
-            const dateA = a.lastMessage ? new Date(a.lastMessage.timestamp) : new Date(a.updatedAt);
-            const dateB = b.lastMessage ? new Date(b.lastMessage.timestamp) : new Date(b.updatedAt);
-            return dateB.getTime() - dateA.getTime();
+            const dateAVal = a.lastMessage ? a.lastMessage.timestamp : a.updatedAt;
+            const dateBVal = b.lastMessage ? b.lastMessage.timestamp : b.updatedAt;
+
+            const dateA = dateAVal ? new Date(dateAVal).getTime() : 0;
+            const dateB = dateBVal ? new Date(dateBVal).getTime() : 0;
+
+            if (isNaN(dateA) || isNaN(dateB)) {
+                // console.warn(`[CHAT CONTROLLER] Invalid date encountered in sorting. A_val: ${dateAVal}, B_val: ${dateBVal}, A_time: ${dateA}, B_time: ${dateB}`);
+                if (isNaN(dateA) && isNaN(dateB)) return 0;
+                return isNaN(dateA) ? 1 : -1;
+            }
+            return dateB - dateA;
         });
 
+        console.log(`[CHAT CONTROLLER] Successfully processed ${conversationsWithDetails.length} conversations.`);
         res.json({ conversations: conversationsWithDetails });
-    } catch (error) {
-        console.error('Erro ao buscar conversas:', error);
-        res.status(500).json({ message: 'Erro interno do servidor', details: (error as Error).message });
+    } catch (error: any) {
+        console.error('-----------------------------------------------------');
+        console.error('[CHAT CONTROLLER] Critical error in getUserConversations:');
+        console.error('Error message:', error.message);
+        console.error('Error stack:', error.stack);
+        if (error.originalError) console.error('Original error:', error.originalError); // For TypeORM errors or nested errors
+        if (error.query) console.error('Failed query (if TypeORM error):', error.query);
+        if (error.parameters) console.error('Query parameters (if TypeORM error):', error.parameters);
+        console.error('-----------------------------------------------------');
+        res.status(500).json({ message: 'Erro interno do servidor ao buscar conversas', details: error.message });
     }
 };
 
@@ -223,6 +252,7 @@ export const getConversationMessages = async (req: Request, res: Response) => {
             status: msg.status
         }));
 
+        console.log(`[CHAT CONTROLLER] getConversationMessages - Sending ${formattedMessages.length} messages for conversation ${conversationId}:`, JSON.stringify(formattedMessages, null, 2));
         res.json({ messages: formattedMessages });
     } catch (error) {
         console.error('Erro ao buscar mensagens:', error);

@@ -18,7 +18,7 @@ function initializeApp(authService: AuthService) {
       console.log('App Initializer: Sem token para validar');
       return Promise.resolve(true);
     }
-    
+
     // Valida o token e captura qualquer erro para não bloquear a inicialização
     return firstValueFrom(
       authService.validateToken().pipe(
@@ -37,7 +37,6 @@ function initializeApp(authService: AuthService) {
 export const appConfig: ApplicationConfig = {
   providers: [
     provideRouter(routes),
-    { provide: HttpClient, useClass: HttpClient },
     provideHttpClient(
       withFetch(),
       withInterceptors([errorInterceptor, authInterceptor])

@@ -29,6 +29,7 @@ const posts_1 = __importDefault(require("./routes/posts"));
 const chat_1 = __importDefault(require("./routes/chat"));
 const profile_1 = __importDefault(require("./routes/profile"));
 const admin_routes_1 = __importDefault(require("./routes/admin.routes")); // Adicionar import para as rotas de admin
+const reward_routes_1 = __importDefault(require("./routes/reward.routes")); // Importar rotas de recompensa
 const ip_block_middleware_1 = require("./middleware/ip-block.middleware"); // Adicionar import
 // Chave secreta para JWT - deve ser igual à usada no controlador de auth
 const JWT_SECRET = process.env.JWT_SECRET || 'bondedobumbiboladao';
@@ -420,7 +421,8 @@ app.use('/api/auth', auth_1.default);
 app.use('/api/posts', posts_1.default);
 app.use('/api/chat', chat_1.default);
 app.use('/api/profile', profile_1.default);
-app.use('/api/admin', admin_routes_1.default); // Adicionar as rotas de admin
+app.use('/api/admin', admin_routes_1.default); // Adicionar rota para admin
+app.use('/api/rewards', reward_routes_1.default); // Adicionar rota para recompensas
 // Rota explícita de fallback para o perfil do usuário atual
 app.get('/api/profile/me', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     console.log('[FALLBACK ROUTE] Interceptada requisição para /api/profile/me');

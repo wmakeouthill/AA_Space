@@ -42,7 +42,7 @@ export class CreatePostComponent implements OnInit {
   }
 
   ngOnInit() {
-    this.authService.isAuthenticated().subscribe(isAuthenticated => {
+    this.authService.isAuthenticated.subscribe((isAuthenticated: boolean) => { // Changed from isAuthenticated() and typed isAuthenticated
       this.isLoggedIn = isAuthenticated;
 
       // Se não estiver logado e não tiver apelido, mostra o formulário de apelido

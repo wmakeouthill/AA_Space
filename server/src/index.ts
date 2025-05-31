@@ -14,6 +14,7 @@ import postRoutes from './routes/posts';
 import chatRoutes from './routes/chat';
 import profileRoutes from './routes/profile';
 import adminRoutes from './routes/admin.routes'; // Adicionar import para as rotas de admin
+import rewardRoutes from './routes/reward.routes'; // Importar rotas de recompensa
 import { checkIpBlocked } from './middleware/ip-block.middleware'; // Adicionar import
 
 // Chave secreta para JWT - deve ser igual à usada no controlador de auth
@@ -455,7 +456,8 @@ app.use('/api/auth', authRoutes);
 app.use('/api/posts', postRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/profile', profileRoutes);
-app.use('/api/admin', adminRoutes); // Adicionar as rotas de admin
+app.use('/api/admin', adminRoutes); // Adicionar rota para admin
+app.use('/api/rewards', rewardRoutes); // Adicionar rota para recompensas
 
 // Rota explícita de fallback para o perfil do usuário atual
 app.get('/api/profile/me', async (req: Request, res: Response) => {

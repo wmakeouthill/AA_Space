@@ -19,6 +19,7 @@ export interface ChatParticipant {
 
 export interface Message {
     id: number;
+    chatId: number; // Added chatId
     content: string;
     senderId: number;
     senderName?: string;
@@ -48,10 +49,34 @@ export interface User {
     username: string;
     email?: string;
     profileImage?: string; // URL da imagem de perfil do usuário
+    userRewards?: FrontendUserReward[]; // <--- ADICIONAR ESTA LINHA
 }
+
+// <--- ADICIONAR ESTAS INTERFACES --- START --->
+export interface FrontendReward {
+    id: number;
+    name: string;
+    milestone: string;
+    designConcept?: string;
+    colorPalette?: string;
+    iconUrl?: string;
+}
+
+export interface FrontendUserReward {
+    id: number;
+    reward: FrontendReward;
+    dateEarned: Date | string;
+}
+// <--- ADICIONAR ESTAS INTERFACES --- END --->
 
 export interface NewMessageEvent {
     message: Message;
     chatId: number;
     isNewUnread?: boolean; // Added to indicate if the message contributes to unread count
+}
+
+export interface MessageStatusUpdate {
+  chatId: number;
+  messageIds: string[];
+  status: 'sent' | 'delivered' | 'read';
 }

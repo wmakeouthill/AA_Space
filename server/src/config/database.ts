@@ -1,6 +1,6 @@
 import "reflect-metadata";
 import { DataSource } from "typeorm";
-import { User, Post, Comment, PostLike, CommentLike, ChatConversation, ChatParticipant, ChatMessage, BlockedIp } from "../models/entities";
+import { User, Post, Comment, PostLike, CommentLike, ChatConversation, ChatParticipant, ChatMessage, BlockedIp, Reward, UserReward } from "../models/entities";
 import { join } from "path";
 
 const dbPath = join(__dirname, "../../../database.sqlite");
@@ -11,6 +11,6 @@ export const AppDataSource = new DataSource({
     database: dbPath,
     synchronize: false, // Alterado de true para false para evitar conflitos com migrações
     logging: true,
-    entities: [User, Post, Comment, PostLike, CommentLike, ChatConversation, ChatParticipant, ChatMessage, BlockedIp],
+    entities: [User, Post, Comment, PostLike, CommentLike, ChatConversation, ChatParticipant, ChatMessage, BlockedIp, Reward, UserReward],
     migrations: [join(__dirname, "../migrations/*.ts")]
 });

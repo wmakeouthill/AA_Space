@@ -20,9 +20,12 @@ export class HeaderComponent implements OnInit, OnDestroy {
   guestNickname: string | null = null;
   isMenuOpen = false; // Property to toggle menu
   totalUnreadMessages = 0; // <--- ADICIONAR ESTA LINHA
+  userRole: string | null = null; // <--- ADD THIS LINE
   private authSubscription: Subscription | null = null;
+  private isAdminSubscription: Subscription | null = null; // Added for isAdmin
   private guestNicknameSubscription: Subscription | null = null;
   private unreadCountSubscription: Subscription | null = null; // <--- ADICIONAR ESTA LINHA
+  private userRoleSubscription: Subscription | null = null; // <--- ADD THIS LINE
 
   constructor(
     private authService: AuthService,
@@ -33,24 +36,23 @@ export class HeaderComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
     // Inscreve-se para mudanças no estado de autenticação
-    this.authSubscription = this.authService.isAuthenticated().subscribe(
+    this.authSubscription = this.authService.isAuthenticated.subscribe(
       isAuthenticated => {
         this.isLoggedIn = isAuthenticated;
         this.username = this.authService.getUsername();
-
-        // Força a definição manual de admin caso o usuário seja 'admin'
-        if (this.username === 'admin') {
-          localStorage.setItem('is_admin', 'true');
-          console.log('Definindo manualmente o usuário admin como administrador');
-        }
-
-        this.isAdmin = this.authService.isAdmin();
-        console.log('Status de administrador:', this.isAdmin);
 
         // Se estiver autenticado, o nickname de convidado não deve ser exibido
         if (isAuthenticated) {
           this.guestNickname = null;
         }
+      }
+    );
+
+    // Subscribe to isAdmin status
+    this.isAdminSubscription = this.authService.isAdmin$.subscribe(
+      isAdmin => {
+        this.isAdmin = isAdmin;
+        console.log('[HeaderComponent] isAdmin status updated from isAdmin$:', this.isAdmin);
       }
     );
 
@@ -65,9 +67,16 @@ export class HeaderComponent implements OnInit, OnDestroy {
     );
 
     // Inscreve-se para mudanças na contagem total de mensagens não lidas
-    this.unreadCountSubscription = this.chatService.totalUnreadCount$.subscribe(count => { // <--- ADICIONAR ESTE BLOCO
+    this.unreadCountSubscription = this.chatService.unreadMessagesCount$.subscribe(count => { // <--- ADICIONAR ESTE BLOCO
       this.totalUnreadMessages = count;
     });
+
+    // <--- ADD THIS BLOCK --- START --->
+    this.userRoleSubscription = this.authService.userRole$.subscribe(role => {
+      this.userRole = role;
+      console.warn('[HeaderComponent] User role updated:', this.userRole); // Added log
+    });
+    // <--- ADD THIS BLOCK --- END --->
   }
 
   ngOnDestroy() {
@@ -75,13 +84,29 @@ export class HeaderComponent implements OnInit, OnDestroy {
     if (this.authSubscription) {
       this.authSubscription.unsubscribe();
     }
+    if (this.isAdminSubscription) { // Unsubscribe isAdminSubscription
+      this.isAdminSubscription.unsubscribe();
+    }
     if (this.guestNicknameSubscription) {
       this.guestNicknameSubscription.unsubscribe();
     }
     if (this.unreadCountSubscription) { // <--- ADICIONAR ESTE BLOCO
       this.unreadCountSubscription.unsubscribe();
     }
+    // <--- ADD THIS BLOCK --- START --->
+    if (this.userRoleSubscription) {
+      this.userRoleSubscription.unsubscribe();
+    }
+    // <--- ADD THIS BLOCK --- END --->
   }
+
+  // <--- ADD THIS GETTER --- START --->
+  get isLeaderOrAdmin(): boolean {
+    const result = this.userRole === 'leader' || this.userRole === 'admin';
+    console.warn('[HeaderComponent] isLeaderOrAdmin check. Role:', this.userRole, 'Result:', result); // Added log
+    return result;
+  }
+  // <--- ADD THIS GETTER --- END --->
 
   toggleMenu() { // Method to toggle menu
     this.isMenuOpen = !this.isMenuOpen;

@@ -5,6 +5,7 @@ import { HeaderComponent } from './components/header/header.component';
 import { AuthService } from './services/auth.service';
 import { ChatService } from './services/chat.service';
 import { Subscription } from 'rxjs';
+import { Chat } from './models/chat/chat.interface'; // Import Chat interface
 // Removed filter from 'rxjs/operators' as it's not used
 
 @Component({
@@ -25,26 +26,25 @@ export class AppComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit() {
-    console.log('[APP COMPONENT] ngOnInit - Initializing component.');
+    // console.log('[APP COMPONENT] ngOnInit - Initializing component.');
     // Subscribe to authentication changes
-    this.authSubscription = this.authService.isAuthenticated().subscribe({
+    this.authSubscription = this.authService.isAuthenticated.subscribe({
       next: (isAuthenticated: boolean) => {
-        console.log(`[APP COMPONENT] isAuthenticated observable emitted: ${isAuthenticated}`);
+        // console.log(`[APP COMPONENT] isAuthenticated observable emitted: ${isAuthenticated}`);
         if (isAuthenticated) {
-          console.log('[APP COMPONENT] User is authenticated. Validating token and initializing chats.');
+          // console.log('[APP COMPONENT] User is authenticated. Validating token and initializing chats.');
           // Validate token and then load chats
           this.authService.validateToken().subscribe({
             next: (validationResponse) => {
-              console.log('[APP COMPONENT] validateToken response:', validationResponse);
+              // console.log('[APP COMPONENT] validateToken response:', validationResponse);
               if (validationResponse && validationResponse.valid) {
-                console.log('[APP COMPONENT] Token validated successfully. Fetching chats.');
-                this.authService.forceAdminForUserAdmin(); 
-                this.chatService.getChats().subscribe({
-                  next: (chats) => {
-                    console.log('[APP COMPONENT] Chats loaded and listeners initialized successfully. Chats:', chats);
+                // console.log('[APP COMPONENT] Token validated successfully. Fetching chats.');
+                this.chatService.fetchConversations().subscribe({ // Changed getChats to fetchConversations
+                  next: (chats: Chat[]) => { // Added type for chats
+                    // console.log('[APP COMPONENT] Chats loaded and listeners initialized successfully. Chats:', chats);
                   },
-                  error: (err) => {
-                    console.error('[APP COMPONENT] Error loading chats after token validation:', err);
+                  error: (err: any) => { // Added type for err
+                    // console.error('[APP COMPONENT] Error loading chats after token validation:', err);
                     // Optionally, handle chat loading errors, e.g., by cleaning up session or notifying user
                   }
                 });
@@ -60,11 +60,11 @@ export class AppComponent implements OnInit, OnDestroy {
             }
           });
         } else {
-          console.log('[APP COMPONENT] User is NOT authenticated. Cleaning up chat session.');
+          // console.log('[APP COMPONENT] User is NOT authenticated. Cleaning up chat session.');
           this.chatService.cleanupUserSession();
         }
       },
-      error: (authError) => {
+      error: (authError: any) => { // Added type any
         console.error('[APP COMPONENT] Error in isAuthenticated observable:', authError);
         this.chatService.cleanupUserSession();
       }
@@ -72,10 +72,13 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy() {
-    console.log('[APP COMPONENT] ngOnDestroy - Cleaning up component.');
+    // console.log('[APP COMPONENT] ngOnDestroy - Cleaning up component.');
     if (this.authSubscription) {
       this.authSubscription.unsubscribe();
     }
-    this.chatService.cleanupUserSession();
+    // No need to call cleanupUserSession here if it's handled by auth state changes
+    // However, if direct cleanup on app destroy is desired regardless of auth state, it can be kept.
+    // For now, let's assume auth state changes will trigger necessary cleanup.
+    // this.chatService.cleanupUserSession();
   }
 }

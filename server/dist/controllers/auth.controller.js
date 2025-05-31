@@ -44,7 +44,7 @@ const register = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             lastIpAddress: ipAddress // Store IP address
         });
         const savedUser = yield userRepository.save(user);
-        console.log('Usuário criado:', { id: savedUser.id, username: savedUser.username });
+        // console.log('Usuário criado:', { id: savedUser.id, username: savedUser.username });
         // Gera token JWT
         const token = jsonwebtoken_1.default.sign({ id: savedUser.id, username: savedUser.username }, JWT_SECRET, { expiresIn: TOKEN_EXPIRATION });
         res.status(201).json({
@@ -62,8 +62,16 @@ exports.register = register;
 const login = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     var _a;
     try {
-        const { username, password } = req.body;
+        let { username, password } = req.body; // Alterado para let para permitir reatribuição
         const ipAddress = req.ip || ((_a = req.socket) === null || _a === void 0 ? void 0 : _a.remoteAddress); // Get IP address from request
+        // Aparar espaços em branco do nome de usuário e senha
+        if (username) {
+            username = username.trim();
+        }
+        // Embora aparar senhas seja debatível, para fins de depuração e robustez contra erros comuns:
+        if (password) {
+            password = password.trim();
+        }
         if (!username || !password) {
             return res.status(400).json({ message: 'Usuário e senha são obrigatórios' });
         }
@@ -83,13 +91,16 @@ const login = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             user.lastIpAddress = ipAddress;
             yield userRepository.save(user);
         }
-        // Gera o token JWT incluindo a informação de admin
-        const token = jsonwebtoken_1.default.sign({ id: user.id, username: user.username, isAdmin: user.isAdmin }, JWT_SECRET, { expiresIn: TOKEN_EXPIRATION });
-        console.log('Login bem-sucedido:', { id: user.id, username: user.username, isAdmin: user.isAdmin });
+        // Gera o token JWT incluindo a informação de admin, role e isMainAdmin
+        const token = jsonwebtoken_1.default.sign({ id: user.id, username: user.username, isAdmin: user.isAdmin, role: user.role, isMainAdmin: user.isMainAdmin }, JWT_SECRET, { expiresIn: TOKEN_EXPIRATION });
+        // console.log('Login bem-sucedido:', { id: user.id, username: user.username, isAdmin: user.isAdmin, role: user.role, isMainAdmin: user.isMainAdmin });
         res.json({
             token,
+            id: user.id, // Adicionar o ID do usuário na resposta
             username: user.username,
             isAdmin: user.isAdmin,
+            role: user.role,
+            isMainAdmin: user.isMainAdmin, // Added isMainAdmin
             message: 'Login realizado com sucesso'
         });
     }
@@ -103,28 +114,36 @@ const validateToken = (req, res) => __awaiter(void 0, void 0, void 0, function* 
     try {
         const authHeader = req.headers.authorization;
         if (!authHeader) {
-            return res.status(401).json({ message: 'Token não fornecido' });
+            return res.status(401).json({ message: 'Token não fornecido', valid: false });
         }
         const token = authHeader.split(' ')[1];
         if (!token) {
-            return res.status(401).json({ message: 'Token não fornecido' });
+            return res.status(401).json({ message: 'Token malformado ou não fornecido', valid: false });
         }
+        // Explicitly type the decoded payload to include isMainAdmin
         const decoded = jsonwebtoken_1.default.verify(token, JWT_SECRET);
         const userRepository = database_1.AppDataSource.getRepository(entities_1.User);
         const user = yield userRepository.findOne({ where: { id: decoded.id } });
         if (!user) {
-            return res.status(401).json({ message: 'Usuário não encontrado' });
+            return res.status(401).json({ message: 'Usuário do token não encontrado', valid: false });
         }
+        // Retornar a role e isMainAdmin do usuário que está no banco de dados
         res.json({
             valid: true,
             username: user.username,
             userId: user.id,
-            isAdmin: user.isAdmin
+            isAdmin: user.isAdmin,
+            role: user.role,
+            isMainAdmin: user.isMainAdmin // Added isMainAdmin
         });
     }
     catch (error) {
         console.error('Erro ao validar token:', error);
-        res.status(401).json({ message: 'Token inválido' });
+        // Adicionar mais detalhes sobre o erro do JWT, se aplicável
+        if (error instanceof jsonwebtoken_1.default.JsonWebTokenError) {
+            return res.status(401).json({ message: `Token inválido: ${error.message}`, valid: false });
+        }
+        return res.status(401).json({ message: 'Token inválido ou expirado', valid: false }); // Added valid: false
     }
 });
 exports.validateToken = validateToken;
@@ -357,7 +376,7 @@ const listAllUsers = (req, res) => __awaiter(void 0, void 0, void 0, function* (
         }
         const userRepository = database_1.AppDataSource.getRepository(entities_1.User);
         // Consulta SQL explícita para garantir que os campos email e phone sejam retornados
-        console.log('[DEBUG] Buscando todos os usuários com informações de contato e último IP');
+        // console.log('[DEBUG] Buscando todos os usuários com informações de contato e último IP');
         const users = yield userRepository.createQueryBuilder('user')
             .select([
             'user.id',
@@ -369,7 +388,7 @@ const listAllUsers = (req, res) => __awaiter(void 0, void 0, void 0, function* (
             'user.lastIpAddress' // Adicionar lastIpAddress à seleção
         ])
             .getMany();
-        console.log('[DEBUG] Usuários encontrados:', users);
+        // console.log('[DEBUG] Usuários encontrados:', users);
         return res.status(200).json({
             users: users.map(user => ({
                 id: user.id,

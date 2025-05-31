@@ -48,8 +48,12 @@ export class HomeComponent implements OnInit {
     // Obtém o ID do usuário atual se estiver autenticado
     if (isAuthenticated) {
       this.authService.getUserInfo().subscribe({
-        next: (user: UserInfo) => {
-          this.userId = user.id;
+        next: (user: UserInfo | null) => { // Changed to UserInfo | null
+          if (user) { // Check if user is not null
+            this.userId = user.id;
+          } else {
+            this.userId = null; // Handle null case
+          }
         },
         error: () => {
           this.userId = null;

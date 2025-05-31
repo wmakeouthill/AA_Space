@@ -81,11 +81,12 @@ export class AuthComponent implements OnInit {
       const rememberMe = this.isLogin ? formValue.rememberMe : false; // Obter valor de rememberMe
 
       const authAction = this.isLogin
-        ? this.authService.login(username, password, rememberMe) // Passar rememberMe para o serviço
-        : this.authService.register(username, password, email, phone).pipe(
+        ? this.authService.login({ username, password }, rememberMe) // Passar rememberMe como segundo argumento
+        : this.authService.register({ username, password, email, phone }).pipe(
             tap(() => {
               // Após registro bem-sucedido, faz login automaticamente
-              return this.authService.login(username, password);
+              // Para o login automático após o registro, o padrão de "rememberMe" pode ser false
+              return this.authService.login({ username, password }, false); // Passar rememberMe como segundo argumento
             })
           );
 

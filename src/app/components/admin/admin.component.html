@@ -40,7 +40,7 @@
                 formControlName="username"
                 id="username"
                 placeholder="Digite o nome do usuário a promover"
-                [disabled]="isSubmitting"
+
               >
               <div class="error-message" *ngIf="promoteForm.get('username')?.errors?.['required'] && promoteForm.get('username')?.touched">
                 O nome de usuário é obrigatório
@@ -49,7 +49,7 @@
 
             <button
               type="submit"
-              [disabled]="!promoteForm.valid || isSubmitting"
+              [disabled]="!promoteForm.valid || promoteForm.get('username')?.disabled"
               class="submit-button"
             >
               {{ isSubmitting ? 'Promovendo...' : 'Promover a Administrador' }}
@@ -70,7 +70,7 @@
                 formControlName="username"
                 id="remove-username"
                 placeholder="Digite o nome do usuário a remover privilégios"
-                [disabled]="isRemoveSubmitting"
+
               >
               <div class="error-message" *ngIf="removeForm.get('username')?.errors?.['required'] && removeForm.get('username')?.touched">
                 O nome de usuário é obrigatório
@@ -79,7 +79,7 @@
 
             <button
               type="submit"
-              [disabled]="!removeForm.valid || isRemoveSubmitting"
+              [disabled]="!removeForm.valid || removeForm.get('username')?.disabled"
               class="submit-button remove-button"
             >
               {{ isRemoveSubmitting ? 'Removendo...' : 'Remover Privilégios' }}
@@ -100,7 +100,7 @@
                 formControlName="username"
                 id="transfer-username"
                 placeholder="Digite o nome do usuário que receberá o título"
-                [disabled]="isTransferSubmitting"
+
               >
               <div class="error-message" *ngIf="transferForm.get('username')?.errors?.['required'] && transferForm.get('username')?.touched">
                 O nome de usuário é obrigatório
@@ -109,7 +109,7 @@
 
             <button
               type="submit"
-              [disabled]="!transferForm.valid || isTransferSubmitting"
+              [disabled]="!transferForm.valid || transferForm.get('username')?.disabled"
               class="submit-button transfer-button"
             >
               {{ isTransferSubmitting ? 'Transferindo...' : 'Transferir Título' }}
@@ -131,7 +131,7 @@
                 formControlName="ipAddress"
                 id="ipAddress"
                 placeholder="Ex: 192.168.1.1, localhost, ::1"
-                [disabled]="isBlockingIp"
+
               >
               <div class="error-message" *ngIf="blockIpForm.get('ipAddress')?.errors?.['required'] && blockIpForm.get('ipAddress')?.touched">
                 O endereço IP é obrigatório.
@@ -148,13 +148,13 @@
                 formControlName="reason"
                 id="reason"
                 placeholder="Motivo do bloqueio"
-                [disabled]="isBlockingIp"
+
               >
             </div>
 
             <button
               type="submit"
-              [disabled]="!blockIpForm.valid || isBlockingIp"
+              [disabled]="!blockIpForm.valid || blockIpForm.get('ipAddress')?.disabled"
               class="submit-button"
             >
               {{ isBlockingIp ? 'Bloqueando...' : 'Bloquear IP' }}
