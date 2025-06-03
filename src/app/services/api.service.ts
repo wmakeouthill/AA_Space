@@ -4,6 +4,26 @@ import { Observable } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { Post, Comment, LikeResponse } from '../models/post.interface';
 
+// --- RECOMPENSAS ---
+
+// Interfaces podem ser movidas para um arquivo models/reward.interface.ts se preferir
+export interface Reward {
+  id: number;
+  milestone: string;
+  name: string;
+  designConcept: string;
+  colorPalette: string;
+}
+
+export interface UserReward {
+  id: number;
+  user_id: number;
+  reward_id: number;
+  awarded_at: Date;
+  awardedByUserId: number;
+  reward: Reward;
+}
+
 // Interface para IP Bloqueado
 export interface BlockedIp {
   id?: number;
@@ -22,7 +42,6 @@ export class ApiService {
   constructor(private http: HttpClient) {
     // console.log('API_URL configurada como:', this.API_URL);
   }
-
   // Método para detectar o ambiente e fornecer a URL correta
   private getApiUrl(): string {
     const currentOrigin = window.location.origin;
@@ -30,16 +49,16 @@ export class ApiService {
 
     if (currentOrigin.includes('v3mrhcvc-4200.brs.devtunnels.ms')) {
       // console.log('Ambiente DevTunnel (Frontend) detectado, usando API URL do DevTunnel (Backend).');
-      return 'https://v3mrhcvc-3001.brs.devtunnels.ms/api';
+      return 'https://v3mrhcvc-3000.brs.devtunnels.ms/api';
     } else if (currentOrigin.includes('.github.dev') || currentOrigin.includes('.github.io') || currentOrigin.includes('.app.github.dev')) {
-      const codespacesApiUrl = currentOrigin.replace(/-\d+(\.app\.github\.dev|\.github\.dev|\.github\.io)/, '-3001$1') + '/api';
+      const codespacesApiUrl = currentOrigin.replace(/-\d+(\.app\.github\.dev|\.github\.dev|\.github\.io)/, '-3000$1') + '/api';
       const finalCodespacesApiUrl = codespacesApiUrl.replace(/\/api\/api$/, '/api');
       // console.log('Ambiente Codespaces detectado, usando API URL:', finalCodespacesApiUrl);
       return finalCodespacesApiUrl;
     }
 
-    // console.log('Ambiente local detectado, usando localhost:3001/api');
-    return 'http://localhost:3001/api';
+    // console.log('Ambiente local detectado, usando localhost:3000/api');
+    return 'http://localhost:3000/api';
   }
 
   // Método para obter a URL base da API (sem o /api no final)
@@ -158,5 +177,22 @@ export class ApiService {
 
   unblockIp(ipAddress: string): Observable<any> {
     return this.http.delete<any>(`${this.API_URL}/admin/unblock-ip/${ipAddress}`);
+  }
+
+  // Reward System endpoints
+  getAllRewards(): Observable<Reward[]> {
+    return this.http.get<Reward[]>(`${this.API_URL}/rewards`);
+  }
+
+  getUserRewards(userId: number): Observable<UserReward[]> {
+    return this.http.get<UserReward[]>(`${this.API_URL}/rewards/user/${userId}`);
+  }
+
+  grantRewardToUser(userId: number, rewardId: number): Observable<UserReward> {
+    return this.http.post<UserReward>(`${this.API_URL}/rewards/grant`, { userId, rewardId });
+  }
+
+  seedRewards(): Observable<any> {
+    return this.http.post(`${this.API_URL}/rewards/seed`, {});
   }
 }

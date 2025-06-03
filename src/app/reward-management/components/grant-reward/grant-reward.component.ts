@@ -4,7 +4,7 @@ import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angula
 import { RouterLink } from '@angular/router';
 import { Observable, of } from 'rxjs';
 import { catchError, tap } from 'rxjs/operators';
-import { Reward, RewardApiService } from '../../services/reward-api.service';
+import { Reward, ApiService } from '../../../services/api.service';
 
 @Component({
   selector: 'app-grant-reward',
@@ -20,10 +20,9 @@ export class GrantRewardComponent implements OnInit {
   errorMessage: string | null = null;
   isLoadingRewards = false;
   isSubmitting = false;
-
   constructor(
     private fb: FormBuilder,
-    private rewardApiService: RewardApiService
+    private apiService: ApiService
   ) {
     this.grantRewardForm = this.fb.group({
       userId: ['', [Validators.required, Validators.pattern(/^[0-9]+$/)]],
@@ -35,13 +34,11 @@ export class GrantRewardComponent implements OnInit {
   ngOnInit(): void {
     this.loadRewards();
   }
-
   loadRewards(): void {
     this.isLoadingRewards = true;
-    this.rewards$ = this.rewardApiService.getAllRewards().pipe(
+    this.rewards$ = this.apiService.getAllRewards().pipe(
       tap(() => this.isLoadingRewards = false),
       catchError(err => {
-        console.warn('Erro ao carregar recompensas:', err); // Changed to console.warn
         this.errorMessage = 'Falha ao carregar a lista de recompensas.';
         this.isLoadingRewards = false;
         return of([]);
@@ -59,16 +56,13 @@ export class GrantRewardComponent implements OnInit {
     }
 
     this.isSubmitting = true;
-    const { userId, rewardId } = this.grantRewardForm.value;
-
-    this.rewardApiService.grantRewardToUser(Number(userId), Number(rewardId)).subscribe({
-      next: (response) => {
+    const { userId, rewardId } = this.grantRewardForm.value;    this.apiService.grantRewardToUser(Number(userId), Number(rewardId)).subscribe({
+      next: (response: any) => {
         this.successMessage = `Recompensa "${response.reward.name}" concedida com sucesso ao usuário ID ${userId}!`;
         this.grantRewardForm.reset();
         this.isSubmitting = false;
       },
-      error: (err) => {
-        console.warn('Erro ao conceder recompensa:', err); // Changed to console.warn
+      error: (err: any) => {
         if (err.status === 404) {
           this.errorMessage = err.error?.message || 'Usuário ou recompensa não encontrado.';
         } else if (err.status === 409) {

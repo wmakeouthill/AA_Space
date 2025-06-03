@@ -32,18 +32,17 @@ export class ChatComponent implements OnInit {
   constructor(private chatService: ChatService) {}
 
   ngOnInit(): void {
-    // Initially, no chat is selected
-    console.log('[CHAT COMPONENT] ngOnInit - No chat initially selected.');
+    // [CHAT COMPONENT] ngOnInit - No chat initially selected.
   }
 
   onChatSelected(chat: Chat): void {
-    console.log('[CHAT COMPONENT] onChatSelected - Chat selected:', chat);
+    // [CHAT COMPONENT] onChatSelected - Chat selected: chat
     this.selectedChat = chat;
   }
 
   onChatCreated(chat: Chat): void {
     // Action for the new chat
-    console.log('[CHAT COMPONENT] onChatCreated - New chat created:', chat);
+    // [CHAT COMPONENT] onChatCreated - New chat created: chat
     this.selectedChat = chat;
 
     // To inform the list component that it should update
@@ -54,16 +53,16 @@ export class ChatComponent implements OnInit {
 
   onMessageSent(message: string): void {
     if (!this.selectedChat) {
-      console.warn('[CHAT COMPONENT] onMessageSent - No selected chat, cannot send message.');
+      // [CHAT COMPONENT] onMessageSent - No selected chat, cannot send message.
       return;
     }
 
-    console.log(`[CHAT COMPONENT] onMessageSent - Attempting to send message: "${message}" to chat ID: ${this.selectedChat.id}`);
+    // [CHAT COMPONENT] onMessageSent - Attempting to send message: message to chat ID: this.selectedChat.id
     this.sending = true;
 
     this.chatService.sendMessage(this.selectedChat.id, message).subscribe({
       next: (response) => {
-        console.log('[CHAT COMPONENT] Message sent successfully via HTTP by ChatComponent:', response);
+        // [CHAT COMPONENT] Message sent successfully via HTTP by ChatComponent: response
         this.sending = false;
       },
       error: (error) => {

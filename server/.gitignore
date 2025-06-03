@@ -11,7 +11,8 @@ server\node_modules
 /.env
 .env
 .env.*
-
+.env/
+node_modules/
 
 # Node
 /node_modules

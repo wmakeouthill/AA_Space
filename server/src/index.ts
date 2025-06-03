@@ -4,8 +4,15 @@ import dotenv from 'dotenv';
 import path from 'path';
 import jwt from 'jsonwebtoken';
 import fs from 'fs';
-import http from 'http'; // Added
-import { WebSocketServer, WebSocket } from 'ws'; // Added
+import http from 'http';
+import { Server as SocketIOServer, Socket } from 'socket.io';
+
+// Extend Socket interface to include custom properties
+declare module 'socket.io' {
+    interface Socket {
+        userId?: number;
+    }
+}
 
 import { AppDataSource } from './config/database';
 import { User } from './models/entities';
@@ -14,8 +21,9 @@ import postRoutes from './routes/posts';
 import chatRoutes from './routes/chat';
 import profileRoutes from './routes/profile';
 import adminRoutes from './routes/admin.routes'; // Adicionar import para as rotas de admin
-import rewardRoutes from './routes/reward.routes'; // Importar rotas de recompensa
 import { checkIpBlocked } from './middleware/ip-block.middleware'; // Adicionar import
+import { getAllRewards, getUserRewards, grantRewardToUser, seedRewards } from './controllers/reward.controller';
+import { authMiddleware, authenticateToken, isAdmin, isLeaderOrAdmin } from './middleware/auth.middleware';
 
 // Chave secreta para JWT - deve ser igual à usada no controlador de auth
 const JWT_SECRET = process.env.JWT_SECRET || 'bondedobumbiboladao';
@@ -26,7 +34,7 @@ const app = express();
 
 // Robust port initialization
 const envPort = process.env.PORT;
-let port = 3001; // Default port
+let port = 3000; // Default port
 if (envPort) {
   const parsedPort = parseInt(envPort, 10);
   if (!isNaN(parsedPort) && parsedPort >= 0 && parsedPort < 65536) {
@@ -40,178 +48,129 @@ if (envPort) {
 
 const isCodespacesEnv = process.env.CODESPACES === 'true' || process.env.GITHUB_CODESPACES === 'true';
 
+// Lista de origens permitidas
+const allowedOrigins = [
+    'http://localhost:4200',
+    'https://localhost:4200',
+    'https://v3mrhcvc-4200.brs.devtunnels.ms',
+    'http://localhost:3000',
+    'http://localhost:3001',
+    'https://v3mrhcvc-3000.brs.devtunnels.ms',
+    'https://v3mrhcvc-3001.brs.devtunnels.ms',
+    /^https:\/\/.*\.app\.github\.dev$/,
+    /^https:\/\/.*\.github\.dev$/,
+    /^https:\/\/.*\.github\.io$/
+];
+
 // Create HTTP server
-const server = http.createServer(app); // Added
+const server = http.createServer(app);
 
-// Create WebSocket server
-const wss = new WebSocketServer({ server }); // Added
+// Create Socket.io server
+const io = new SocketIOServer(server, {
+    cors: {
+        origin: allowedOrigins,
+        methods: ["GET", "POST"],
+        credentials: true
+    }
+});
 
-// Store active WebSocket connections (you'll need a more robust way to manage this, e.g., by chatId)
-const clients = new Map<string, Set<WebSocket>>();
-console.log('[WSS] WebSocket server initialized. Clients map created.');
+// Store active Socket.io connections by chat room
+const chatRooms = new Map<string, Set<Socket>>();
+console.log('[SOCKET.IO] Socket.io server initialized. Chat rooms map created.');
 
-wss.on('connection', (ws: WebSocket, req: Request) => {
-    const connectionTime = new Date().toISOString();
-    console.log(`[WSS ${connectionTime}] New connection incoming. IP: ${req.socket.remoteAddress}`);
+// Socket.io connection handler
+io.on('connection', (socket: Socket) => {
+    console.log(`[SOCKET.IO] New connection: ${socket.id}`);
 
-    const url = req.url;
-    console.log(`[WSS DEBUG ${connectionTime}] Raw req.url: ${url}`);
+    // Handle user connection
+    socket.on('userConnected', (data: { userId: number }) => {
+        socket.userId = data.userId;
+        console.log(`[SOCKET.IO] User ${data.userId} connected with socket ${socket.id}`);
+    });
 
-    let extractedChatId: string | undefined;
+    // Handle joining chat rooms
+    socket.on('joinChat', (chatId: string) => {
+        socket.join(`chat_${chatId}`);
+        console.log(`[SOCKET.IO] Socket ${socket.id} joined chat_${chatId}`);
 
-    if (url) {
-        const pathname = url.split('?')[0];
-        console.log(`[WSS DEBUG ${connectionTime}] pathname: ${pathname}`);
+        // Add to our tracking map
+        if (!chatRooms.has(chatId)) {
+            chatRooms.set(chatId, new Set());
+        }
+        chatRooms.get(chatId)!.add(socket);
+        console.log(`[SOCKET.IO] Chat room ${chatId} now has ${chatRooms.get(chatId)!.size} members`);
+    });
 
-        const pathSegments = pathname.split('/').filter(segment => {
-            return segment.length > 0;
+    // Handle leaving chat rooms
+    socket.on('leaveChat', (chatId: string) => {
+        socket.leave(`chat_${chatId}`);
+        console.log(`[SOCKET.IO] Socket ${socket.id} left chat_${chatId}`);
+
+        // Remove from our tracking map
+        const room = chatRooms.get(chatId);
+        if (room) {
+            room.delete(socket);
+            if (room.size === 0) {
+                chatRooms.delete(chatId);
+                console.log(`[SOCKET.IO] Chat room ${chatId} is now empty and removed`);
+            }
+        }
+    });
+
+    // Handle sending messages
+    socket.on('sendMessage', (messageData: any, ack?: Function) => {
+        console.log(`[SOCKET.IO] Received sendMessage:`, messageData);
+        // This will be handled by HTTP endpoints, but we can acknowledge receipt
+        if (ack) {
+            ack({ success: true, message: 'Message received' });
+        }
+    });
+
+    // Handle disconnect
+    socket.on('disconnect', (reason: string) => {
+        console.log(`[SOCKET.IO] Socket ${socket.id} disconnected: ${reason}`);
+
+        // Remove from all chat rooms
+        chatRooms.forEach((clients, chatId) => {
+            if (clients.has(socket)) {
+                clients.delete(socket);
+                if (clients.size === 0) {
+                    chatRooms.delete(chatId);
+                    console.log(`[SOCKET.IO] Chat room ${chatId} is now empty and removed on disconnect`);
+                }
+            }
         });
-        console.log(`[WSS DEBUG ${connectionTime}] pathSegments after filter: [${pathSegments.join(', ')}]`);
-        console.log(`[WSS DEBUG ${connectionTime}] pathSegments.length: ${pathSegments.length}`);
-
-        if (pathSegments.length > 0) {
-            console.log(`[WSS DEBUG ${connectionTime}] pathSegments[0]: ${pathSegments[0]}`);
-        }
-        if (pathSegments.length > 1) {
-            console.log(`[WSS DEBUG ${connectionTime}] pathSegments[1]: ${pathSegments[1]}`);
-        }
-        if (pathSegments.length > 2) {
-            console.log(`[WSS DEBUG ${connectionTime}] pathSegments[2]: ${pathSegments[2]}`);
-        }
-
-        if (pathSegments.length === 3 && pathSegments[0] === 'ws' && pathSegments[1] === 'chat') {
-            extractedChatId = pathSegments[2];
-            console.log(`[WSS DEBUG ${connectionTime}] Condition for chatId extraction MET. extractedChatId = '${extractedChatId}'`);
-        } else {
-            console.log(`[WSS DEBUG ${connectionTime}] Condition for chatId extraction NOT MET. pathSegments.length=${pathSegments.length}, pathSegments[0]='${pathSegments[0]}', pathSegments[1]='${pathSegments[1]}'`);
-        }
-    } else {
-        console.log(`[WSS DEBUG ${connectionTime}] req.url is null or undefined.`);
-    }
-
-    console.log(`[WSS ${connectionTime}] Final extracted chatId before validation: '${extractedChatId}' from URL: ${url}`);
-
-    if (!extractedChatId || extractedChatId.trim() === '' || isNaN(parseInt(extractedChatId))) {
-        console.log(`[WSS ${connectionTime}] Connection attempt with invalid or non-numeric chat ID: '${extractedChatId}' from URL: '${url}'. Expected format like /ws/chat/:chatId/ where :chatId is numeric. Closing connection.`);
-        ws.close(1008, "Invalid or non-numeric URL path for chat ID");
-        return;
-    }
-
-    const chatId = extractedChatId;
-
-    console.log(`[WSS ${connectionTime}] Client attempting to connect to chat: ${chatId}. Current clients map size: ${clients.size}`);
-    if (clients.has(chatId)) {
-        console.log(`[WSS ${connectionTime}] Chat room ${chatId} already exists. Current members: ${clients.get(chatId)!.size}`);
-    } else {
-        console.log(`[WSS ${connectionTime}] Chat room ${chatId} does not exist. Creating new set for it.`);
-    }
-
-    if (!clients.has(chatId)) {
-        clients.set(chatId, new Set());
-        console.log(`[WSS ${connectionTime}] Created new client set for chat: ${chatId}. clients map keys:`, Array.from(clients.keys()));
-    }
-
-    const chatSpecificClients = clients.get(chatId)!;
-
-    if (chatSpecificClients.has(ws)) {
-        console.warn(`[WSS ${connectionTime}] Client (WebSocket instance) already in set for chat ${chatId}. This might indicate an issue. Not adding again.`);
-    } else {
-        chatSpecificClients.add(ws);
-        console.log(`[WSS ${connectionTime}] Client successfully added to chat: ${chatId}. Total clients in this chat: ${chatSpecificClients.size}. Overall clients in map: ${Array.from(clients.values()).reduce((acc, set) => acc + set.size, 0)}`);
-    }
-
-    ws.on('message', (message: Buffer) => {
-        console.log(`[WSS ${connectionTime}] Received message on chat ${chatId} from a client: ${message.toString().substring(0,200)}`);
-    });
-
-    ws.on('close', (code: number, reason: Buffer) => {
-        const reasonString = reason ? reason.toString() : 'No reason given';
-        console.log(`[WSS ${connectionTime}] Client disconnected from chat: ${chatId}. Code: ${code}, Reason: ${reasonString}. Attempting to remove client.`);
-        const deleted = chatSpecificClients.delete(ws);
-        if (deleted) {
-            console.log(`[WSS ${connectionTime}] Client successfully removed from chat: ${chatId}. Remaining clients in this chat: ${chatSpecificClients.size}`);
-        } else {
-            console.warn(`[WSS ${connectionTime}] Attempted to remove client from chat ${chatId} on 'close', but client was not found in the set.`);
-        }
-
-        if (chatSpecificClients.size === 0) {
-            const mapDeleted = clients.delete(chatId);
-            if (mapDeleted) {
-                console.log(`[WSS ${connectionTime}] Chat room ${chatId} is now empty and has been removed from clients map. clients map keys:`, Array.from(clients.keys()));
-            } else {
-                console.warn(`[WSS ${connectionTime}] Attempted to delete chat room ${chatId} from map, but it was not found.`);
-            }
-        }
-    });
-
-    ws.on('error', (error: Error) => {
-        console.error(`[WSS ${connectionTime}] WebSocket error for a client in chat ${chatId}:`, error);
-        console.log(`[WSS ${connectionTime}] Attempting to remove client from chat ${chatId} due to error.`);
-        const deleted = chatSpecificClients.delete(ws);
-        if (deleted) {
-            console.log(`[WSS ${connectionTime}] Client removed from chat ${chatId} due to error. Remaining clients in this chat: ${chatSpecificClients.size}`);
-        } else {
-            console.warn(`[WSS ${connectionTime}] Attempted to remove client from chat ${chatId} (due to error), but client was not found.`);
-        }
-
-        if (chatSpecificClients.size === 0) {
-            const mapDeleted = clients.delete(chatId);
-             if (mapDeleted) {
-                console.log(`[WSS ${connectionTime}] Chat room ${chatId} (due to error) is now empty and has been removed from clients map. clients map keys:`, Array.from(clients.keys()));
-            } else {
-                console.warn(`[WSS ${connectionTime}] Attempted to delete chat room ${chatId} from map (due to error), but it was not found.`);
-            }
-        }
-        if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {
-            console.log(`[WSS ${connectionTime}] Terminating WebSocket for client in chat ${chatId} after error as it was still open/connecting.`);
-            ws.terminate();
-        }
     });
 });
 
 // Function to broadcast messages to a specific chat room
 export function broadcastMessageToChat(chatId: string, message: any) {
-    console.log(`[WSS DEBUG] broadcastMessageToChat called for chatId: ${chatId}, message status: ${message?.status}`); // <<< ADDED THIS LOG
-    const chatClients = clients.get(chatId.toString()); // Ensure chatId is a string
-    if (chatClients) {
-        let messageString: string;
+    console.log(`[SOCKET.IO] broadcastMessageToChat called for chatId: ${chatId}, message status: ${message?.status}`);
+
+    const roomName = `chat_${chatId}`;
+    const connectedSockets = io.sockets.adapter.rooms.get(roomName);
+
+    if (connectedSockets && connectedSockets.size > 0) {
+        console.log(`[SOCKET.IO] Broadcasting to chat ${chatId} (${connectedSockets.size} clients)`);
+
         try {
-            messageString = JSON.stringify(message);
-        } catch (e: any) { // Catch if message is not stringifiable
-            console.error(`[WSS] Failed to stringify message for chat ${chatId}. Error: ${e.message}. Message data:`, message);
-            return; // Do not proceed if message cannot be stringified
+            // Emit to all sockets in the chat room
+            io.to(roomName).emit('newMessage', message);
+            console.log(`[SOCKET.IO] Successfully broadcasted message to chat ${chatId}`);
+        } catch (e: any) {
+            console.error(`[SOCKET.IO] Error broadcasting message to chat ${chatId}. Error: ${e.message}`);
         }
-
-        console.log(`[WSS] Broadcasting to chat ${chatId} (${chatClients.size} clients). Message (first 100 chars): "${messageString.substring(0, 100)}${messageString.length > 100 ? '...' : ''}"`);
-        let sendErrors = 0;
-        let closedClientsDuringBroadcast = 0;
-
-        chatClients.forEach(client => {
-            if (client.readyState === WebSocket.OPEN) {
-                try {
-                    client.send(messageString);
-                } catch (e: any) { // Catch errors during send
-                    sendErrors++;
-                    console.error(`[WSS] Error sending message to a client in chat ${chatId}. Error: ${e.message}. Client readyState: ${client.readyState}`);
-                }
-            } else {
-                closedClientsDuringBroadcast++;
-            }
-        });
-
-        if (sendErrors > 0) {
-            console.warn(`[WSS] Encountered ${sendErrors} errors while broadcasting to chat ${chatId}.`);
-        }
-        if (closedClientsDuringBroadcast > 0) {
-            console.log(`[WSS] Skipped sending to ${closedClientsDuringBroadcast} clients in chat ${chatId} as they were not in OPEN state.`);
-        }
+    } else {
+        console.log(`[SOCKET.IO] No clients found in chat ${chatId} to broadcast message`);
     }
 }
 
 // Function to broadcast message status updates to a specific chat room
 export function broadcastMessageStatusUpdate(chatId: string, readerUserId: string, status: 'read' | 'delivered' | 'sent', messageIds: string[]) {
-    const chatClients = clients.get(chatId.toString());
-    if (chatClients) {
+    const roomName = `chat_${chatId}`;
+    const connectedSockets = io.sockets.adapter.rooms.get(roomName);
+
+    if (connectedSockets && connectedSockets.size > 0) {
         const payload = {
             type: 'messageStatusUpdate',
             chatId,
@@ -219,53 +178,20 @@ export function broadcastMessageStatusUpdate(chatId: string, readerUserId: strin
             status,
             messageIds
         };
-        let messageString: string;
+
+        console.log(`[SOCKET.IO] Broadcasting message status update to chat ${chatId} (${connectedSockets.size} clients)`);
+
         try {
-            messageString = JSON.stringify(payload);
+            // Emit to all sockets in the chat room
+            io.to(roomName).emit('messageStatusUpdate', payload);
+            console.log(`[SOCKET.IO] Successfully broadcasted message status update to chat ${chatId}`);
         } catch (e: any) {
-            console.error(`[WSS] Failed to stringify message status update for chat ${chatId}. Error: ${e.message}. Payload:`, payload);
-            return;
-        }
-
-        console.log(`[WSS] Broadcasting message status update to chat ${chatId} (${chatClients.size} clients). Payload (first 100 chars): "${messageString.substring(0, 100)}${messageString.length > 100 ? '...' : ''}"`);
-        let sendErrors = 0;
-        let closedClientsDuringBroadcast = 0;
-
-        chatClients.forEach(client => {
-            if (client.readyState === WebSocket.OPEN) {
-                try {
-                    client.send(messageString);
-                } catch (e: any) {
-                    sendErrors++;
-                    console.error(`[WSS] Error sending message status update to a client in chat ${chatId}. Error: ${e.message}. Client readyState: ${client.readyState}`);
-                }
-            } else {
-                closedClientsDuringBroadcast++;
-            }
-        });
-
-        if (sendErrors > 0) {
-            console.warn(`[WSS] Encountered ${sendErrors} errors while broadcasting message status update to chat ${chatId}.`);
-        }
-        if (closedClientsDuringBroadcast > 0) {
-            console.log(`[WSS] Skipped sending message status update to ${closedClientsDuringBroadcast} clients in chat ${chatId} as they were not in OPEN state.`);
+            console.error(`[SOCKET.IO] Error broadcasting message status update to chat ${chatId}. Error: ${e.message}`);
         }
     } else {
-        console.log(`[WSS] No clients found for chat ${chatId} to broadcast message status update.`);
+        console.log(`[SOCKET.IO] No clients found for chat ${chatId} to broadcast message status update.`);
     }
 }
-
-// Lista de origens permitidas
-const allowedOrigins = [
-    'http://localhost:4200',
-    'https://localhost:4200',
-    'https://v3mrhcvc-4200.brs.devtunnels.ms', // Trailing slash removed
-    'http://localhost:3001',
-    'https://v3mrhcvc-3001.brs.devtunnels.ms', // Trailing slash removed
-    /^https:\/\/.*\.app\.github\.dev$/,  // Permite qualquer subdomínio do GitHub Codespaces
-    /^https:\/\/.*\.github\.dev$/,       // Formato alternativo de domínio Codespaces
-    /^https:\/\/.*\.github\.io$/         // Suporte para GitHub Pages
-];
 
 // Configuração CORS detalhada
 const corsOptions = {
@@ -327,6 +253,9 @@ app.use(express.json({ limit: '50mb' }));  // Aumentando o limite para permitir 
 
 // Aplicar o middleware de bloqueio de IP globalmente ANTES das rotas da API
 app.use(checkIpBlocked);
+
+// Aplicar o middleware de autenticação globalmente para todas as rotas da API
+app.use('/api', authMiddleware);
 
 // Headers adicionais para CORS
 app.use((req: Request, res: Response, next: NextFunction) => {
@@ -457,7 +386,12 @@ app.use('/api/posts', postRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/profile', profileRoutes);
 app.use('/api/admin', adminRoutes); // Adicionar rota para admin
-app.use('/api/rewards', rewardRoutes); // Adicionar rota para recompensas
+
+// Rotas de recompensas consolidadas - com middlewares específicos para proteção
+app.post('/api/rewards/seed', authenticateToken, isAdmin, seedRewards);
+app.get('/api/rewards', authenticateToken, isLeaderOrAdmin, getAllRewards);
+app.get('/api/rewards/user/:userId', authenticateToken, getUserRewards);
+app.post('/api/rewards/grant', authenticateToken, isLeaderOrAdmin, grantRewardToUser);
 
 // Rota explícita de fallback para o perfil do usuário atual
 app.get('/api/profile/me', async (req: Request, res: Response) => {

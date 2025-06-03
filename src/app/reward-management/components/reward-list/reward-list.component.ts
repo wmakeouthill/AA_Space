@@ -3,12 +3,12 @@ import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { Observable, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
-import { Reward, RewardApiService } from '../../services/reward-api.service'; // Ajuste o caminho se necessário
+import { Reward, ApiService } from '../../../services/api.service'; // Usando ApiService centralizado
 
 @Component({
   selector: 'app-reward-list',
-  standalone: true, // Certifique-se de que é standalone
-  imports: [CommonModule, RouterLink], // CommonModule para *ngIf, *ngFor, async pipe
+  standalone: true,
+  imports: [CommonModule, RouterLink],
   templateUrl: './reward-list.component.html',
   styleUrl: './reward-list.component.css'
 })
@@ -16,8 +16,8 @@ export class RewardListComponent implements OnInit {
   rewards$: Observable<Reward[]>;
   error: string | null = null;
 
-  constructor(private rewardApiService: RewardApiService) {
-    this.rewards$ = of([]); // Inicialização padrão
+  constructor(private apiService: ApiService) {
+    this.rewards$ = of([]);
   }
 
   ngOnInit(): void {
@@ -26,24 +26,23 @@ export class RewardListComponent implements OnInit {
 
   loadRewards(): void {
     this.error = null;
-    this.rewards$ = this.rewardApiService.getAllRewards().pipe(
+    this.rewards$ = this.apiService.getAllRewards().pipe(
       catchError(err => {
-        console.warn('Error loading rewards:', err); // Changed to console.warn
+        console.warn('Error loading rewards:', err);
         this.error = 'Falha ao carregar as recompensas. Tente novamente mais tarde.';
-        return of([]); // Retorna um array vazio em caso de erro para o async pipe não quebrar
+        return of([]);
       })
     );
   }
 
-  // Opcional: Método para acionar o seed de recompensas (se houver um botão para isso)
   seedInitialRewards(): void {
-    this.rewardApiService.seedRewards().subscribe({
+    this.apiService.seedRewards().subscribe({
       next: () => {
         alert('Recompensas iniciais semeadas com sucesso!');
-        this.loadRewards(); // Recarrega a lista
+        this.loadRewards();
       },
       error: (err) => {
-        console.warn('Error seeding rewards:', err); // Changed to console.warn
+        console.warn('Error seeding rewards:', err);
         alert('Falha ao semear recompensas: ' + (err.error?.message || err.message));
       }
     });

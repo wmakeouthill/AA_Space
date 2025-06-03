@@ -38,7 +38,7 @@ export class ChatConversationComponent implements OnChanges, OnInit, OnDestroy {
   private userProfileSubscription!: Subscription; // Changed from authSubscription
 
   private profileImageUpdatedHandler = () => {
-    console.log('[CHAT CONVERSATION] Evento de atualização de imagem detectado, recarregando mensagens');
+    // [CHAT CONVERSATION] Evento de atualização de imagem detectado, recarregando mensagens
     if (this.selectedChat) {
       this.loadMessagesAndListen();
     }
@@ -49,11 +49,11 @@ export class ChatConversationComponent implements OnChanges, OnInit, OnDestroy {
     private profileService: ProfileService,
     private cdRef: ChangeDetectorRef // Ensure injected
   ) {
-    console.log('[CONVO] Constructor: Initializing component.');
+    // [CONVO] Constructor: Initializing component.
   }
 
   ngOnInit(): void {
-    console.log('[CONVO] ngOnInit: Initializing component.');
+    // [CONVO] ngOnInit: Initializing component.
     window.addEventListener('profile:imageUpdated', this.profileImageUpdatedHandler);
 
     this.userProfileSubscription = this.profileService.getCurrentUserProfile().subscribe((userProfile: UserProfile) => {
@@ -61,18 +61,18 @@ export class ChatConversationComponent implements OnChanges, OnInit, OnDestroy {
       if (userProfile && userProfile.id !== undefined) {
         this.currentUserId = userProfile.id;
         this.currentUserProfileImageUrl = userProfile.profileImage || this.defaultImage;
-        console.warn(`[CONVO] ngOnInit: Current user profile updated from ProfileService. ID: ${this.currentUserId}, Avatar: ${this.currentUserProfileImageUrl}`); // Changed to warn
+        // [CONVO] ngOnInit: Current user profile updated from ProfileService. ID: this.currentUserId, Avatar: this.currentUserProfileImageUrl
 
         // Log the state of selectedChat right before the condition
-        console.warn(`[CONVO] ngOnInit: Checking condition to load messages. selectedChat:`, this.selectedChat);
+        // [CONVO] ngOnInit: Checking condition to load messages. selectedChat: this.selectedChat
 
         // If currentUserId is now valid and was previously invalid, and a chat is selected, load messages.
         if (this.selectedChat && (previousUserId === undefined || previousUserId === null || previousUserId === -1) && (this.currentUserId !== undefined && this.currentUserId !== null && this.currentUserId !== -1)) {
-          console.warn(`[CONVO] ngOnInit: currentUserId is now valid (${this.currentUserId}) and a chat (ID: ${this.selectedChat.id}) is selected. Triggering message load.`); // Changed to warn
+          // [CONVO] ngOnInit: currentUserId is now valid (this.currentUserId) and a chat (ID: this.selectedChat.id) is selected. Triggering message load.
           this.loadMessagesAndListen();
         }
       } else {
-        console.warn('[CONVO] ngOnInit: No user profile or user ID from ProfileService. UserProfile:', userProfile);
+        // [CONVO] ngOnInit: No user profile or user ID from ProfileService. UserProfile: userProfile
         this.currentUserId = -1;
         this.currentUserProfileImageUrl = this.defaultImage;
       }
@@ -80,33 +80,33 @@ export class ChatConversationComponent implements OnChanges, OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    console.log('[CONVO] ngOnDestroy: Cleaning up component.');
+    // [CONVO] ngOnDestroy: Cleaning up component.
     window.removeEventListener('profile:imageUpdated', this.profileImageUpdatedHandler);
     this.unsubscribeFromMessages(); // Ensures the single correct method is called
 
     if (this.userProfileSubscription) {
       this.userProfileSubscription.unsubscribe();
-      console.log('[CONVO] ngOnDestroy: Unsubscribed from ProfileService.');
+      // [CONVO] ngOnDestroy: Unsubscribed from ProfileService.
     }
   }
 
   private unsubscribeFromMessages(): void { // This is the correct, remaining method
     if (this.messageSubscription) {
-      console.log(`[CONVO] unsubscribeFromMessages - Unsubscribing from messageSubscription. Chat ID was: ${this.selectedChat?.id}`);
+      // [CONVO] unsubscribeFromMessages - Unsubscribing from messageSubscription. Chat ID was: this.selectedChat?.id
       this.messageSubscription.unsubscribe();
       this.messageSubscription = null;
       // No need to call chatService.closeChatConnection() here unless it's specifically for this component's view
     } else {
-      // console.log('[CONVO] unsubscribeFromMessages - No active messageSubscription to unsubscribe from.');
+      // [CONVO] unsubscribeFromMessages - No active messageSubscription to unsubscribe from.
     }
   }
 
   private loadMessagesAndListen(): void {
     if (!this.selectedChat) {
-      console.log('[CONVO] loadMessagesAndListen - No selected chat, returning.');
+      // [CONVO] loadMessagesAndListen - No selected chat, returning.
       return;
     }
-    console.warn(`[CONVO] loadMessagesAndListen - START for chat ID ${this.selectedChat.id}`); // Changed to warn
+    // [CONVO] loadMessagesAndListen - START for chat ID this.selectedChat.id
 
     this.loading = true;
     this.error = null;
@@ -114,7 +114,7 @@ export class ChatConversationComponent implements OnChanges, OnInit, OnDestroy {
     const chatId = this.selectedChat.id;
     this.chatService.fetchMessages(chatId).subscribe({
         next: (fetchedMessages) => {
-            console.log(`[CONVO] loadMessagesAndListen - STEP 1: fetchMessages SUCCESS for chat ${chatId}. Raw fetchedMessages Count: ${fetchedMessages ? fetchedMessages.length : 'undefined/null'}.`);
+            // [CONVO] loadMessagesAndListen - STEP 1: fetchMessages SUCCESS for chat chatId. Raw fetchedMessages Count: fetchedMessages ? fetchedMessages.length : 'undefined/null'.
 
             this.messages = (fetchedMessages || []).map(msg => ({
                 ...msg,
@@ -122,13 +122,13 @@ export class ChatConversationComponent implements OnChanges, OnInit, OnDestroy {
             }));
 
             const messagesForLog = this.messages ? JSON.parse(JSON.stringify(this.messages)) : [];
-            console.log(`[CONVO] loadMessagesAndListen - STEP 2: this.messages assigned and mapped. Current this.messages Count: ${this.messages.length}. Data (logged as copy):`, messagesForLog);
+            // [CONVO] loadMessagesAndListen - STEP 2: this.messages assigned and mapped. Current this.messages Count: this.messages.length. Data (logged as copy): messagesForLog
 
             this.loading = false;
 
-            console.log(`[CONVO] loadMessagesAndListen - STEP 3: Messages processed. Current this.messages Count: ${this.messages.length}. Triggering cdRef.detectChanges().`);
+            // [CONVO] loadMessagesAndListen - STEP 3: Messages processed. Current this.messages Count: this.messages.length. Triggering cdRef.detectChanges().
             this.cdRef.detectChanges();
-            console.log(`[CONVO] loadMessagesAndListen - STEP 4: cdRef.detectChanges() DONE. Current this.messages Count: ${this.messages.length}. Now calling listenForNewMessages.`); // MODIFIED LOG
+            // [CONVO] loadMessagesAndListen - STEP 4: cdRef.detectChanges() DONE. Current this.messages Count: this.messages.length. Now calling listenForNewMessages.
             this.listenForNewMessages(chatId); // Pass chatId
         },
         error: (err) => {
@@ -142,26 +142,26 @@ export class ChatConversationComponent implements OnChanges, OnInit, OnDestroy {
 
   private listenForNewMessages(expectedChatId: number): void {
     if (!this.selectedChat || this.selectedChat.id !== expectedChatId) {
-      console.warn(`[CONVO] listenForNewMessages - Called for chat ${expectedChatId} but selected chat is ${this.selectedChat?.id}. Aborting subscription.`);
+      // [CONVO] listenForNewMessages - Called for chat expectedChatId but selected chat is this.selectedChat?.id. Aborting subscription.
       return;
     }
 
     if (this.messageSubscription) {
       this.messageSubscription.unsubscribe();
       this.messageSubscription = null;
-      console.log(`[CONVO] listenForNewMessages - Unsubscribed from previous messageSubscription for chat ${expectedChatId}.`);
+      // [CONVO] listenForNewMessages - Unsubscribed from previous messageSubscription for chat expectedChatId.
     }
 
-    console.log(`[CONVO] listenForNewMessages - Subscribing to chatService.messages$ for chat ID ${expectedChatId}. Current this.messages count before sub: ${this.messages.length}`);
+    // [CONVO] listenForNewMessages - Subscribing to chatService.messages$ for chat ID expectedChatId. Current this.messages count before sub: this.messages.length
 
     this.messageSubscription = this.chatService.messages$
       .subscribe({
         next: (messagesFromObservable: Message[]) => {
-          console.warn(`[CONVO] messages$.next - Received messagesFromObservable. Length: ${messagesFromObservable?.length}. ForChatID: ${this.selectedChat?.id}, ExpectedChatID: ${expectedChatId}`);
+          // [CONVO] messages$.next - Received messagesFromObservable. Length: messagesFromObservable?.length. ForChatID: this.selectedChat?.id, ExpectedChatID: expectedChatId
 
           if (this.selectedChat && this.selectedChat.id === expectedChatId) {
             const filteredMessagesFromObs = (messagesFromObservable || []).filter(m => m.chatId === expectedChatId);
-            console.warn(`[CONVO] messages$.next - Filtered for chat ${expectedChatId}. filteredMessagesFromObs Length: ${filteredMessagesFromObs.length}. Current this.messages length before update: ${this.messages.length}`);
+            // [CONVO] messages$.next - Filtered for chat expectedChatId. filteredMessagesFromObs Length: filteredMessagesFromObs.length. Current this.messages length before update: this.messages.length
 
             if (filteredMessagesFromObs.length > 0) {
               // Observable has new messages, update our list
@@ -172,24 +172,24 @@ export class ChatConversationComponent implements OnChanges, OnInit, OnDestroy {
 
               if (JSON.stringify(this.messages) !== JSON.stringify(newMappedMessages)) {
                   this.messages = newMappedMessages;
-                  console.warn(`[CONVO] messages$.next - this.messages updated from observable with ${newMappedMessages.length} message(s) for chat ${expectedChatId}. Triggering cdRef.detectChanges().`);
+                  // [CONVO] messages$.next - this.messages updated from observable with newMappedMessages.length message(s) for chat expectedChatId. Triggering cdRef.detectChanges().
                   this.cdRef.detectChanges();
               } else {
-                  console.warn(`[CONVO] messages$.next - Observable data for chat ${expectedChatId} matches current this.messages. No update needed.`);
+                  // [CONVO] messages$.next - Observable data for chat expectedChatId matches current this.messages. No update needed.
               }
             } else { // filteredMessagesFromObs.length === 0
               // Observable emitted an empty array for this chat.
               // If we already have messages (e.g., from HTTP), we don't want to wipe them.
               // If this.messages is already empty, no change is needed.
               if (this.messages.length > 0) {
-                console.warn(`[CONVO] messages$.next - Observable filtered to 0 messages for chat ${expectedChatId}, but HTTP messages exist (${this.messages.length}). IGNORING this emission to prevent wipe.`);
+                // [CONVO] messages$.next - Observable filtered to 0 messages for chat expectedChatId, but HTTP messages exist (this.messages.length). IGNORING this emission to prevent wipe.
               } else {
-                console.warn(`[CONVO] messages$.next - Observable filtered to 0 messages for chat ${expectedChatId}, and this.messages is already []. No change needed.`);
+                // [CONVO] messages$.next - Observable filtered to 0 messages for chat expectedChatId, and this.messages is already []. No change needed.
               }
             }
-            console.log(`[CONVO] messages$.next - Finished processing for chat ${expectedChatId}. Current this.messages Count: ${this.messages.length}.`);
+            // [CONVO] messages$.next - Finished processing for chat expectedChatId. Current this.messages Count: this.messages.length.
           } else {
-            console.warn(`[CONVO] messages$.next - Event for different/no selected chat. Selected: ${this.selectedChat?.id}, Expected: ${expectedChatId}. Not processing this emission here.`);
+            // [CONVO] messages$.next - Event for different/no selected chat. Selected: this.selectedChat?.id, Expected: expectedChatId. Not processing this emission here.
           }
         },
         error: (err: any) => {
@@ -200,7 +200,7 @@ export class ChatConversationComponent implements OnChanges, OnInit, OnDestroy {
             }
         }
       });
-    console.log(`[CONVO] listenForNewMessages - Subscription to messages$ established for chat ${expectedChatId}.`);
+    // [CONVO] listenForNewMessages - Subscription to messages$ established for chat expectedChatId.
   }
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -208,45 +208,29 @@ export class ChatConversationComponent implements OnChanges, OnInit, OnDestroy {
         const newChat = changes['selectedChat'].currentValue as Chat | null;
         const oldChat = changes['selectedChat'].previousValue as Chat | null;
 
-        console.log(`[CONVO] ngOnChanges - selectedChat changed. New ID: ${newChat?.id}, Old ID: ${oldChat?.id}.`);
+        // console.log(`[CONVO] ngOnChanges - selectedChat changed. New ID: ${newChat?.id}, Old ID: ${oldChat?.id}.`);
 
-        // Determine if the chat has meaningfully changed
         const hasChatIdActuallyChanged = newChat?.id !== oldChat?.id;
-        // This also covers transitions to/from null if we consider undefined ID different from a numeric ID.
-        // More explicit checks for clarity:
-        // const isNewChatSelected = newChat && !oldChat; // From null to a chat
-        // const isChatDeselected = !newChat && oldChat; // From a chat to null
-
         if (hasChatIdActuallyChanged) {
-            console.warn(`[CONVO] ngOnChanges - Meaningful chat change detected. New: ${newChat?.id}, Old: ${oldChat?.id}.`);
-
-            this.unsubscribeFromMessages(); // Always unsubscribe if chat identity changes or becomes null
-
+            // console.warn(`[CONVO] ngOnChanges - Meaningful chat change detected. New: ${newChat?.id}, Old: ${oldChat?.id}.`);
+            this.unsubscribeFromMessages();
             if (newChat) {
-                console.log(`[CONVO] ngOnChanges - New chat selected (ID: ${newChat.id}). Resetting messages and preparing to load.`);
-                this.messages = []; // Reset messages for the new chat
-
+                // console.log(`[CONVO] ngOnChanges - New chat selected (ID: ${newChat.id}). Resetting messages and preparing to load.`);
+                this.messages = [];
                 if (this.currentUserId !== undefined && this.currentUserId !== null && this.currentUserId !== -1) {
-                    console.warn(`[CONVO] ngOnChanges - User ID ${this.currentUserId} is valid. Calling loadMessagesAndListen for chat ${newChat.id}.`);
+                    // console.warn(`[CONVO] ngOnChanges - User ID ${this.currentUserId} is valid. Calling loadMessagesAndListen for chat ${newChat.id}.`);
                     this.loadMessagesAndListen();
                 } else {
-                    console.warn(`[CONVO] ngOnChanges - User ID (${this.currentUserId}) is not yet valid. Messages cleared, waiting for ProfileService for chat ${newChat.id}.`);
+                    // console.warn(`[CONVO] ngOnChanges - User ID (${this.currentUserId}) is not yet valid. Messages cleared, waiting for ProfileService for chat ${newChat.id}.`);
                 }
-            } else { // newChat is null (chat deselected)
-                console.log('[CONVO] ngOnChanges - No chat selected. Messages cleared.');
-                this.messages = []; // Ensure messages are cleared
+            } else {
+                // console.log('[CONVO] ngOnChanges - No chat selected. Messages cleared.');
+                this.messages = [];
             }
-            // Only call detectChanges if messages array was actually modified (e.g. set to [])
-            // or if other template-bound properties changed that need immediate reflection.
             this.cdRef.detectChanges();
         } else if (newChat && oldChat && newChat.id === oldChat.id) {
-            // This case means ngOnChanges was called, but the chat ID is the same.
-            // This could be a re-trigger or the input object reference changed but represents the same chat.
-            // We should NOT reset messages or reload if the essential data (ID) is the same.
-            console.warn(`[CONVO] ngOnChanges - Called for the same chat ID (${newChat.id}). Current messages count: ${this.messages.length}. No action taken to prevent wipe/reload.`);
+            // console.warn(`[CONVO] ngOnChanges - Called for the same chat ID (${newChat.id}). Current messages count: ${this.messages.length}. No action taken to prevent wipe/reload.`);
         }
-        // Removed previous unconditional .detectChanges() and specific ones from old logic.
-        // The detectChanges inside the `if (hasChatIdActuallyChanged)` block should cover necessary updates.
     }
   }
 

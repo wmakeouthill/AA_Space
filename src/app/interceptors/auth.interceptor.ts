@@ -19,7 +19,8 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
     '/api/auth/users',
     '/api/auth/make-admin',
     '/api/profile', // Protegendo explicitamente os endpoints de profile
-    '/api/chat'
+    '/api/chat',
+    '/api/rewards' // Adicionado para garantir envio do token
   ];
 
   // Verifica se é uma rota pública que não precisa de token

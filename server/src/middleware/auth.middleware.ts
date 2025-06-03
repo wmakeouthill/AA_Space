@@ -38,20 +38,20 @@ export const authMiddleware = async (req: AuthRequest, res: Response, next: Next
             } else {
                 console.warn(`[AUTH MIDDLEWARE V3] Token válido, mas usuário ID ${decoded.id} não encontrado no banco de dados.`);
                 // req.user permanece undefined, acesso não autenticado
-            }
-        } catch (error: any) {
+            }        } catch (error: any) {
             console.warn(`[AUTH MIDDLEWARE V3] Falha na verificação do token: ${error.message}. Acesso prosseguirá como não autenticado se a rota permitir.`);
             // req.user permanece undefined
         }
     } else {
         console.log('[AUTH MIDDLEWARE V3] Nenhum token de autenticação Bearer fornecido.');
-    }
-
-    // 2. Define rotas/ações que EXIGEM autenticação (o usuário DEVE estar logado)
+    }    // 2. Define rotas/ações que EXIGEM autenticação (o usuário DEVE estar logado)
     const strictlyProtectedRules = [
         // Rotas de Administração
         { pathPattern: /^\/api\/admin/, methods: ['GET', 'POST', 'PUT', 'DELETE'] },
         { pathPattern: /^\/api\/users/, methods: ['GET', 'POST', 'PUT', 'DELETE'] }, // Assumindo que /api/users é admin
+
+        // Nota: Rotas de Recompensas removidas daqui - proteção será feita pelos middlewares específicos das rotas
+        // { pathPattern: /^\/api\/rewards/, methods: ['GET', 'POST', 'PUT', 'DELETE'] },
 
         // Rotas de Chat
         { pathPattern: /^\/api\/chat/, methods: ['GET', 'POST', 'PUT', 'DELETE'] },
@@ -125,12 +125,25 @@ export const isMainAdmin = (req: AuthRequest, res: Response, next: NextFunction)
 
 // Novo middleware para verificar se o usuário é líder, padrinho/madrinha ou admin
 export const isLeaderOrAdmin = (req: AuthRequest, res: Response, next: NextFunction) => {
-    if (!req.user || !req.user.role) {
-        return res.status(403).json({ message: 'Acesso negado: Função do usuário não definida.' });
+    console.log(`[isLeaderOrAdmin] Checking user: ${req.user?.username}, role: ${req.user?.role}, isAdmin: ${req.user?.isAdmin}, isMainAdmin: ${req.user?.isMainAdmin}`);
+
+    if (!req.user) {
+        return res.status(403).json({ message: 'Acesso negado: Usuário não autenticado.' });
     }
-    const allowedRoles = ['leader', 'admin']; // Adicione 'padrinho', 'madrinha' se forem valores distintos em `role`
-    if (!allowedRoles.includes(req.user.role) && !req.user.isAdmin && !req.user.isMainAdmin) {
-        return res.status(403).json({ message: 'Acesso negado: Requer privilégios de líder, padrinho/madrinha ou administrador.' });
+
+    // Permitir acesso se o usuário é admin ou main admin (independente do role)
+    if (req.user.isAdmin || req.user.isMainAdmin) {
+        console.log(`[isLeaderOrAdmin] Access granted: User is admin`);
+        return next();
     }
-    next();
+
+    // Verificar roles específicos (leader, padrinho, madrinha)
+    const allowedRoles = ['leader', 'admin', 'padrinho', 'madrinha'];
+    if (req.user.role && allowedRoles.includes(req.user.role)) {
+        console.log(`[isLeaderOrAdmin] Access granted: User has allowed role: ${req.user.role}`);
+        return next();
+    }
+
+    console.log(`[isLeaderOrAdmin] Access denied: User does not have required permissions`);
+    return res.status(403).json({ message: 'Acesso negado: Requer privilégios de líder, padrinho/madrinha ou administrador.' });
 };

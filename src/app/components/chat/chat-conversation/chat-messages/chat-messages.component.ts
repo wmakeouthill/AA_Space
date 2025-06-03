@@ -226,7 +226,7 @@ export class ChatMessagesComponent implements OnInit, OnChanges, AfterViewChecke
 
   @Input()
   set messages(value: Message[]) {
-    console.log(`[CHAT MESSAGES] Setter: messages @Input received. Raw value:`, JSON.stringify(value?.map(m => ({id: m.id, content: m.content, senderId: m.senderId, status: m.status})))); // ADDED DETAILED LOG
+    // [CHAT MESSAGES] Setter: messages @Input received. Raw value: value
     if (value) {
       const currentMessageStatuses = new Map<number, 'sent' | 'delivered' | 'read'>();
       this._messages.forEach(msg => {
@@ -252,7 +252,7 @@ export class ChatMessagesComponent implements OnInit, OnChanges, AfterViewChecke
       });
 
       this._messages = [...processedNewMessages];
-      console.log(`[CHAT MESSAGES] Setter: _messages updated. New _messages:`, JSON.stringify(this._messages?.map(m => ({id: m.id, content: m.content, senderId: m.senderId, status: m.status})))); // ADDED DETAILED LOG
+      // [CHAT MESSAGES] Setter: _messages updated. New _messages: this._messages
 
       if (this.isViewInitialized) {
         this.scrollToBottom();
@@ -260,7 +260,7 @@ export class ChatMessagesComponent implements OnInit, OnChanges, AfterViewChecke
       }
     } else {
       this._messages = [];
-      console.log(`[CHAT MESSAGES] Setter: messages @Input was null/undefined. _messages cleared.`); // Existing log
+      // [CHAT MESSAGES] Setter: messages @Input was null/undefined. _messages cleared.
       if (this.isViewInitialized) {
         this.cdr.detectChanges();
       }

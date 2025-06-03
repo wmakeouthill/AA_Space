@@ -52,7 +52,7 @@ export class HeaderComponent implements OnInit, OnDestroy {
     this.isAdminSubscription = this.authService.isAdmin$.subscribe(
       isAdmin => {
         this.isAdmin = isAdmin;
-        console.log('[HeaderComponent] isAdmin status updated from isAdmin$:', this.isAdmin);
+        // [HeaderComponent] isAdmin status updated from isAdmin$: this.isAdmin
       }
     );
 
@@ -74,7 +74,7 @@ export class HeaderComponent implements OnInit, OnDestroy {
     // <--- ADD THIS BLOCK --- START --->
     this.userRoleSubscription = this.authService.userRole$.subscribe(role => {
       this.userRole = role;
-      console.warn('[HeaderComponent] User role updated:', this.userRole); // Added log
+      // [HeaderComponent] User role updated: this.userRole
     });
     // <--- ADD THIS BLOCK --- END --->
   }
@@ -102,8 +102,8 @@ export class HeaderComponent implements OnInit, OnDestroy {
 
   // <--- ADD THIS GETTER --- START --->
   get isLeaderOrAdmin(): boolean {
-    const result = this.userRole === 'leader' || this.userRole === 'admin';
-    console.warn('[HeaderComponent] isLeaderOrAdmin check. Role:', this.userRole, 'Result:', result); // Added log
+    const result = this.userRole === 'leader' || this.userRole === 'admin' || this.isAdmin;
+    // [HeaderComponent] isLeaderOrAdmin check. Role: this.userRole, isAdmin: this.isAdmin, Result: result
     return result;
   }
   // <--- ADD THIS GETTER --- END --->

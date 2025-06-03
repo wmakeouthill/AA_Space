@@ -200,9 +200,7 @@ export class ChatService implements OnDestroy {
         this.conversationsSubject.next(updatedConversations);
       }
       this.updateTotalUnreadCount();
-    });
-
-    this.socket.on('conversationUpdated', (updatedConversation: Chat) => {
+    });    this.socket.on('conversationUpdated', (updatedConversation: Chat) => {
       // console.log('[ChatService] Received conversationUpdated event:', updatedConversation);
       const currentConversations = this.conversationsSubject.getValue();
       const index = currentConversations.findIndex(c => c.id === updatedConversation.id);
@@ -218,6 +216,16 @@ export class ChatService implements OnDestroy {
         this.currentChatSubject.next(updatedConversation);
       }
       this.updateTotalUnreadCount();
+    });
+
+    this.socket.on('messageStatusUpdate', (data: { type: string; chatId: string; readerUserId: string; status: 'read' | 'delivered' | 'sent'; messageIds: string[] }) => {
+      // console.log('[ChatService] Received messageStatusUpdate event:', data);
+      // Emit the status update to the subject for components to handle
+      this.messageStatusUpdateSubject.next({
+        chatId: parseInt(data.chatId, 10),
+        messageIds: data.messageIds,
+        status: data.status
+      });
     });
 
     this.socket.on('onlineUsers', (users: User[]) => {
@@ -254,18 +262,18 @@ export class ChatService implements OnDestroy {
     // console.log(`[ChatService] Fetching messages for chat ID: ${chatId}...`);
     return this.http.get<{ messages: Message[] }>(`${this.apiUrl}/chat/${chatId}/messages`).pipe(
       tap(rawResponse => {
-        console.log(`[ChatService] Raw HTTP response for messages (chat ${chatId}):`, JSON.stringify(rawResponse, null, 2));
+        // console.log(`[ChatService] Raw HTTP response for messages (chat ${chatId}):`, JSON.stringify(rawResponse, null, 2));
       }),
       map(response => response.messages), // Extract the messages array
       tap(processedMessages => {
-        console.log(`[ChatService] Processed messages for chat ${chatId}:`, JSON.stringify(processedMessages, null, 2));
+        // console.log(`[ChatService] Processed messages for chat ${chatId}:`, JSON.stringify(processedMessages, null, 2));
         this.messagesSubject.next(processedMessages);
         const unreadMessageIds = processedMessages
           .filter(msg => !msg.read && msg.senderId !== this.currentUserId)
           .map(msg => msg.id);
 
         if (unreadMessageIds.length > 0) {
-          console.log(`[ChatService] Marking ${unreadMessageIds.length} messages as read for chat ${chatId}.`);
+          // console.log(`[ChatService] Marking ${unreadMessageIds.length} messages as read for chat ${chatId}.`);
           this.markMessagesAsRead(chatId, unreadMessageIds);
         } else {
           // console.log(`[ChatService] No unread messages to mark for chat ${chatId}.`);

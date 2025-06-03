@@ -93,13 +93,13 @@ export class ChatProfileComponent implements OnInit, OnDestroy {
   }
 
   toggleProfileMenu(event: MouseEvent): void {
-    console.warn('[ChatProfileComponent] toggleProfileMenu CALLED'); // LOG 1
+    // [ChatProfileComponent] toggleProfileMenu CALLED
     event.stopPropagation();
-    console.warn('[ChatProfileComponent] Current showProfileMenu before toggle:', this.showProfileMenu); // LOG 2
+    // [ChatProfileComponent] Current showProfileMenu before toggle: this.showProfileMenu
     this.showProfileMenu = !this.showProfileMenu;
-    console.warn('[ChatProfileComponent] New showProfileMenu after toggle:', this.showProfileMenu); // LOG 3
+    // [ChatProfileComponent] New showProfileMenu after toggle: this.showProfileMenu
     this.cdr.detectChanges(); // Ensure Angular picks up the change
-    console.warn('[ChatProfileComponent] detectChanges called after toggle'); // LOG 4
+    // [ChatProfileComponent] detectChanges called after toggle
   }
 
   selectProfileImageFile(): void {
