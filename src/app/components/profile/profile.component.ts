@@ -31,12 +31,24 @@ export class ProfileComponent implements OnInit, OnDestroy {
     this.destroy$.next();
     this.destroy$.complete();
   }
-
   getRewardCount(userProfile: UserProfile | null): number {
     return userProfile?.userRewards?.length || 0;
   }
 
   hasRewards(userProfile: UserProfile | null): boolean {
     return (userProfile?.userRewards?.length || 0) > 0;
+  }
+
+  getLatestReward(userProfile: UserProfile | null) {
+    if (!userProfile?.userRewards || userProfile.userRewards.length === 0) {
+      return null;
+    }
+
+    // Ordenar por data (mais recente primeiro) e retornar o primeiro
+    const sortedRewards = [...userProfile.userRewards].sort((a, b) =>
+      new Date(b.dateEarned).getTime() - new Date(a.dateEarned).getTime()
+    );
+
+    return sortedRewards[0];
   }
 }

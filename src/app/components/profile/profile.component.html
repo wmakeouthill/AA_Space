@@ -20,19 +20,17 @@
           </div>
         </div>
       </div>
-    </div>
-
-    <!-- Rewards Section -->
+    </div>    <!-- Rewards Section -->
     <div class="rewards-section">
       <h2 class="section-title">
         <i class="reward-icon">🏆</i>
-        Minhas Recompensas
+        Recompensa Mais Recente
       </h2>
 
-      <div *ngIf="hasRewards(userProfile); else noRewards" class="rewards-grid">
-        <div *ngFor="let userReward of userProfile.userRewards" class="reward-card">
+      <div *ngIf="getLatestReward(userProfile) as latestReward; else noRewards" class="latest-reward-container">
+        <div class="latest-reward-card">
           <app-reward-badge
-            [userReward]="userReward"
+            [userReward]="latestReward"
             [size]="'large'"
             [showDetails]="true">
           </app-reward-badge>
@@ -64,14 +62,16 @@
                 [size]="'medium'"
                 [showDetails]="false">
               </app-reward-badge>
-            </div>
-            <div class="achievement-details">
+            </div>            <div class="achievement-details">
               <h4>{{ userReward.reward.name }}</h4>
               <p class="achievement-date">
                 Conquistado em {{ userReward.dateEarned | date:'dd/MM/yyyy' }}
               </p>
               <p class="achievement-milestone">
                 Marco: {{ userReward.reward.milestone }}
+              </p>
+              <p class="achievement-description" *ngIf="userReward.reward.designConcept">
+                {{ userReward.reward.designConcept }}
               </p>
             </div>
           </div>

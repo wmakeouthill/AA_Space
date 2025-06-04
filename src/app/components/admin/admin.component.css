@@ -147,8 +147,15 @@
 .user-info {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   margin-bottom: 0.8rem;
+}
+
+.user-identity {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
 }
 
 .user-name {
@@ -178,6 +185,33 @@
 .main-admin-badge {
   background-color: #f39c12;
   color: white;
+}
+
+/* Estilos para recompensas dos usuários */
+.user-rewards {
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.user-rewards app-reward-badges-inline {
+  display: flex;
+  align-items: center;
+}
+
+/* Ajustar o tamanho dos badges inline no admin */
+.user-item .reward-badges-inline .inline-badge {
+  width: 20px !important;
+  height: 20px !important;
+  font-size: 0.8rem !important;
+  min-width: 20px !important;
+}
+
+.user-item .reward-badges-inline .extra-count {
+  font-size: 0.7rem !important;
+  padding: 2px 4px !important;
+  min-width: auto !important;
 }
 
 .contact-info {

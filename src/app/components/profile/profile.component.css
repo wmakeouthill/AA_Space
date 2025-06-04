@@ -114,6 +114,31 @@
   font-size: 2rem;
 }
 
+/* Latest Reward Container */
+.latest-reward-container {
+  display: flex;
+  justify-content: center;
+  margin: 2rem 0;
+}
+
+.latest-reward-card {
+  background: linear-gradient(145deg, #f8f9fa, #e9ecef);
+  border-radius: 20px;
+  padding: 2rem;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15);
+  transition: all 0.3s ease;
+  border: 2px solid rgba(26, 95, 122, 0.2);
+  max-width: 500px;
+  width: 100%;
+  text-align: center;
+}
+
+.latest-reward-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+  border-color: #1a5f7a;
+}
+
 .rewards-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
@@ -132,6 +157,31 @@
 .reward-card:hover {
   transform: translateY(-5px);
   box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
+  border-color: #1a5f7a;
+}
+
+/* Latest Reward Container */
+.latest-reward-container {
+  display: flex;
+  justify-content: center;
+  margin: 2rem 0;
+}
+
+.latest-reward-card {
+  background: linear-gradient(145deg, #f8f9fa, #e9ecef);
+  border-radius: 20px;
+  padding: 2rem;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15);
+  transition: all 0.3s ease;
+  border: 2px solid rgba(26, 95, 122, 0.2);
+  max-width: 500px;
+  width: 100%;
+  text-align: center;
+}
+
+.latest-reward-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
   border-color: #1a5f7a;
 }
 
@@ -245,6 +295,31 @@
   color: #28a745;
   font-weight: 500;
   font-size: 0.9rem;
+}
+
+.achievement-description {
+  margin: 0.5rem 0 0 0;
+  color: #495057;
+  font-size: 0.85rem;
+  font-style: italic;
+  line-height: 1.4;
+  background: rgba(26, 95, 122, 0.05);
+  padding: 0.5rem;
+  border-radius: 8px;
+  border-left: 3px solid #1a5f7a;
+}
+
+/* Achievement Description */
+.achievement-description {
+  margin: 0.5rem 0 0 0;
+  color: #495057;
+  font-size: 0.85rem;
+  font-style: italic;
+  line-height: 1.4;
+  background: rgba(26, 95, 122, 0.05);
+  padding: 0.5rem;
+  border-radius: 8px;
+  border-left: 3px solid #1a5f7a;
 }
 
 /* Loading State */

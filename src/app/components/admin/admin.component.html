@@ -224,10 +224,19 @@
         <p>Nenhum usuário encontrado</p>
       </div>
 
-      <div *ngIf="!isLoadingUsers" class="users-list">
-        <div *ngFor="let user of filteredUsers" class="user-item">
+      <div *ngIf="!isLoadingUsers" class="users-list">        <div *ngFor="let user of filteredUsers" class="user-item">
           <div class="user-info">
-            <span class="user-name">{{ user.username }}</span>
+            <div class="user-identity">
+              <span class="user-name">{{ user.username }}</span>
+              <!-- Seção de badges de recompensas abaixo do nome -->
+              <div class="user-rewards" *ngIf="user.userRewards && user.userRewards.length > 0">
+                <app-reward-badges-inline
+                  [userRewards]="user.userRewards"
+                  [maxBadges]="2"
+                  [showTooltip]="true">
+                </app-reward-badges-inline>
+              </div>
+            </div>
             <div class="user-badges">
               <span *ngIf="user.isAdmin" class="user-badge admin-badge">Admin</span>
               <span *ngIf="user.isMainAdmin" class="user-badge main-admin-badge">Principal</span>

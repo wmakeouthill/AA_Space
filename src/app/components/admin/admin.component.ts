@@ -4,6 +4,8 @@ import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { Router } from '@angular/router';
 import { ApiService, BlockedIp } from '../../services/api.service'; // Import BlockedIp
 import { AuthService } from '../../services/auth.service';
+import { FrontendUserReward } from '../../models/chat/chat.interface';
+import { RewardBadgesInlineComponent } from '../reward-badges-inline/reward-badges-inline.component';
 
 interface AdminUser {
   id?: number;
@@ -21,12 +23,13 @@ interface User {
   isAdmin: boolean;
   isMainAdmin?: boolean;
   lastIpAddress?: string; // Adicionar lastIpAddress
+  userRewards?: FrontendUserReward[]; // Adicionar recompensas do usuário
 }
 
 @Component({
   selector: 'app-admin',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, RewardBadgesInlineComponent],
   templateUrl: './admin.component.html',
   styleUrl: './admin.component.css'
 })
