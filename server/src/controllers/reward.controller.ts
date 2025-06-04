@@ -35,16 +35,36 @@ export const getUserRewards = async (req: AuthRequest, res: Response) => { // Al
     }
 };
 
+export const getUserRewardsByUsername = async (req: AuthRequest, res: Response) => {
+    try {
+        const username = req.params.username;
+        if (!username) {
+            return res.status(400).json({ message: 'Username é obrigatório' });
+        }
+        const userRewards = await rewardService.getUserRewardsByUsername(username);
+        res.json(userRewards);
+    } catch (error) {
+        if (error instanceof Error) {
+            if (error.message === 'Usuário não encontrado') {
+                return res.status(404).json({ message: error.message });
+            }
+            res.status(500).json({ message: error.message });
+        } else {
+            res.status(500).json({ message: 'Erro desconhecido ao buscar recompensas do usuário' });
+        }
+    }
+};
+
 export const grantRewardToUser = async (req: AuthRequest, res: Response) => { // Alterado para AuthRequest
     try {
-        const { userId, rewardId } = req.body;
+        const { username, rewardId } = req.body;
         const awardedByUserId = (req.user as User).id; // Pega o ID do usuário autenticado (que está concedendo)
 
-        if (!userId || !rewardId) {
-            return res.status(400).json({ message: 'userId e rewardId são obrigatórios' });
+        if (!username || !rewardId) {
+            return res.status(400).json({ message: 'username e rewardId são obrigatórios' });
         }
 
-        const newReward = await rewardService.grantRewardToUser(userId, rewardId, awardedByUserId);
+        const newReward = await rewardService.grantRewardToUserByUsername(username, rewardId, awardedByUserId);
         res.status(201).json(newReward);
     } catch (error) {
         if (error instanceof Error) {

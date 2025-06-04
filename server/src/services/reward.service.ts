@@ -10,16 +10,24 @@ export class RewardService {
 
     async getAllRewards(): Promise<Reward[]> {
         return this.rewardRepository.find();
-    }
-
-    async getUserRewards(userId: number): Promise<UserReward[]> {
+    }    async getUserRewards(userId: number): Promise<UserReward[]> {
         return this.userRewardRepository.find({
             where: { user_id: userId },
             relations: ['reward'], // Para incluir os detalhes da recompensa
         });
     }
 
-    async grantRewardToUser(userId: number, rewardId: number, awardedByUserId: number): Promise<UserReward> {
+    async getUserRewardsByUsername(username: string): Promise<UserReward[]> {
+        const user = await this.userRepository.findOneBy({ username: username });
+        if (!user) {
+            throw new Error('Usuário não encontrado');
+        }
+
+        return this.userRewardRepository.find({
+            where: { user_id: user.id },
+            relations: ['reward'], // Para incluir os detalhes da recompensa
+        });
+    }async grantRewardToUser(userId: number, rewardId: number, awardedByUserId: number): Promise<UserReward> {
         const user = await this.userRepository.findOneBy({ id: userId });
         if (!user) {
             throw new Error('Usuário não encontrado');
@@ -46,6 +54,43 @@ export class RewardService {
 
         const newUserReward = this.userRewardRepository.create({
             user_id: userId,
+            reward_id: rewardId,
+            awardedByUserId: awardedByUserId,
+            user: user,
+            reward: reward,
+            awardedBy: awardedByUser
+        });
+
+        return this.userRewardRepository.save(newUserReward);
+    }
+
+    async grantRewardToUserByUsername(username: string, rewardId: number, awardedByUserId: number): Promise<UserReward> {
+        const user = await this.userRepository.findOneBy({ username: username });
+        if (!user) {
+            throw new Error('Usuário não encontrado');
+        }
+
+        const reward = await this.rewardRepository.findOneBy({ id: rewardId });
+        if (!reward) {
+            throw new Error('Recompensa não encontrada');
+        }
+
+        const awardedByUser = await this.userRepository.findOneBy({ id: awardedByUserId });
+        if (!awardedByUser) {
+            throw new Error('Usuário que está concedendo a recompensa não encontrado');
+        }
+
+        // Verifica se o usuário já possui esta recompensa
+        const existingUserReward = await this.userRewardRepository.findOne({
+            where: { user_id: user.id, reward_id: rewardId }
+        });
+
+        if (existingUserReward) {
+            throw new Error('Usuário já possui esta recompensa');
+        }
+
+        const newUserReward = this.userRewardRepository.create({
+            user_id: user.id,
             reward_id: rewardId,
             awardedByUserId: awardedByUserId,
             user: user,

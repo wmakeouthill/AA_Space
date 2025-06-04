@@ -9,14 +9,12 @@
     {{ errorMessage }}
   </div>
 
-  <form [formGroup]="grantRewardForm" (ngSubmit)="onSubmit()">
-    <div class="mb-3">
-      <label for="userId" class="form-label">ID do Usuário:</label>
-      <input type="text" id="userId" formControlName="userId" class="form-control"
-             [ngClass]="{ 'is-invalid': grantRewardForm.get('userId')?.invalid && grantRewardForm.get('userId')?.touched }">
-      <div *ngIf="grantRewardForm.get('userId')?.invalid && grantRewardForm.get('userId')?.touched" class="invalid-feedback">
-        <div *ngIf="grantRewardForm.get('userId')?.errors?.['required']">ID do usuário é obrigatório.</div>
-        <div *ngIf="grantRewardForm.get('userId')?.errors?.['pattern']">ID do usuário deve ser um número.</div>
+  <form [formGroup]="grantRewardForm" (ngSubmit)="onSubmit()">    <div class="mb-3">
+      <label for="username" class="form-label">Username do Usuário:</label>
+      <input type="text" id="username" formControlName="username" class="form-control"
+             [ngClass]="{ 'is-invalid': grantRewardForm.get('username')?.invalid && grantRewardForm.get('username')?.touched }">
+      <div *ngIf="grantRewardForm.get('username')?.invalid && grantRewardForm.get('username')?.touched" class="invalid-feedback">
+        <div *ngIf="grantRewardForm.get('username')?.errors?.['required']">Username é obrigatório.</div>
       </div>
     </div>
 

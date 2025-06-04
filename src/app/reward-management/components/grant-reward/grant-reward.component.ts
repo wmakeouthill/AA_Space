@@ -19,13 +19,12 @@ export class GrantRewardComponent implements OnInit {
   successMessage: string | null = null;
   errorMessage: string | null = null;
   isLoadingRewards = false;
-  isSubmitting = false;
-  constructor(
+  isSubmitting = false;  constructor(
     private fb: FormBuilder,
     private apiService: ApiService
   ) {
     this.grantRewardForm = this.fb.group({
-      userId: ['', [Validators.required, Validators.pattern(/^[0-9]+$/)]],
+      username: ['', Validators.required],
       rewardId: ['', Validators.required]
     });
     this.rewards$ = of([]);
@@ -53,12 +52,12 @@ export class GrantRewardComponent implements OnInit {
     if (this.grantRewardForm.invalid) {
       this.errorMessage = 'Formulário inválido. Verifique os campos.';
       return;
-    }
+    }    this.isSubmitting = true;
+    const { username, rewardId } = this.grantRewardForm.value;
 
-    this.isSubmitting = true;
-    const { userId, rewardId } = this.grantRewardForm.value;    this.apiService.grantRewardToUser(Number(userId), Number(rewardId)).subscribe({
+    this.apiService.grantRewardToUserByUsername(username, Number(rewardId)).subscribe({
       next: (response: any) => {
-        this.successMessage = `Recompensa "${response.reward.name}" concedida com sucesso ao usuário ID ${userId}!`;
+        this.successMessage = `Recompensa "${response.reward.name}" concedida com sucesso ao usuário ${username}!`;
         this.grantRewardForm.reset();
         this.isSubmitting = false;
       },

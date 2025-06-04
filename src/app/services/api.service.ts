@@ -183,13 +183,20 @@ export class ApiService {
   getAllRewards(): Observable<Reward[]> {
     return this.http.get<Reward[]>(`${this.API_URL}/rewards`);
   }
-
   getUserRewards(userId: number): Observable<UserReward[]> {
     return this.http.get<UserReward[]>(`${this.API_URL}/rewards/user/${userId}`);
   }
 
+  getUserRewardsByUsername(username: string): Observable<UserReward[]> {
+    return this.http.get<UserReward[]>(`${this.API_URL}/rewards/username/${username}`);
+  }
+
   grantRewardToUser(userId: number, rewardId: number): Observable<UserReward> {
     return this.http.post<UserReward>(`${this.API_URL}/rewards/grant`, { userId, rewardId });
+  }
+
+  grantRewardToUserByUsername(username: string, rewardId: number): Observable<UserReward> {
+    return this.http.post<UserReward>(`${this.API_URL}/rewards/grant`, { username, rewardId });
   }
 
   seedRewards(): Observable<any> {

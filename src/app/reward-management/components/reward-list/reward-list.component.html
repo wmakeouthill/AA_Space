@@ -1,7 +1,6 @@
 <div class="reward-list-container">
   <h2>Gerenciamento de Recompensas</h2>
-
-  <div class="actions">
+  <div class="actions-section">
     <a routerLink="/reward-management/grant" class="btn btn-primary">Conceder Recompensa</a>
     <button (click)="seedInitialRewards()" class="btn btn-secondary">Semear Recompensas Iniciais</button>
   </div>
@@ -9,29 +8,18 @@
   <div *ngIf="error" class="alert alert-danger">
     {{ error }}
   </div>
-
   <div *ngIf="rewards$ | async as rewards; else loadingOrEmpty">
     <div *ngIf="rewards.length > 0; else noRewards">
-      <table class="table table-striped">
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Marco (Milestone)</th>
-            <th>Nome</th>
-            <th>Conceito do Design</th>
-            <th>Paleta de Cores</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr *ngFor="let reward of rewards">
-            <td>{{ reward.id }}</td>
-            <td>{{ reward.milestone }}</td>
-            <td>{{ reward.name }}</td>
-            <td>{{ reward.designConcept }}</td>
-            <td>{{ reward.colorPalette }}</td>
-          </tr>
-        </tbody>
-      </table>
+      <div class="rewards-grid">
+        <div *ngFor="let reward of rewards" class="reward-card">
+          <h3>{{ reward.name }}</h3>
+          <div class="reward-milestone">Marco: {{ reward.milestone }}</div>
+          <div class="reward-description">
+            <strong>Design:</strong> {{ reward.designConcept }}<br>
+            <strong>Cores:</strong> {{ reward.colorPalette }}
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -40,9 +28,8 @@
       Carregando recompensas...
     </div>
   </ng-template>
-
   <ng-template #noRewards>
-    <div *ngIf="!error" class="empty-message">
+    <div *ngIf="!error" class="loading-message">
       Nenhuma recompensa encontrada. Você pode tentar semear as recompensas iniciais.
     </div>
   </ng-template>
