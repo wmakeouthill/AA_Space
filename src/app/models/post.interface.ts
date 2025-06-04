@@ -1,3 +1,15 @@
+import { FrontendUserReward } from './chat/chat.interface';
+
+// Interface for rewards as returned by the backend in authorRewards
+export interface AuthorReward {
+    id: number;
+    name: string;
+    designConcept: string;
+    colorPalette: string;
+    iconUrl?: string;
+    dateEarned: string | Date;
+}
+
 export interface Post {
     id: number;
     title: string;
@@ -11,8 +23,10 @@ export interface Post {
     user?: {
         id: number;
         username?: string;
+        userRewards?: FrontendUserReward[];
     };
     user_id?: number; // Adicionando propriedade opcional user_id
+    authorRewards?: AuthorReward[]; // Recompensas do autor do post
 }
 
 export interface Comment {
@@ -28,8 +42,10 @@ export interface Comment {
     user?: {
         id: number;
         username?: string;
+        userRewards?: FrontendUserReward[];
     };
     user_id?: number; // Adicionando propriedade opcional user_id para comentários
+    authorRewards?: AuthorReward[]; // Recompensas do autor do comentário
 }
 
 export interface PostLike {

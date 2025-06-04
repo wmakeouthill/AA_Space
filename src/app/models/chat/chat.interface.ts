@@ -15,6 +15,7 @@ export interface ChatParticipant {
     username: string;
     isAdmin?: boolean;
     profileImage?: string; // URL da imagem de perfil do participante
+    userRewards?: FrontendUserReward[]; // Recompensas do participante
 }
 
 export interface Message {
@@ -24,6 +25,7 @@ export interface Message {
     senderId: number;
     senderName?: string;
     senderProfileImage?: string; // URL da imagem de perfil do remetente
+    senderRewards?: FrontendUserReward[]; // Recompensas do remetente
     timestamp: Date | string;
     read: boolean;
     status?: 'sent' | 'delivered' | 'read'; // Novo campo para status da mensagem

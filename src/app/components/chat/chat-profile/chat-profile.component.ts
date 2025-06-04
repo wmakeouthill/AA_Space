@@ -4,14 +4,15 @@ import { FormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
 import { AuthService } from '../../../services/auth.service';
 import { ProfileService } from '../../../services/profile.service';
-import { FrontendUserReward } from '../../../models/chat/chat.interface'; // Added import
+import { FrontendUserReward } from '../../../models/chat/chat.interface';
+import { RewardBadgesInlineComponent } from '../../reward-badges-inline/reward-badges-inline.component';
 
 @Component({
   selector: 'app-chat-profile',
   templateUrl: './chat-profile.component.html',
   styleUrls: ['./chat-profile.component.css'],
   standalone: true,
-  imports: [CommonModule, FormsModule]
+  imports: [CommonModule, FormsModule, RewardBadgesInlineComponent]
 })
 export class ChatProfileComponent implements OnInit, OnDestroy {
   profileImage: string | null = null;

@@ -1,0 +1,23 @@
+<div class="reward-badge"
+     [class]="'size-' + size"
+     [style.border-color]="getRewardColor()"
+     [title]="showTooltip ? getTooltipText() : ''">
+
+  <div class="badge-icon" [style.background-color]="getRewardColor()">
+    <span class="icon-emoji">{{ getRewardIcon() }}</span>
+  </div>
+
+  <div class="badge-content" *ngIf="showDetails">
+    <h4 class="reward-name">{{ userReward.reward.name }}</h4>
+    <p class="reward-milestone">Marco: {{ userReward.reward.milestone }}</p>
+    <p class="reward-date">{{ userReward.dateEarned | date:'dd/MM/yyyy' }}</p>
+    <p class="reward-description" *ngIf="userReward.reward.designConcept">
+      {{ userReward.reward.designConcept }}
+    </p>
+  </div>
+
+  <!-- Mini badge for inline display -->
+  <div class="mini-badge" *ngIf="!showDetails && size === 'small'">
+    <span class="mini-icon">{{ getRewardIcon() }}</span>
+  </div>
+</div>

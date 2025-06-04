@@ -222,6 +222,43 @@
   background-color: rgba(0, 0, 0, 0.7);
 }
 
+/* Rewards section styles */
+.profile-rewards-section {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #e8e8e8;
+}
+
+.rewards-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.rewards-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.rewards-display {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.no-rewards-message {
+  font-size: 11px;
+  color: #999;
+  font-style: italic;
+}
+
+.no-rewards-message span {
+  opacity: 0.8;
+}
+
 /* Tablet */
 @media (max-width: 768px) {
   .profile-container {
@@ -337,5 +374,21 @@
     width: 25px;
     height: 25px;
     font-size: 16px;
+  }
+}
+
+/* Rewards section responsive design */
+@media (max-width: 480px) {
+  .profile-rewards-section {
+    margin-top: 6px;
+    padding-top: 6px;
+  }
+
+  .rewards-title {
+    font-size: 10px;
+  }
+
+  .no-rewards-message {
+    font-size: 10px;
   }
 }

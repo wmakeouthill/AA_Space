@@ -6,6 +6,7 @@ import { AuthComponent } from './components/auth/auth.component';
 import { WelcomeDialogComponent } from './components/welcome-dialog/welcome-dialog.component';
 import { AdminComponent } from './components/admin/admin.component';
 import { ChatComponent } from './components/chat/chat.component';
+import { ProfileComponent } from './components/profile/profile.component';
 import { authGuard } from './guards/auth.guard';
 import { roleGuard } from './guards/role.guard';
 import { RewardListComponent } from './reward-management/components/reward-list/reward-list.component';
@@ -19,6 +20,8 @@ export const routes: Routes = [
   { path: 'auth', component: AuthComponent },
   { path: 'admin', component: AdminComponent, canActivate: [authGuard] },
   { path: 'chat', component: ChatComponent, canActivate: [authGuard] },
+  { path: 'profile', component: ProfileComponent, canActivate: [authGuard] },
+  { path: 'profile/:username', component: ProfileComponent },
   // Rotas de recompensas centralizadas
   { path: 'reward-management', component: RewardListComponent, canActivate: [roleGuard], data: { roles: ['admin', 'leader'] } },
   { path: 'reward-management/grant', component: GrantRewardComponent, canActivate: [roleGuard], data: { roles: ['admin', 'leader'] } },

@@ -20,7 +20,15 @@
           <a [routerLink]="['/post', post.id]">{{ post.title }}</a>
         </h2>
         <p class="post-info">
-          Compartilhado por {{ post.author }} • {{ post.created_at | date:'dd/MM/yyyy HH:mm' }}
+          <span class="author-section">
+            Compartilhado por {{ post.author }}
+            <app-reward-badges-inline
+              [userRewards]="getPostAuthorRewards(post)"
+              [maxBadges]="2"
+              class="author-rewards">
+            </app-reward-badges-inline>
+          </span>
+          • {{ post.created_at | date:'dd/MM/yyyy HH:mm' }}
           <button *ngIf="isPostAuthor(post)" class="delete-button-small" title="Excluir postagem" (click)="deletePost(post.id, $event)">
             <span class="delete-icon-small">Excluir post 🗑️</span>
           </button>

@@ -2,12 +2,13 @@ import { ChangeDetectionStrategy, ChangeDetectorRef, Component, ElementRef, Inpu
 import { CommonModule } from '@angular/common';
 import { Message, ChatParticipant, MessageStatusUpdate } from '../../../../models/chat/chat.interface'; // Added MessageStatusUpdate
 import { ChatService } from '../../../../services/chat.service';
+import { RewardBadgesInlineComponent } from '../../../reward-badges-inline/reward-badges-inline.component';
 import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-chat-messages',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, RewardBadgesInlineComponent],
   template: `
     <div class="messages-container" #scrollMe>
       <div *ngIf="messages.length === 0" class="no-messages">
@@ -23,9 +24,12 @@ import { Subscription } from 'rxjs';
         </div>
 
         <div class="message-content-wrapper">
-          <div class="message-bubble">
-            <div class="message-sender" *ngIf="message.senderId !== currentUserId && message.senderId !== undefined && isGroup">
+          <div class="message-bubble">            <div class="message-sender" *ngIf="message.senderId !== currentUserId && message.senderId !== undefined && isGroup">
               {{ getSenderName(message) }}
+              <app-reward-badges-inline
+                [userRewards]="getSenderRewards(message)"
+                [maxBadges]="2">
+              </app-reward-badges-inline>
             </div>
             <div class="message-content">{{ message.content }}</div>
             <div class="message-time">
@@ -433,6 +437,16 @@ export class ChatMessagesComponent implements OnInit, OnChanges, AfterViewChecke
         }
     }
     return null;
+  }
+
+  getSenderRewards(message: Message): any[] {
+    if (!message) return [];
+    if (message.senderId !== this.currentUserId) {
+      if (message.senderRewards) return message.senderRewards;
+      const participant = this.participants.find(p => p.id === message.senderId);
+      return participant?.userRewards || [];
+    }
+    return [];
   }
 
   ngOnDestroy(): void {

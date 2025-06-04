@@ -279,12 +279,17 @@ export const getCurrentUserProfile = async (req: Request, res: Response) => {
         if (!userId) {
             console.log('[PROFILE CONTROLLER] Usuário não autenticado');
             return res.status(401).json({ message: 'Usuário não autenticado' });
-        }
-
-        // Buscar informações do usuário
+        }        // Buscar informações do usuário com recompensas
         const userRepository = AppDataSource.getRepository(User);
-        console.log('[PROFILE CONTROLLER] Buscando usuário no banco de dados');
-        const user = await userRepository.findOneBy({ id: userId });
+        console.log('[PROFILE CONTROLLER] Buscando usuário no banco de dados com recompensas');
+        const user = await userRepository.findOne({
+            where: { id: userId },
+            relations: {
+                userRewards: {
+                    reward: true
+                }
+            }
+        });
 
         if (!user) {
             console.log('[PROFILE CONTROLLER] Usuário não encontrado');
@@ -292,13 +297,27 @@ export const getCurrentUserProfile = async (req: Request, res: Response) => {
         }
 
         console.log('[PROFILE CONTROLLER] Usuário encontrado:', user.username);
+        console.log('[PROFILE CONTROLLER] Recompensas encontradas:', user.userRewards?.length || 0);
+
         return res.status(200).json({
             id: user.id,
             username: user.username,
             email: user.email,
             phone: user.phone,
             profileImage: user.profileImage,
-            isAdmin: user.isAdmin
+            isAdmin: user.isAdmin,
+            userRewards: user.userRewards?.map(ur => ({
+                id: ur.id,
+                reward: {
+                    id: ur.reward.id,
+                    name: ur.reward.name,
+                    milestone: ur.reward.milestone,
+                    designConcept: ur.reward.designConcept,
+                    colorPalette: ur.reward.colorPalette,
+                    iconUrl: ur.reward.iconUrl
+                },
+                dateEarned: ur.dateEarned
+            })) || []
         });
     } catch (error) {
         console.error('Erro ao buscar perfil do usuário:', error);

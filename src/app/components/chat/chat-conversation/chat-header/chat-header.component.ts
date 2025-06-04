@@ -1,12 +1,13 @@
 import { Component, Input, OnChanges, ViewChild, ElementRef, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Chat, ChatParticipant } from '../../../../models/chat/chat.interface';
+import { Chat, ChatParticipant, FrontendUserReward } from '../../../../models/chat/chat.interface';
 import { ChatService } from '../../../../services/chat.service';
+import { RewardBadgesInlineComponent } from '../../../reward-badges-inline/reward-badges-inline.component';
 
 @Component({
   selector: 'app-chat-header',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, RewardBadgesInlineComponent],
   template: `
     <div class="chat-header">
       <div class="chat-info" *ngIf="chat">
@@ -22,9 +23,16 @@ import { ChatService } from '../../../../services/chat.service';
             <button (click)="selectGroupAvatarFile()">Mudar Foto</button>
             <button (click)="removeCurrentGroupAvatar()" *ngIf="chat.avatarPath">Remover Foto</button>
           </div>
-        </div>
-        <div class="chat-user-info">
-          <h3>{{ chat.isGroup ? (chat.name || 'Grupo') : getParticipantName(chat) }}</h3>
+        </div>        <div class="chat-user-info">
+          <div class="user-name-container">
+            <h3>{{ chat.isGroup ? (chat.name || 'Grupo') : getParticipantName(chat) }}</h3>
+            <app-reward-badges-inline
+              *ngIf="!chat.isGroup && getParticipantRewards().length > 0"
+              [userRewards]="getParticipantRewards()"
+              [maxBadges]="2"
+              [showTooltip]="true">
+            </app-reward-badges-inline>
+          </div>
           <div class="participants" *ngIf="chat.isGroup">
             {{ chat.participants.length }} participantes
             <span *ngIf="isCurrentUserAdminInGroup()" class="admin-badge">(Admin)</span>
@@ -98,11 +106,16 @@ import { ChatService } from '../../../../services/chat.service';
 
     .avatar-menu button:hover {
       background-color: #f0f0f0;
-    }
-
-    .chat-user-info {
+    }    .chat-user-info {
       flex: 1;
       min-width: 0;
+    }
+
+    .user-name-container {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
     }
 
     .chat-info h3 {
@@ -112,6 +125,7 @@ import { ChatService } from '../../../../services/chat.service';
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      flex-shrink: 0;
     }
 
     .participants {
@@ -283,7 +297,6 @@ export class ChatHeaderComponent implements OnChanges {
     }
     return this.chatService.formatImageUrl('/assets/images/user.png');
   }
-
   getGroupImage(): string {
     if (this.chat?.avatarPath) {
       return this.chatService.formatImageUrl(this.chat.avatarPath);
@@ -292,5 +305,15 @@ export class ChatHeaderComponent implements OnChanges {
       return this.chatService.formatImageUrl('/assets/images/admin-group.png');
     }
     return this.chatService.formatImageUrl('/assets/images/group.png');
+  }  /**
+   * Get rewards for the other participant in a 1-on-1 chat
+   */
+  getParticipantRewards(): FrontendUserReward[] {
+    if (!this.chat || this.chat.isGroup) {
+      return [];
+    }
+
+    const otherParticipant = this.chatService.getOtherParticipant(this.chat, this.currentUserId);
+    return otherParticipant?.userRewards || [];
   }
 }

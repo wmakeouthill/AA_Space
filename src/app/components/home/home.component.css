@@ -116,6 +116,17 @@
   margin-bottom: 1rem;
 }
 
+/* Author section with rewards */
+.author-section {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.author-rewards {
+  margin-left: 0.25rem;
+}
+
 .post-preview {
   color: #333;
   margin-bottom: 1.5rem;

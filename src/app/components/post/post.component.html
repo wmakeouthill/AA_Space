@@ -11,7 +11,14 @@
     <div class="post-header">
       <h1>{{ post.title }}</h1>
       <div class="post-meta">
-        <span>Por {{ post.author }}</span>
+        <div class="author-section">
+          <span>Por {{ post.author }}</span>
+          <app-reward-badges-inline
+            [userRewards]="getAuthorRewards()"
+            [maxBadges]="2"
+            class="author-rewards">
+          </app-reward-badges-inline>
+        </div>
         <span>• {{ post.created_at | date:'dd/MM/yyyy HH:mm' }}</span>
         <button *ngIf="isCurrentUserAuthor" class="delete-button-small" title="Excluir postagem" (click)="deletePost()">
           <span class="delete-icon-small">Excluir post 🗑️</span>
@@ -60,7 +67,14 @@
         <div *ngFor="let comment of comments" class="comment">
           <div class="comment-header">
             <div class="comment-meta">
-              <span class="comment-author">{{ comment.author }}</span>
+              <div class="comment-author-section">
+                <span class="comment-author">{{ comment.author }}</span>
+                <app-reward-badges-inline
+                  [userRewards]="getCommentAuthorRewards(comment)"
+                  [maxBadges]="2"
+                  class="comment-author-rewards">
+                </app-reward-badges-inline>
+              </div>
               <span class="comment-date">• {{ comment.created_at | date:'dd/MM/yyyy HH:mm' }}</span>
               <button *ngIf="isCommentAuthor(comment)" class="delete-button-small" title="Excluir comentário" (click)="deleteComment(comment)">
                 <span class="delete-icon-small">Excluir 🗑️</span>

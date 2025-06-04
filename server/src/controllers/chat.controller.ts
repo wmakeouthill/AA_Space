@@ -87,12 +87,12 @@ export const getUserConversations = async (req: Request, res: Response) => {
 
         if (conversationIds.length === 0) {
             return res.json({ conversations: [] });
-        }
-
-        const conversations = await conversationRepository
+        }        const conversations = await conversationRepository
             .createQueryBuilder('conversation')
             .leftJoinAndSelect('conversation.participants', 'participants')
             .leftJoinAndSelect('participants.user', 'participantUser')
+            .leftJoinAndSelect('participantUser.userRewards', 'userRewards')
+            .leftJoinAndSelect('userRewards.reward', 'reward')
             .where('conversation.id IN (:...ids)', { ids: conversationIds })
             .orderBy('conversation.updatedAt', 'DESC')
             .getMany();
@@ -135,14 +135,25 @@ export const getUserConversations = async (req: Request, res: Response) => {
                 id: conv.id,
                 name: conversationName,
                 isGroup: conv.isGroup,
-                avatarPath: conversationImage,
-                participants: currentParticipants.map(p => {
+                avatarPath: conversationImage,                participants: currentParticipants.map(p => {
                     if (!p) return null;
                     return {
                         id: p.userId,
                         username: p.user ? p.user.username : 'Unknown User',
                         profileImage: p.user ? p.user.profileImage : null,
-                        isAdmin: p.isAdmin
+                        isAdmin: p.isAdmin,
+                        userRewards: p.user?.userRewards?.map(ur => ({
+                            id: ur.id,
+                            reward: {
+                                id: ur.reward.id,
+                                name: ur.reward.name,
+                                milestone: ur.reward.milestone,
+                                designConcept: ur.reward.designConcept,
+                                colorPalette: ur.reward.colorPalette,
+                                iconUrl: ur.reward.iconUrl
+                            },
+                            dateEarned: ur.dateEarned
+                        })) || []
                     };
                 }).filter(p => p !== null),
                 lastMessage: lastMessage ? {

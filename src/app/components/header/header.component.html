@@ -12,6 +12,7 @@
     <nav class="nav-links" [class.active]="isMenuOpen">
       <a routerLink="/" class="nav-link" (click)="isMenuOpen = false">Início</a>
       <a routerLink="/create" class="nav-link" (click)="isMenuOpen = false">Compartilhar História</a>
+      <a *ngIf="isLoggedIn" routerLink="/profile" class="nav-link" (click)="isMenuOpen = false">Perfil</a>
       <a *ngIf="isLoggedIn" routerLink="/chat" class="nav-link" (click)="isMenuOpen = false">
         Chat
         <span *ngIf="totalUnreadMessages > 0" class="unread-badge badge">{{ totalUnreadMessages }}</span>

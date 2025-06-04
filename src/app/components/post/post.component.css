@@ -47,6 +47,18 @@
   gap: 0.5rem;
 }
 
+/* Author section with rewards */
+.author-section {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.author-rewards {
+  margin-left: 0.25rem;
+}
+
 .post-body {
   line-height: 1.6;
   margin-bottom: 2rem;
@@ -252,6 +264,18 @@ textarea:focus {
 
 .comment-content {
   line-height: 1.5;
+}
+
+/* Comment author section with rewards */
+.comment-author-section {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.comment-author-rewards {
+  margin-left: 0.25rem;
 }
 
 .no-comments {

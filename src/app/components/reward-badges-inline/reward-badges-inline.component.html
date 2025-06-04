@@ -1,0 +1,14 @@
+<span class="reward-badges-inline" *ngIf="hasRewards()">
+  <span *ngFor="let reward of getTopRewards()"
+        class="inline-badge"
+        [style.background-color]="getRewardColor(reward)"
+        [title]="showTooltip ? getTooltipText(reward) : ''">
+    {{ getRewardIcon(reward) }}
+  </span>
+
+  <span *ngIf="getExtraCount() > 0"
+        class="extra-count"
+        [title]="'Mais ' + getExtraCount() + ' recompensa(s)'">
+    +{{ getExtraCount() }}
+  </span>
+</span>

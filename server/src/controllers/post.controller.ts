@@ -18,6 +18,8 @@ export const getPosts = async (req: Request, res: Response) => {
         const posts = await postRepository
             .createQueryBuilder('post')
             .leftJoinAndSelect('post.user', 'user')
+            .leftJoinAndSelect('user.userRewards', 'userRewards')
+            .leftJoinAndSelect('userRewards.reward', 'reward')
             .leftJoinAndSelect('post.comments', 'comments')
             .leftJoinAndSelect('post.postLikes', 'postLikes')
             .leftJoinAndSelect('postLikes.user', 'likeUser')
@@ -51,7 +53,16 @@ export const getPosts = async (req: Request, res: Response) => {
                 author,
                 comment_count: post.comments?.length || 0,
                 likes: totalLikes,
-                userLiked: !!hasLike
+                userLiked: !!hasLike,
+                // Adicionar recompensas do autor
+                authorRewards: post.user?.userRewards ? post.user.userRewards.map(userReward => ({
+                    id: userReward.reward.id,
+                    name: userReward.reward.name,
+                    designConcept: userReward.reward.designConcept,
+                    colorPalette: userReward.reward.colorPalette,
+                    iconUrl: userReward.reward.iconUrl,
+                    dateEarned: userReward.dateEarned
+                })) : []
             };
         }));
 
@@ -75,6 +86,8 @@ export const getPost = async (req: Request, res: Response) => {
         const post = await postRepository
             .createQueryBuilder('post')
             .leftJoinAndSelect('post.user', 'user')
+            .leftJoinAndSelect('user.userRewards', 'userRewards')
+            .leftJoinAndSelect('userRewards.reward', 'reward')
             .leftJoinAndSelect('post.postLikes', 'postLikes')
             .leftJoinAndSelect('postLikes.user', 'likeUser')
             .where('post.id = :id', { id: parseInt(id) })
@@ -119,7 +132,16 @@ export const getPost = async (req: Request, res: Response) => {
                 username: post.user.username
             } : null,
             // Adicionar user_id explicitamente para facilitar a verificação de autoria
-            user_id: post.user ? post.user.id : null
+            user_id: post.user ? post.user.id : null,
+            // Adicionar recompensas do autor
+            authorRewards: post.user?.userRewards ? post.user.userRewards.map(userReward => ({
+                id: userReward.reward.id,
+                name: userReward.reward.name,
+                designConcept: userReward.reward.designConcept,
+                colorPalette: userReward.reward.colorPalette,
+                iconUrl: userReward.reward.iconUrl,
+                dateEarned: userReward.dateEarned
+            })) : []
         };
 
         // Para debug
@@ -144,12 +166,17 @@ export const createPost = async (req: AuthRequest, res: Response) => {
 
         let userData: DeepPartial<User> | undefined = undefined;
         let author: string;
+        let userWithRewards = null;
 
         if (userId) {
-            const user = await userRepository.findOne({ where: { id: userId } });
+            const user = await userRepository.findOne({
+                where: { id: userId },
+                relations: ['userRewards', 'userRewards.reward']
+            });
             if (user) {
                 userData = { id: user.id } as DeepPartial<User>;
                 author = user.username;
+                userWithRewards = user;
             } else {
                 author = 'Anônimo';
             }
@@ -173,7 +200,15 @@ export const createPost = async (req: AuthRequest, res: Response) => {
 
         const responsePost = {
             ...newPost,
-            author: anonymous ? 'Anônimo' : author
+            author: anonymous ? 'Anônimo' : author,
+            authorRewards: userWithRewards?.userRewards ? userWithRewards.userRewards.map(userReward => ({
+                id: userReward.reward.id,
+                name: userReward.reward.name,
+                designConcept: userReward.reward.designConcept,
+                colorPalette: userReward.reward.colorPalette,
+                iconUrl: userReward.reward.iconUrl,
+                dateEarned: userReward.dateEarned
+            })) : []
         };
 
         res.status(201).json(responsePost);
@@ -200,12 +235,17 @@ export const createComment = async (req: AuthRequest, res: Response) => {
 
         let userData: DeepPartial<User> | undefined = undefined;
         let author: string;
+        let userWithRewards = null;
 
         if (userId) {
-            const user = await userRepository.findOne({ where: { id: userId } });
+            const user = await userRepository.findOne({
+                where: { id: userId },
+                relations: ['userRewards', 'userRewards.reward']
+            });
             if (user) {
                 userData = { id: user.id } as DeepPartial<User>;
                 author = user.username;
+                userWithRewards = user;
             } else {
                 author = 'Anônimo';
             }
@@ -235,7 +275,15 @@ export const createComment = async (req: AuthRequest, res: Response) => {
             post_id: post.id,
             anonymous: newComment.anonymous,
             likes: 0,
-            userLiked: false
+            userLiked: false,
+            authorRewards: userWithRewards?.userRewards ? userWithRewards.userRewards.map(userReward => ({
+                id: userReward.reward.id,
+                name: userReward.reward.name,
+                designConcept: userReward.reward.designConcept,
+                colorPalette: userReward.reward.colorPalette,
+                iconUrl: userReward.reward.iconUrl,
+                dateEarned: userReward.dateEarned
+            })) : []
         };
 
         res.status(201).json(formattedComment);
@@ -400,6 +448,8 @@ export const getComments = async (req: Request, res: Response) => {
         const comments = await commentRepository
             .createQueryBuilder('comment')
             .leftJoinAndSelect('comment.user', 'user')
+            .leftJoinAndSelect('user.userRewards', 'userRewards')
+            .leftJoinAndSelect('userRewards.reward', 'reward')
             .leftJoinAndSelect('comment.post', 'post')
             .where('comment.post.id = :postId', { postId: parseInt(postId) })
             .orderBy('comment.created_at', 'DESC')
@@ -437,7 +487,16 @@ export const getComments = async (req: Request, res: Response) => {
                     id: comment.user.id,
                     username: comment.user.username
                 } : null,
-                user_id: comment.user ? comment.user.id : null
+                user_id: comment.user ? comment.user.id : null,
+                // Adicionar recompensas do autor do comentário
+                authorRewards: comment.user?.userRewards ? comment.user.userRewards.map(userReward => ({
+                    id: userReward.reward.id,
+                    name: userReward.reward.name,
+                    designConcept: userReward.reward.designConcept,
+                    colorPalette: userReward.reward.colorPalette,
+                    iconUrl: userReward.reward.iconUrl,
+                    dateEarned: userReward.dateEarned
+                })) : []
             };
         }));
 

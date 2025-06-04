@@ -1,0 +1,88 @@
+<div class="profile-container">
+  <div *ngIf="userProfile$ | async as userProfile" class="profile-content">
+
+    <!-- Profile Header -->
+    <div class="profile-header">
+      <div class="profile-avatar">
+        <img [src]="userProfile.profileImage || 'assets/images/user.png'"
+             [alt]="userProfile.username"
+             class="avatar-image">
+      </div>
+      <div class="profile-info">
+        <h1 class="username">{{ userProfile.username }}</h1>
+        <div class="profile-stats">
+          <div class="stat-item">
+            <span class="stat-number">{{ getRewardCount(userProfile) }}</span>
+            <span class="stat-label">Recompensas</span>
+          </div>
+          <div class="stat-item" *ngIf="userProfile.isAdmin">
+            <span class="admin-badge">Admin</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Rewards Section -->
+    <div class="rewards-section">
+      <h2 class="section-title">
+        <i class="reward-icon">🏆</i>
+        Minhas Recompensas
+      </h2>
+
+      <div *ngIf="hasRewards(userProfile); else noRewards" class="rewards-grid">
+        <div *ngFor="let userReward of userProfile.userRewards" class="reward-card">
+          <app-reward-badge
+            [userReward]="userReward"
+            [size]="'large'"
+            [showDetails]="true">
+          </app-reward-badge>
+        </div>
+      </div>
+
+      <ng-template #noRewards>
+        <div class="no-rewards">
+          <div class="no-rewards-icon">🎯</div>
+          <h3>Nenhuma recompensa ainda</h3>
+          <p>Continue participando da comunidade para ganhar suas primeiras recompensas!</p>
+        </div>
+      </ng-template>
+    </div>
+
+    <!-- Achievement Gallery -->
+    <div class="achievement-gallery" *ngIf="hasRewards(userProfile)">
+      <h3 class="gallery-title">Galeria de Conquistas</h3>
+      <div class="achievement-timeline">
+        <div *ngFor="let userReward of userProfile.userRewards; let i = index"
+             class="timeline-item"
+             [class.animate-in]="true"
+             [style.animation-delay]="(i * 0.1) + 's'">
+          <div class="timeline-marker"></div>
+          <div class="timeline-content">
+            <div class="achievement-icon">
+              <app-reward-badge
+                [userReward]="userReward"
+                [size]="'medium'"
+                [showDetails]="false">
+              </app-reward-badge>
+            </div>
+            <div class="achievement-details">
+              <h4>{{ userReward.reward.name }}</h4>
+              <p class="achievement-date">
+                Conquistado em {{ userReward.dateEarned | date:'dd/MM/yyyy' }}
+              </p>
+              <p class="achievement-milestone">
+                Marco: {{ userReward.reward.milestone }}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="!(userProfile$ | async)" class="loading-container">
+    <div class="loading-spinner"></div>
+    <p>Carregando perfil...</p>
+  </div>
+</div>

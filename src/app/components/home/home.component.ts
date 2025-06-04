@@ -5,6 +5,7 @@ import { ApiService } from '../../services/api.service';
 import { AuthService } from '../../services/auth.service';
 import { GuestService } from '../../services/guest.service';
 import { Post } from '../../models/post.interface';
+import { RewardBadgesInlineComponent } from '../reward-badges-inline/reward-badges-inline.component';
 
 interface UserInfo {
   id: number;
@@ -14,7 +15,7 @@ interface UserInfo {
 @Component({
   selector: 'app-home',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, RewardBadgesInlineComponent],
   templateUrl: './home.component.html',
   styleUrl: './home.component.css'
 })
@@ -178,5 +179,50 @@ export class HomeComponent implements OnInit {
         this.error = error.error?.message || 'Não foi possível excluir a postagem. Por favor, tente novamente mais tarde.';
       }
     });
+  }
+
+  /**
+   * Get rewards for a post author
+   */
+  getPostAuthorRewards(post: Post) {
+    if (post && post.authorRewards) {
+      // Convert authorRewards to FrontendUserReward format
+      return post.authorRewards.map(reward => ({
+        id: reward.id,
+        reward: {
+          id: reward.id,
+          name: reward.name,
+          milestone: this.getMilestoneFromRewardName(reward.name), // Derive milestone from name
+          designConcept: reward.designConcept,
+          colorPalette: reward.colorPalette,
+          iconUrl: reward.iconUrl
+        },
+        dateEarned: reward.dateEarned
+      }));
+    }
+    return [];
+  }
+
+  /**
+   * Helper method to get milestone from reward name
+   */
+  private getMilestoneFromRewardName(rewardName: string): string {
+    // Map common reward names to milestones
+    const milestoneMap: { [key: string]: string } = {
+      'Nova Aurora': '24 Horas',
+      'Compromisso Firme': '2 Semanas',
+      'Primeira Conexão': 'Primeira Conexão',
+      'Fortaleza Interior': '30 Dias',
+      'Caminho Iluminado': '90 Dias',
+      'Raiz Profunda': '6 Meses',
+      'Fênix Renascida': '1 Ano',
+      'Guardião da Esperança': '2 Anos',
+      'Mentor da Sabedoria': '3 Anos',
+      'Estrela Guia da Sabedoria': '5 Anos',
+      'Carvalho da Fortaleza': '10 Anos',
+      'Farol de Esperança': '15 Anos',
+      'Legado de Inspiração': '20 Anos'
+    };
+    return milestoneMap[rewardName] || 'Unknown';
   }
 }
