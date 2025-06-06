@@ -104,4 +104,39 @@ export class RewardService {
     async findRewardById(rewardId: number): Promise<Reward | null> {
         return this.rewardRepository.findOneBy({ id: rewardId });
     }
+
+    // Novo método para zerar todas as recompensas de um usuário
+    async clearUserRewards(username: string): Promise<{ deletedCount: number }> {
+        const user = await this.userRepository.findOneBy({ username: username });
+        if (!user) {
+            throw new Error('Usuário não encontrado');
+        }
+
+        const result = await this.userRewardRepository.delete({ user_id: user.id });
+        return { deletedCount: result.affected || 0 };
+    }
+
+    // Novo método para remover uma recompensa específica de um usuário
+    async removeUserReward(username: string, rewardId: number): Promise<{ removed: boolean }> {
+        const user = await this.userRepository.findOneBy({ username: username });
+        if (!user) {
+            throw new Error('Usuário não encontrado');
+        }
+
+        const reward = await this.rewardRepository.findOneBy({ id: rewardId });
+        if (!reward) {
+            throw new Error('Recompensa não encontrada');
+        }
+
+        const result = await this.userRewardRepository.delete({
+            user_id: user.id,
+            reward_id: rewardId
+        });
+
+        if (result.affected === 0) {
+            throw new Error('Usuário não possui esta recompensa');
+        }
+
+        return { removed: true };
+    }
 }

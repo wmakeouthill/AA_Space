@@ -146,6 +146,241 @@
   }
 }
 
+/* Novos estilos para gerenciamento de recompensas */
+.management-section {
+  margin: 3rem 0;
+  padding: 2rem;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+}
+
+.management-section h3 {
+  color: #1a5f7a;
+  margin-bottom: 2rem;
+  font-size: 1.5rem;
+  text-align: center;
+}
+
+.management-card {
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 2rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.management-card h4 {
+  color: #1a5f7a;
+  margin-bottom: 1rem;
+  font-size: 1.2rem;
+}
+
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+  color: #495057;
+}
+
+.form-control {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #ced4da;
+  border-radius: 0.375rem;
+  font-size: 1rem;
+  transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.form-control:focus {
+  border-color: #1a5f7a;
+  outline: 0;
+  box-shadow: 0 0 0 0.2rem rgba(26, 95, 122, 0.25);
+}
+
+.form-control.is-invalid {
+  border-color: #dc3545;
+}
+
+.invalid-feedback {
+  display: block;
+  color: #dc3545;
+  font-size: 0.875rem;
+  margin-top: 0.25rem;
+}
+
+.input-group {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.input-group .form-control {
+  flex: 1;
+}
+
+.btn-outline-primary {
+  background-color: transparent;
+  color: #1a5f7a;
+  border: 1px solid #1a5f7a;
+}
+
+.btn-outline-primary:hover:not(:disabled) {
+  background-color: #1a5f7a;
+  color: white;
+}
+
+.btn-danger {
+  background-color: #dc3545;
+  color: white;
+}
+
+.btn-danger:hover:not(:disabled) {
+  background-color: #c82333;
+}
+
+.btn-outline-danger {
+  background-color: transparent;
+  color: #dc3545;
+  border: 1px solid #dc3545;
+}
+
+.btn-outline-danger:hover:not(:disabled) {
+  background-color: #dc3545;
+  color: white;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-sm {
+  padding: 0.375rem 0.75rem;
+  font-size: 0.875rem;
+}
+
+/* Estilos para lista de recompensas do usuário */
+.user-rewards-list {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #e9ecef;
+}
+
+.user-rewards-list h5 {
+  color: #1a5f7a;
+  margin-bottom: 1rem;
+}
+
+.user-rewards-grid {
+  display: grid;
+  gap: 1rem;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.user-reward-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 6px;
+  transition: background-color 0.2s ease;
+}
+
+.user-reward-card:hover {
+  background-color: #e9ecef;
+}
+
+.reward-info h6 {
+  margin: 0 0 0.25rem 0;
+  color: #495057;
+  font-size: 1rem;
+}
+
+.reward-milestone {
+  display: inline-block;
+  background-color: #28a745;
+  color: white;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+
+.reward-date {
+  display: block;
+  color: #6c757d;
+  font-size: 0.75rem;
+}
+
+/* Seção de exibição de recompensas */
+.rewards-display-section {
+  margin-top: 3rem;
+  padding-top: 2rem;
+  border-top: 2px solid #e9ecef;
+}
+
+.rewards-display-section h3 {
+  color: #1a5f7a;
+  margin-bottom: 2rem;
+  font-size: 1.5rem;
+  text-align: center;
+}
+
+/* Estilos para alertas */
+.alert {
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+  border: 1px solid transparent;
+  border-radius: 0.375rem;
+}
+
+.alert-success {
+  color: #155724;
+  background-color: #d4edda;
+  border-color: #c3e6cb;
+}
+
+.alert-danger {
+  color: #721c24;
+  background-color: #f8d7da;
+  border-color: #f5c6cb;
+}
+
+/* Spinner */
+.spinner-border {
+  display: inline-block;
+  width: 1rem;
+  height: 1rem;
+  vertical-align: text-bottom;
+  border: 0.125em solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: spinner-border 0.75s linear infinite;
+}
+
+.spinner-border-sm {
+  width: 0.875rem;
+  height: 0.875rem;
+  border-width: 0.125rem;
+}
+
+@keyframes spinner-border {
+  to { transform: rotate(360deg); }
+}
+
+.me-1 { margin-right: 0.25rem; }
+.me-2 { margin-right: 0.5rem; }
+
+/* Responsividade */
 @media (max-width: 768px) {
   .reward-list-container {
     margin: 1rem;
@@ -163,5 +398,23 @@
   .btn {
     margin: 0.25rem;
     padding: 0.5rem 1rem;
+  }
+
+  .management-card {
+    padding: 1.5rem;
+  }
+
+  .input-group {
+    flex-direction: column;
+  }
+
+  .user-reward-card {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .reward-info {
+    width: 100%;
   }
 }

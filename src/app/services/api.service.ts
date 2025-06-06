@@ -202,4 +202,17 @@ export class ApiService {
   seedRewards(): Observable<any> {
     return this.http.post(`${this.API_URL}/rewards/seed`, {});
   }
+
+  // Novos métodos para gerenciamento de recompensas
+  clearUserRewards(username: string): Observable<any> {
+    return this.http.delete(`${this.API_URL}/rewards/clear`, {
+      body: { username }
+    });
+  }
+
+  removeUserReward(username: string, rewardId: number): Observable<any> {
+    return this.http.delete(`${this.API_URL}/rewards/remove`, {
+      body: { username, rewardId }
+    });
+  }
 }

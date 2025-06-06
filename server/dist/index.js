@@ -29,8 +29,9 @@ const posts_1 = __importDefault(require("./routes/posts"));
 const chat_1 = __importDefault(require("./routes/chat"));
 const profile_1 = __importDefault(require("./routes/profile"));
 const admin_routes_1 = __importDefault(require("./routes/admin.routes")); // Adicionar import para as rotas de admin
-const reward_routes_1 = __importDefault(require("./routes/reward.routes")); // Importar rotas de recompensa
 const ip_block_middleware_1 = require("./middleware/ip-block.middleware"); // Adicionar import
+const reward_controller_1 = require("./controllers/reward.controller");
+const auth_middleware_1 = require("./middleware/auth.middleware");
 // Chave secreta para JWT - deve ser igual à usada no controlador de auth
 const JWT_SECRET = process.env.JWT_SECRET || 'bondedobumbiboladao';
 dotenv_1.default.config();
@@ -235,6 +236,8 @@ app.use((0, cors_1.default)(corsOptions));
 app.use(express_1.default.json({ limit: '50mb' })); // Aumentando o limite para permitir uploads de imagens
 // Aplicar o middleware de bloqueio de IP globalmente ANTES das rotas da API
 app.use(ip_block_middleware_1.checkIpBlocked);
+// Aplicar o middleware de autenticação globalmente para todas as rotas da API
+app.use('/api', auth_middleware_1.authMiddleware);
 // Headers adicionais para CORS
 app.use((req, res, next) => {
     const origin = req.headers.origin;
@@ -339,7 +342,14 @@ app.use('/api/posts', posts_1.default);
 app.use('/api/chat', chat_1.default);
 app.use('/api/profile', profile_1.default);
 app.use('/api/admin', admin_routes_1.default); // Adicionar rota para admin
-app.use('/api/rewards', reward_routes_1.default); // Adicionar rota para recompensas
+// Rotas de recompensas consolidadas - com middlewares específicos para proteção
+app.post('/api/rewards/seed', auth_middleware_1.authenticateToken, auth_middleware_1.isAdmin, reward_controller_1.seedRewards);
+app.get('/api/rewards', auth_middleware_1.authenticateToken, auth_middleware_1.isLeaderOrAdmin, reward_controller_1.getAllRewards);
+app.get('/api/rewards/user/:userId', auth_middleware_1.authenticateToken, reward_controller_1.getUserRewards);
+app.get('/api/rewards/username/:username', auth_middleware_1.authenticateToken, reward_controller_1.getUserRewardsByUsername);
+app.post('/api/rewards/grant', auth_middleware_1.authenticateToken, auth_middleware_1.isLeaderOrAdmin, reward_controller_1.grantRewardToUser);
+app.delete('/api/rewards/clear', auth_middleware_1.authenticateToken, auth_middleware_1.isLeaderOrAdmin, reward_controller_1.clearUserRewards);
+app.delete('/api/rewards/remove', auth_middleware_1.authenticateToken, auth_middleware_1.isLeaderOrAdmin, reward_controller_1.removeUserReward);
 // Rota explícita de fallback para o perfil do usuário atual
 app.get('/api/profile/me', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     console.log('[FALLBACK ROUTE] Interceptada requisição para /api/profile/me');

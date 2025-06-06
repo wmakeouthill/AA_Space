@@ -387,6 +387,8 @@ const listAllUsers = (req, res) => __awaiter(void 0, void 0, void 0, function* (
             'user.isMainAdmin',
             'user.lastIpAddress' // Adicionar lastIpAddress à seleção
         ])
+            .leftJoinAndSelect('user.userRewards', 'userReward')
+            .leftJoinAndSelect('userReward.reward', 'reward')
             .getMany();
         // console.log('[DEBUG] Usuários encontrados:', users);
         return res.status(200).json({
@@ -397,7 +399,8 @@ const listAllUsers = (req, res) => __awaiter(void 0, void 0, void 0, function* (
                 phone: user.phone,
                 isAdmin: user.isAdmin,
                 isMainAdmin: user.isMainAdmin,
-                lastIpAddress: user.lastIpAddress // Adicionar lastIpAddress ao mapeamento
+                lastIpAddress: user.lastIpAddress, // Adicionar lastIpAddress ao mapeamento
+                userRewards: user.userRewards || [] // Incluir recompensas do usuário
             }))
         });
     }

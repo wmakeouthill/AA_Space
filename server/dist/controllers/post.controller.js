@@ -22,13 +22,15 @@ const getPosts = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         const posts = yield postRepository
             .createQueryBuilder('post')
             .leftJoinAndSelect('post.user', 'user')
+            .leftJoinAndSelect('user.userRewards', 'userRewards')
+            .leftJoinAndSelect('userRewards.reward', 'reward')
             .leftJoinAndSelect('post.comments', 'comments')
             .leftJoinAndSelect('post.postLikes', 'postLikes')
             .leftJoinAndSelect('postLikes.user', 'likeUser')
             .orderBy('post.created_at', 'DESC')
             .getMany();
         const formattedPosts = yield Promise.all(posts.map((post) => __awaiter(void 0, void 0, void 0, function* () {
-            var _a;
+            var _a, _b;
             // Verifica se existe like do usuário
             const hasLike = userId ? yield postLikeRepository.findOne({
                 where: {
@@ -45,7 +47,16 @@ const getPosts = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             });
             console.log(`[GET POSTS] Post ${post.id} - Total de likes: ${totalLikes}`);
             const author = post.anonymous ? 'Anônimo' : (post.originalAuthor || post.author);
-            return Object.assign(Object.assign({}, post), { author, comment_count: ((_a = post.comments) === null || _a === void 0 ? void 0 : _a.length) || 0, likes: totalLikes, userLiked: !!hasLike });
+            return Object.assign(Object.assign({}, post), { author, comment_count: ((_a = post.comments) === null || _a === void 0 ? void 0 : _a.length) || 0, likes: totalLikes, userLiked: !!hasLike, 
+                // Adicionar recompensas do autor
+                authorRewards: ((_b = post.user) === null || _b === void 0 ? void 0 : _b.userRewards) ? post.user.userRewards.map(userReward => ({
+                    id: userReward.reward.id,
+                    name: userReward.reward.name,
+                    designConcept: userReward.reward.designConcept,
+                    colorPalette: userReward.reward.colorPalette,
+                    iconUrl: userReward.reward.iconUrl,
+                    dateEarned: userReward.dateEarned
+                })) : [] });
         })));
         res.json(formattedPosts);
     }
@@ -56,7 +67,7 @@ const getPosts = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
 });
 exports.getPosts = getPosts;
 const getPost = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
+    var _a, _b;
     try {
         const { id } = req.params;
         const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id;
@@ -66,6 +77,8 @@ const getPost = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         const post = yield postRepository
             .createQueryBuilder('post')
             .leftJoinAndSelect('post.user', 'user')
+            .leftJoinAndSelect('user.userRewards', 'userRewards')
+            .leftJoinAndSelect('userRewards.reward', 'reward')
             .leftJoinAndSelect('post.postLikes', 'postLikes')
             .leftJoinAndSelect('postLikes.user', 'likeUser')
             .where('post.id = :id', { id: parseInt(id) })
@@ -103,7 +116,16 @@ const getPost = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
                 username: post.user.username
             } : null, 
             // Adicionar user_id explicitamente para facilitar a verificação de autoria
-            user_id: post.user ? post.user.id : null });
+            user_id: post.user ? post.user.id : null, 
+            // Adicionar recompensas do autor
+            authorRewards: ((_b = post.user) === null || _b === void 0 ? void 0 : _b.userRewards) ? post.user.userRewards.map(userReward => ({
+                id: userReward.reward.id,
+                name: userReward.reward.name,
+                designConcept: userReward.reward.designConcept,
+                colorPalette: userReward.reward.colorPalette,
+                iconUrl: userReward.reward.iconUrl,
+                dateEarned: userReward.dateEarned
+            })) : [] });
         // Para debug
         console.log(`[GET POST] Resposta final - post.user: ${post.user ? JSON.stringify(post.user) : 'null'}`);
         console.log(`[GET POST] Resposta final - formattedPost.user_id: ${formattedPost.user_id}`);
@@ -125,11 +147,16 @@ const createPost = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         const userRepository = database_1.AppDataSource.getRepository(entities_1.User);
         let userData = undefined;
         let author;
+        let userWithRewards = null;
         if (userId) {
-            const user = yield userRepository.findOne({ where: { id: userId } });
+            const user = yield userRepository.findOne({
+                where: { id: userId },
+                relations: ['userRewards', 'userRewards.reward']
+            });
             if (user) {
                 userData = { id: user.id };
                 author = user.username;
+                userWithRewards = user;
             }
             else {
                 author = 'Anônimo';
@@ -151,7 +178,14 @@ const createPost = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         };
         const newPost = postRepository.create(postData);
         yield postRepository.save(newPost);
-        const responsePost = Object.assign(Object.assign({}, newPost), { author: anonymous ? 'Anônimo' : author });
+        const responsePost = Object.assign(Object.assign({}, newPost), { author: anonymous ? 'Anônimo' : author, authorRewards: (userWithRewards === null || userWithRewards === void 0 ? void 0 : userWithRewards.userRewards) ? userWithRewards.userRewards.map(userReward => ({
+                id: userReward.reward.id,
+                name: userReward.reward.name,
+                designConcept: userReward.reward.designConcept,
+                colorPalette: userReward.reward.colorPalette,
+                iconUrl: userReward.reward.iconUrl,
+                dateEarned: userReward.dateEarned
+            })) : [] });
         res.status(201).json(responsePost);
     }
     catch (error) {
@@ -175,11 +209,16 @@ const createComment = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         }
         let userData = undefined;
         let author;
+        let userWithRewards = null;
         if (userId) {
-            const user = yield userRepository.findOne({ where: { id: userId } });
+            const user = yield userRepository.findOne({
+                where: { id: userId },
+                relations: ['userRewards', 'userRewards.reward']
+            });
             if (user) {
                 userData = { id: user.id };
                 author = user.username;
+                userWithRewards = user;
             }
             else {
                 author = 'Anônimo';
@@ -209,7 +248,15 @@ const createComment = (req, res) => __awaiter(void 0, void 0, void 0, function* 
             post_id: post.id,
             anonymous: newComment.anonymous,
             likes: 0,
-            userLiked: false
+            userLiked: false,
+            authorRewards: (userWithRewards === null || userWithRewards === void 0 ? void 0 : userWithRewards.userRewards) ? userWithRewards.userRewards.map(userReward => ({
+                id: userReward.reward.id,
+                name: userReward.reward.name,
+                designConcept: userReward.reward.designConcept,
+                colorPalette: userReward.reward.colorPalette,
+                iconUrl: userReward.reward.iconUrl,
+                dateEarned: userReward.dateEarned
+            })) : []
         };
         res.status(201).json(formattedComment);
     }
@@ -360,11 +407,14 @@ const getComments = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
         const comments = yield commentRepository
             .createQueryBuilder('comment')
             .leftJoinAndSelect('comment.user', 'user')
+            .leftJoinAndSelect('user.userRewards', 'userRewards')
+            .leftJoinAndSelect('userRewards.reward', 'reward')
             .leftJoinAndSelect('comment.post', 'post')
             .where('comment.post.id = :postId', { postId: parseInt(postId) })
             .orderBy('comment.created_at', 'DESC')
             .getMany();
         const formattedComments = yield Promise.all(comments.map((comment) => __awaiter(void 0, void 0, void 0, function* () {
+            var _a;
             // Verifica se existe like do usuário
             const hasLike = userId ? yield commentLikeRepository.findOne({
                 where: {
@@ -393,7 +443,16 @@ const getComments = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
                     id: comment.user.id,
                     username: comment.user.username
                 } : null,
-                user_id: comment.user ? comment.user.id : null
+                user_id: comment.user ? comment.user.id : null,
+                // Adicionar recompensas do autor do comentário
+                authorRewards: ((_a = comment.user) === null || _a === void 0 ? void 0 : _a.userRewards) ? comment.user.userRewards.map(userReward => ({
+                    id: userReward.reward.id,
+                    name: userReward.reward.name,
+                    designConcept: userReward.reward.designConcept,
+                    colorPalette: userReward.reward.colorPalette,
+                    iconUrl: userReward.reward.iconUrl,
+                    dateEarned: userReward.dateEarned
+                })) : []
             };
         })));
         res.json(formattedComments);

@@ -22,7 +22,7 @@ import chatRoutes from './routes/chat';
 import profileRoutes from './routes/profile';
 import adminRoutes from './routes/admin.routes'; // Adicionar import para as rotas de admin
 import { checkIpBlocked } from './middleware/ip-block.middleware'; // Adicionar import
-import { getAllRewards, getUserRewards, getUserRewardsByUsername, grantRewardToUser, seedRewards } from './controllers/reward.controller';
+import { getAllRewards, getUserRewards, getUserRewardsByUsername, grantRewardToUser, seedRewards, clearUserRewards, removeUserReward } from './controllers/reward.controller';
 import { authMiddleware, authenticateToken, isAdmin, isLeaderOrAdmin } from './middleware/auth.middleware';
 
 // Chave secreta para JWT - deve ser igual à usada no controlador de auth
@@ -393,6 +393,8 @@ app.get('/api/rewards', authenticateToken, isLeaderOrAdmin, getAllRewards);
 app.get('/api/rewards/user/:userId', authenticateToken, getUserRewards);
 app.get('/api/rewards/username/:username', authenticateToken, getUserRewardsByUsername);
 app.post('/api/rewards/grant', authenticateToken, isLeaderOrAdmin, grantRewardToUser);
+app.delete('/api/rewards/clear', authenticateToken, isLeaderOrAdmin, clearUserRewards);
+app.delete('/api/rewards/remove', authenticateToken, isLeaderOrAdmin, removeUserReward);
 
 // Rota explícita de fallback para o perfil do usuário atual
 app.get('/api/profile/me', async (req: Request, res: Response) => {

@@ -118,3 +118,58 @@ export const seedRewards = async (req: AuthRequest, res: Response) => { // Alter
         }
     }
 };
+
+// Novo controlador para zerar recompensas de um usuário
+export const clearUserRewards = async (req: AuthRequest, res: Response) => {
+    try {
+        const { username } = req.body;
+
+        if (!username) {
+            return res.status(400).json({ message: 'Username é obrigatório' });
+        }
+
+        const result = await rewardService.clearUserRewards(username);
+        res.status(200).json({
+            message: `${result.deletedCount} recompensa(s) removida(s) do usuário ${username}`,
+            deletedCount: result.deletedCount
+        });
+    } catch (error) {
+        if (error instanceof Error) {
+            if (error.message === 'Usuário não encontrado') {
+                return res.status(404).json({ message: error.message });
+            }
+            res.status(500).json({ message: error.message });
+        } else {
+            res.status(500).json({ message: 'Erro desconhecido ao zerar recompensas do usuário' });
+        }
+    }
+};
+
+// Novo controlador para remover uma recompensa específica de um usuário
+export const removeUserReward = async (req: AuthRequest, res: Response) => {
+    try {
+        const { username, rewardId } = req.body;
+
+        if (!username || !rewardId) {
+            return res.status(400).json({ message: 'Username e rewardId são obrigatórios' });
+        }
+
+        const result = await rewardService.removeUserReward(username, rewardId);
+        res.status(200).json({
+            message: `Recompensa removida com sucesso do usuário ${username}`,
+            removed: result.removed
+        });
+    } catch (error) {
+        if (error instanceof Error) {
+            if (error.message === 'Usuário não encontrado' || error.message === 'Recompensa não encontrada') {
+                return res.status(404).json({ message: error.message });
+            }
+            if (error.message === 'Usuário não possui esta recompensa') {
+                return res.status(409).json({ message: error.message });
+            }
+            res.status(500).json({ message: error.message });
+        } else {
+            res.status(500).json({ message: 'Erro desconhecido ao remover recompensa do usuário' });
+        }
+    }
+};

@@ -1,36 +1,129 @@
 <div class="reward-list-container">
   <h2>Gerenciamento de Recompensas</h2>
+
+  <!-- Seção de ações principais -->
   <div class="actions-section">
     <a routerLink="/reward-management/grant" class="btn btn-primary">Conceder Recompensa</a>
-    <button (click)="seedInitialRewards()" class="btn btn-secondary">Semear Recompensas Iniciais</button>
   </div>
 
+  <!-- Mensagens de sucesso e erro -->
+  <div *ngIf="successMessage" class="alert alert-success">
+    {{ successMessage }}
+  </div>
   <div *ngIf="error" class="alert alert-danger">
     {{ error }}
   </div>
-  <div *ngIf="rewards$ | async as rewards; else loadingOrEmpty">
-    <div *ngIf="rewards.length > 0; else noRewards">
-      <div class="rewards-grid">
-        <div *ngFor="let reward of rewards" class="reward-card">
-          <h3>{{ reward.name }}</h3>
-          <div class="reward-milestone">Marco: {{ reward.milestone }}</div>
-          <div class="reward-description">
-            <strong>Design:</strong> {{ reward.designConcept }}<br>
-            <strong>Cores:</strong> {{ reward.colorPalette }}
+
+  <!-- Nova seção para gerenciar recompensas de usuários -->
+  <div class="management-section">
+    <h3>Gerenciar Recompensas de Usuários</h3>
+
+    <!-- Zerar recompensas de usuário -->
+    <div class="management-card">
+      <h4>🗑️ Zerar Todas as Recompensas de um Usuário</h4>
+      <form [formGroup]="clearRewardsForm" (ngSubmit)="clearUserRewards()">
+        <div class="form-group">
+          <label for="clearUsername">Username:</label>
+          <input
+            type="text"
+            id="clearUsername"
+            formControlName="username"
+            class="form-control"
+            placeholder="Digite o username do usuário"
+            [class.is-invalid]="clearRewardsForm.get('username')?.invalid && clearRewardsForm.get('username')?.touched">
+          <div *ngIf="clearRewardsForm.get('username')?.invalid && clearRewardsForm.get('username')?.touched" class="invalid-feedback">
+            Username é obrigatório
+          </div>
+        </div>
+        <button
+          type="submit"
+          class="btn btn-danger"
+          [disabled]="clearRewardsForm.invalid || isLoadingClear">
+          <span *ngIf="isLoadingClear" class="spinner-border spinner-border-sm me-2"></span>
+          {{ isLoadingClear ? 'Zerando...' : 'Zerar Todas as Recompensas' }}
+        </button>
+      </form>
+    </div>
+
+    <!-- Buscar e remover recompensas específicas -->
+    <div class="management-card">
+      <h4>🔍 Buscar e Remover Recompensas Específicas</h4>
+      <form [formGroup]="removeRewardForm">
+        <div class="form-group">
+          <label for="searchUsername">Username:</label>
+          <div class="input-group">
+            <input
+              type="text"
+              id="searchUsername"
+              formControlName="username"
+              class="form-control"
+              placeholder="Digite o username do usuário"
+              [class.is-invalid]="removeRewardForm.get('username')?.invalid && removeRewardForm.get('username')?.touched">
+            <button
+              type="button"
+              class="btn btn-outline-primary"
+              (click)="searchUserRewards()"
+              [disabled]="!removeRewardForm.get('username')?.value || isLoadingUserRewards">
+              <span *ngIf="isLoadingUserRewards" class="spinner-border spinner-border-sm me-2"></span>
+              {{ isLoadingUserRewards ? 'Buscando...' : 'Buscar Recompensas' }}
+            </button>
+          </div>
+          <div *ngIf="removeRewardForm.get('username')?.invalid && removeRewardForm.get('username')?.touched" class="invalid-feedback">
+            Username é obrigatório
+          </div>
+        </div>
+      </form>
+
+      <!-- Lista de recompensas do usuário -->
+      <div *ngIf="userRewards.length > 0" class="user-rewards-list">
+        <h5>Recompensas de {{ removeRewardForm.get('username')?.value }}:</h5>
+        <div class="user-rewards-grid">
+          <div *ngFor="let userReward of userRewards" class="user-reward-card">
+            <div class="reward-info">
+              <h6>{{ userReward.reward.name }}</h6>
+              <span class="reward-milestone">{{ userReward.reward.milestone }}</span>
+              <small class="reward-date">Conquistado em: {{ userReward.dateEarned | date:'dd/MM/yyyy' }}</small>
+            </div>
+            <button
+              class="btn btn-sm btn-outline-danger"
+              (click)="removeSpecificReward(userReward.reward.id)"
+              [disabled]="isLoadingRemove">
+              <span *ngIf="isLoadingRemove" class="spinner-border spinner-border-sm me-1"></span>
+              Remover
+            </button>
           </div>
         </div>
       </div>
     </div>
   </div>
 
-  <ng-template #loadingOrEmpty>
-    <div *ngIf="!(rewards$ | async) && !error" class="loading-message">
-      Carregando recompensas...
+  <!-- Lista de todas as recompensas (seção existente) -->
+  <div class="rewards-display-section">
+    <h3>Todas as Recompensas Disponíveis</h3>
+    <div *ngIf="rewards$ | async as rewards; else loadingOrEmpty">
+      <div *ngIf="rewards.length > 0; else noRewards">
+        <div class="rewards-grid">
+          <div *ngFor="let reward of rewards" class="reward-card">
+            <h3>{{ reward.name }}</h3>
+            <div class="reward-milestone">Marco: {{ reward.milestone }}</div>
+            <div class="reward-description">
+              <strong>Design:</strong> {{ reward.designConcept }}<br>
+              <strong>Cores:</strong> {{ reward.colorPalette }}
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
-  </ng-template>
-  <ng-template #noRewards>
-    <div *ngIf="!error" class="loading-message">
-      Nenhuma recompensa encontrada. Você pode tentar semear as recompensas iniciais.
-    </div>
-  </ng-template>
+
+    <ng-template #loadingOrEmpty>
+      <div *ngIf="!(rewards$ | async) && !error" class="loading-message">
+        Carregando recompensas...
+      </div>
+    </ng-template>
+    <ng-template #noRewards>
+      <div *ngIf="!error" class="loading-message">
+        Nenhuma recompensa encontrada.
+      </div>
+    </ng-template>
+  </div>
 </div>
